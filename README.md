@@ -1,2 +1,2 @@
-# claude-games
+# silly-games
 games created by claude
