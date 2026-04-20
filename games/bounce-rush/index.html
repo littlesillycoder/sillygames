@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bounce Rush</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0d1a;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh;
+    user-select: none;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    width: 100%; max-width: 580px;
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.55rem 1rem;
+    background: #14142b;
+    border-bottom: 1px solid #2a2a50;
+  }
+  .topbar-home {
+    text-decoration: none; color: #94a3b8; font-size: 1.1rem;
+    padding: 0.2rem 0.45rem; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .topbar-home:hover { background: #22224a; color: #e2e8f0; }
+  .topbar-title { font-size: 1rem; font-weight: 700; flex: 1; text-align: center; }
+  .topbar-btn {
+    background: #22224a; border: 1px solid #3a3a6a; color: #e2e8f0;
+    border-radius: 8px; padding: 0.3rem 0.7rem;
+    font-size: 0.82rem; cursor: pointer; transition: background 0.15s;
+  }
+  .topbar-btn:hover { background: #2e2e5a; }
+
+  /* ── LAYOUT ── */
+  .game-area {
+    display: flex; align-items: flex-start;
+    width: 100%; max-width: 620px;
+    padding: 0.75rem 0.5rem;
+    justify-content: center;
+    gap: 0;
+  }
+  .sidebar {
+    width: 128px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 0.6rem;
+    padding: 0.4rem 0.5rem 0 0;
+  }
+  .stat-box {
+    background: #14142b; border: 1px solid #2a2a50;
+    border-radius: 10px; padding: 0.5rem 0.7rem;
+  }
+  .stat-label { font-size: 0.67rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 1.25rem; font-weight: 800; color: #e2e8f0; line-height: 1.2; }
+  .stat-sub   { font-size: 0.7rem; color: #94a3b8; margin-top: 0.1rem; }
+  .stars-row  { font-size: 1.1rem; letter-spacing: 2px; }
+
+  .how-btn, .restart-btn {
+    border: none; color: #fff; border-radius: 9px;
+    padding: 0.48rem 0.5rem; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s; width: 100%;
+  }
+  .how-btn     { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+  .restart-btn { background: linear-gradient(135deg, #0891b2, #0e7490); }
+  .how-btn:hover, .restart-btn:hover { opacity: 0.85; }
+
+  canvas {
+    border: 2px solid #2a2a50; border-radius: 12px;
+    display: block; cursor: crosshair; touch-action: none;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; backdrop-filter: blur(4px);
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: #1c1c38; border: 1px solid #3a3a6a;
+    border-radius: 16px; padding: 1.8rem 2rem;
+    max-width: 350px; width: 92%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .modal h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.9rem; text-align: center; }
+  .modal p  { font-size: 0.87rem; color: #94a3b8; line-height: 1.6; margin-bottom: 0.5rem; }
+  .modal ul { padding-left: 1.2rem; margin-bottom: 0.8rem; }
+  .modal li { font-size: 0.87rem; color: #94a3b8; line-height: 1.7; }
+  .modal-btns { display: flex; gap: 0.6rem; margin-top: 1.2rem; }
+  .modal-start {
+    flex: 1; background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    border: none; color: #fff; border-radius: 9px;
+    padding: 0.65rem; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .modal-start:hover { opacity: 0.85; }
+  .level-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem;
+    margin: 0.5rem 0 0.9rem;
+  }
+  .lvl-btn {
+    background: #14142b; border: 1px solid #2a2a50;
+    border-radius: 7px; padding: 0.35rem 0.1rem;
+    font-size: 0.8rem; font-weight: 600; color: #94a3b8;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .lvl-btn:hover  { background: #22224a; color: #e2e8f0; }
+  .lvl-btn.active { background: #7c3aed; border-color: #a78bfa; color: #fff; }
+  .lvl-btn.done   { border-color: #22c55e; color: #4ade80; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="topbar-home" href="../../index.html">🏠</a>
+  <div class="topbar-title">🟡 Bounce Rush</div>
+  <button class="topbar-btn" id="soundBtn">🔊</button>
+</div>
+
+<div class="game-area">
+  <div class="sidebar">
+    <div class="stat-box">
+      <div class="stat-label">Level</div>
+      <div class="stat-value" id="sLevel">1</div>
+      <div class="stat-sub"  id="sLevelName">Meadow</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Boosts</div>
+      <div class="stat-value" id="sBoosts">0</div>
+      <div class="stat-sub"  id="sPar">Par: 4</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Stars</div>
+      <div class="stars-row" id="sStars">☆☆☆</div>
+    </div>
+    <button class="how-btn"     id="howBtn">❓ How to Play</button>
+    <button class="restart-btn" id="restartBtn">↺ Restart</button>
+  </div>
+  <canvas id="c" width="460" height="540"></canvas>
+</div>
+
+<!-- Instructions / Level Select Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>🟡 Bounce Rush</h2>
+    <p>Bounce your way to the glowing star on each level!</p>
+    <ul>
+      <li><strong>Click</strong> anywhere to boost the ball toward that spot</li>
+      <li>The ball bounces off <strong>walls, floor</strong> and <strong>platforms</strong></li>
+      <li>Guide it through the <strong>gaps</strong> to reach the ⭐ star</li>
+      <li>Fewer boosts = more stars</li>
+    </ul>
+    <p style="color:#64748b; font-size:0.78rem;">Tip: Click near the ball for a gentle redirect, far away for full power.</p>
+    <p style="margin-top:0.4rem; color:#e2e8f0; font-size:0.82rem; font-weight:600;">Select Level</p>
+    <div class="level-grid" id="levelGrid"></div>
+    <div class="modal-btns">
+      <button class="modal-start" id="modalStartBtn">▶ Start Game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════════════
+let audioCtx = null;
+let soundOn = true;
+let musicPlaying = false;
+let melTimer = null;
+let melIdx = 0;
+
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function beep(freq, type, dur, vol = 0.14, delay = 0) {
+  if (!soundOn) return;
+  const ctx = ac();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = type; o.frequency.value = freq;
+  const t = ctx.currentTime + delay;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+
+function sndBoost()  { beep(380, 'sine', 0.11, 0.18); beep(560, 'sine', 0.07, 0.10, 0.07); }
+function sndBounce(v){ beep(140 + v * 8, 'sine', 0.07, 0.12); }
+function sndWin()    { [523,659,784,1047].forEach((f,i) => beep(f,'sine',0.22,0.14,i*0.11)); }
+function sndFall()   { beep(200,'sawtooth',0.18,0.12); beep(110,'sawtooth',0.28,0.10,0.14); }
+
+const MEL = [392,440,523,440,392,349,392,440,523,659,523,440,392,523,659,784,659,523,440,523,392];
+function startMusic() {
+  if (musicPlaying || !soundOn) return;
+  musicPlaying = true;
+  (function tick() {
+    if (!musicPlaying || !soundOn) return;
+    beep(MEL[melIdx++ % MEL.length], 'triangle', 0.18, 0.055);
+    melTimer = setTimeout(tick, 230);
+  })();
+}
+function stopMusic() { musicPlaying = false; clearTimeout(melTimer); }
+
+document.getElementById('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+  soundOn ? startMusic() : stopMusic();
+});
+
+// ═══════════════════════════════════════════════════════
+//  LEVELS
+// ═══════════════════════════════════════════════════════
+// Each row: {y, gapX, gapW}  → platforms on left[0..gapX] and right[gapX+gapW..CW]
+// bg: two-stop gradient colours
+const LEVELS = [
+  { name:'Meadow',  par:4,  bg:['#0c1f09','#081508'],
+    start:{x:230,y:512}, goal:{x:145,y:56},
+    rows:[
+      {y:410, gapX:185, gapW:108},   // centre gap
+      {y:295, gapX: 88, gapW:108},   // left gap → goal on left
+    ]
+  },
+  { name:'Canyon',  par:5,  bg:['#1e0e00','#130800'],
+    start:{x:230,y:512}, goal:{x:350,y:52},
+    rows:[
+      {y:430, gapX:292, gapW:108},   // right gap
+      {y:330, gapX:185, gapW:108},   // centre
+      {y:228, gapX:270, gapW:108},   // right → goal right
+    ]
+  },
+  { name:'Forest',  par:6,  bg:['#061a06','#041004'],
+    start:{x:230,y:512}, goal:{x:120,y:52},
+    rows:[
+      {y:440, gapX:178, gapW:104},
+      {y:350, gapX:295, gapW:102},   // right
+      {y:262, gapX:178, gapW:104},   // centre
+      {y:178, gapX: 78, gapW:104},   // left → goal left
+    ]
+  },
+  { name:'Stormy',  par:7,  bg:['#08081e','#050512'],
+    start:{x: 80,y:512}, goal:{x:355,y:52},
+    rows:[
+      {y:442, gapX: 54, gapW:106},   // left (start is left)
+      {y:358, gapX:290, gapW:106},   // right
+      {y:276, gapX:178, gapW:106},   // centre
+      {y:196, gapX:290, gapW:106},   // right → goal right
+    ]
+  },
+  { name:'Crystal', par:7,  bg:['#05081e','#030610'],
+    start:{x:370,y:512}, goal:{x:118,y:52},
+    rows:[
+      {y:445, gapX:294, gapW:104},   // right (start is right)
+      {y:358, gapX:178, gapW:104},   // centre
+      {y:272, gapX: 68, gapW:104},   // left
+      {y:188, gapX:178, gapW:104},   // centre
+      {y:110, gapX: 68, gapW:104},   // left → goal left
+    ]
+  },
+  { name:'Sky High', par:8, bg:['#04041a','#020210'],
+    start:{x:230,y:512}, goal:{x:350,y:44},
+    rows:[
+      {y:452, gapX:178, gapW:102},
+      {y:372, gapX:296, gapW:102},
+      {y:294, gapX:178, gapW:102},
+      {y:218, gapX: 68, gapW:102},
+      {y:146, gapX:286, gapW:102},   // right → goal right
+    ]
+  },
+  { name:'Maze',    par:9,  bg:['#0e0414','#08020c'],
+    start:{x:230,y:512}, goal:{x:115,y:44},
+    rows:[
+      {y:455, gapX:288, gapW:100},
+      {y:378, gapX:178, gapW:100},
+      {y:303, gapX: 62, gapW:100},
+      {y:232, gapX:288, gapW:100},
+      {y:164, gapX:178, gapW:100},
+      {y:100, gapX: 62, gapW:100},   // left → goal left
+    ]
+  },
+  { name:'Summit',  par:10, bg:['#1a0012','#0d0008'],
+    start:{x:230,y:512}, goal:{x:348,y:38},
+    rows:[
+      {y:460, gapX:182, gapW: 96},
+      {y:392, gapX: 58, gapW: 96},
+      {y:326, gapX:296, gapW: 96},
+      {y:262, gapX:182, gapW: 96},
+      {y:200, gapX: 58, gapW: 96},
+      {y:141, gapX:296, gapW: 96},
+      {y: 86, gapX:288, gapW: 96},   // right → goal right
+    ]
+  },
+];
+
+// Build platform rect arrays from rows
+function buildPlatforms(rows) {
+  const plats = [];
+  for (const {y, gapX, gapW} of rows) {
+    if (gapX > 0)         plats.push({x:0,      y, w:gapX,           h:14});
+    const rStart = gapX + gapW;
+    if (rStart < CW)      plats.push({x:rStart,  y, w:CW - rStart,    h:14});
+  }
+  return plats;
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════
+const CW = 460, CH = 540;
+const BALL_R      = 14;
+const GRAVITY     = 0.40;
+const BOUNCE_COEF = 0.72;   // restitution for platforms
+const FLOOR_COEF  = 0.78;   // floor/ceiling bounce
+const WALL_COEF   = 0.72;
+const FLOOR_FRIC  = 0.88;   // horizontal friction on floor bounce
+const PLAT_FRIC   = 0.92;
+const BOOST_FORCE = 8.8;
+const MAX_SPEED   = 19;
+const GOAL_R      = 18;
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let gameState  = 'idle';   // idle | playing | win
+let savedState = null;
+
+let currentLevel = 0;
+let levelDone    = new Array(LEVELS.length).fill(false);
+let levelStars   = new Array(LEVELS.length).fill(0);
+
+let ball = {x:230, y:512, vx:0, vy:0};
+let boosts = 0;
+
+let platforms = [];
+let goalPulse = 0;
+let squishT   = 0;   // squish animation 0→1→0
+let squishAx  = 0;   // axis: 0=horizontal, 1=vertical
+let winT      = 0;
+
+let particles = [];
+let trail     = [];
+
+let mousePos  = {x:230, y:540};  // current cursor on canvas
+
+// ═══════════════════════════════════════════════════════
+//  LOAD LEVEL
+// ═══════════════════════════════════════════════════════
+function loadLevel(idx) {
+  currentLevel = idx;
+  const lv = LEVELS[idx];
+  platforms = buildPlatforms(lv.rows);
+  ball.x = lv.start.x;
+  ball.y = lv.start.y;
+  ball.vx = 0;
+  ball.vy = -3.5;   // small initial upward nudge so ball is in motion
+  boosts  = 0;
+  particles = [];
+  trail     = [];
+  squishT   = 0;
+  winT      = 0;
+  goalPulse = 0;
+  gameState = 'playing';
+  updateSidebar();
+}
+
+function updateSidebar() {
+  const lv = LEVELS[currentLevel];
+  document.getElementById('sLevel').textContent     = currentLevel + 1;
+  document.getElementById('sLevelName').textContent = lv.name;
+  document.getElementById('sBoosts').textContent    = boosts;
+  document.getElementById('sPar').textContent       = 'Par: ' + lv.par;
+  const s = levelStars[currentLevel];
+  document.getElementById('sStars').textContent =
+    (s>=1?'⭐':'☆') + (s>=2?'⭐':'☆') + (s>=3?'⭐':'☆');
+}
+
+function calcStars(boosts, par) {
+  if (boosts <= par - 1) return 3;
+  if (boosts <= par + 1) return 2;
+  if (boosts <= par + 4) return 1;
+  return 0;
+}
+
+// ═══════════════════════════════════════════════════════
+//  PHYSICS
+// ═══════════════════════════════════════════════════════
+function stepPhysics() {
+  // Gravity
+  ball.vy += GRAVITY;
+
+  // Apply velocity
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  const speed = Math.hypot(ball.vx, ball.vy);
+
+  // Trail
+  trail.push({x: ball.x, y: ball.y, life: 1.0});
+  if (trail.length > 22) trail.shift();
+  for (const t of trail) t.life -= 0.055;
+
+  // ── Floor ──
+  if (ball.y + BALL_R >= CH) {
+    ball.y = CH - BALL_R;
+    if (Math.abs(ball.vy) > 1) {
+      ball.vy = -Math.abs(ball.vy) * FLOOR_COEF;
+      ball.vx *= FLOOR_FRIC;
+      triggerSquish(0);
+      sndBounce(Math.abs(ball.vy));
+      spawnBounce(ball.x, CH, 5);
+    } else {
+      ball.vy = 0;
+    }
+  }
+
+  // ── Ceiling ──
+  if (ball.y - BALL_R <= 0) {
+    ball.y = BALL_R;
+    ball.vy = Math.abs(ball.vy) * FLOOR_COEF;
+    triggerSquish(0);
+  }
+
+  // ── Left wall ──
+  if (ball.x - BALL_R <= 0) {
+    ball.x = BALL_R;
+    ball.vx = Math.abs(ball.vx) * WALL_COEF;
+    triggerSquish(1);
+    sndBounce(Math.abs(ball.vx));
+  }
+
+  // ── Right wall ──
+  if (ball.x + BALL_R >= CW) {
+    ball.x = CW - BALL_R;
+    ball.vx = -Math.abs(ball.vx) * WALL_COEF;
+    triggerSquish(1);
+    sndBounce(Math.abs(ball.vx));
+  }
+
+  // ── Platforms ──
+  for (const p of platforms) {
+    resolvePlatform(p);
+  }
+
+  // Cap speed
+  const spd2 = Math.hypot(ball.vx, ball.vy);
+  if (spd2 > MAX_SPEED) {
+    ball.vx = ball.vx / spd2 * MAX_SPEED;
+    ball.vy = ball.vy / spd2 * MAX_SPEED;
+  }
+
+  // ── Goal check ──
+  const lv = LEVELS[currentLevel];
+  if (Math.hypot(ball.x - lv.goal.x, ball.y - lv.goal.y) < GOAL_R + BALL_R - 4) {
+    gameState = 'win';
+    winT = 0;
+    const stars = calcStars(boosts, lv.par);
+    levelStars[currentLevel]  = Math.max(levelStars[currentLevel], stars);
+    levelDone[currentLevel]   = true;
+    sndWin();
+    spawnWin(lv.goal.x, lv.goal.y);
+    updateSidebar();
+  }
+}
+
+function resolvePlatform(p) {
+  // Expanded AABB
+  const ex = p.x - BALL_R, ey = p.y - BALL_R;
+  const ew = p.w + BALL_R * 2, eh = p.h + BALL_R * 2;
+
+  if (ball.x <= ex || ball.x >= ex + ew) return;
+  if (ball.y <= ey || ball.y >= ey + eh) return;
+
+  const oL = ball.x - ex;
+  const oR = (ex + ew) - ball.x;
+  const oT = ball.y - ey;
+  const oB = (ey + eh) - ball.y;
+  const mn = Math.min(oL, oR, oT, oB);
+
+  if (mn === oT && ball.vy > 0) {
+    // Top face (ball falling onto platform)
+    ball.y = ey;
+    ball.vy = -Math.abs(ball.vy) * BOUNCE_COEF;
+    ball.vx *= PLAT_FRIC;
+    triggerSquish(0);
+    sndBounce(Math.abs(ball.vy));
+    spawnBounce(ball.x, p.y, 4);
+  } else if (mn === oB && ball.vy < 0) {
+    // Bottom face (ball hitting underside)
+    ball.y = ey + eh;
+    ball.vy = Math.abs(ball.vy) * BOUNCE_COEF;
+    triggerSquish(0);
+    sndBounce(Math.abs(ball.vy));
+  } else if (mn === oL && ball.vx > 0) {
+    ball.x = ex;
+    ball.vx = -Math.abs(ball.vx) * WALL_COEF;
+    triggerSquish(1);
+  } else if (mn === oR && ball.vx < 0) {
+    ball.x = ex + ew;
+    ball.vx = Math.abs(ball.vx) * WALL_COEF;
+    triggerSquish(1);
+  }
+}
+
+function applyBoost(tx, ty) {
+  const dx = tx - ball.x;
+  const dy = ty - ball.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  // Scale force by distance (min 30px, full force at 150px+)
+  const power = BOOST_FORCE * Math.min(dist / 150, 1) * 0.6 + BOOST_FORCE * 0.4;
+  ball.vx += (dx / dist) * power;
+  ball.vy += (dy / dist) * power;
+  const spd = Math.hypot(ball.vx, ball.vy);
+  if (spd > MAX_SPEED) {
+    ball.vx = ball.vx / spd * MAX_SPEED;
+    ball.vy = ball.vy / spd * MAX_SPEED;
+  }
+  boosts++;
+  updateSidebar();
+  sndBoost();
+  spawnBoost(ball.x, ball.y, dx, dy);
+}
+
+// ═══════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════
+function triggerSquish(axis) {
+  squishT = 1;
+  squishAx = axis;
+}
+
+function spawnBounce(x, y, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 1 + Math.random() * 2.5;
+    particles.push({x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 1,
+      life:1, r:3, color:'#fbbf24'});
+  }
+}
+
+function spawnBoost(x, y, dx, dy) {
+  const d = Math.hypot(dx, dy) || 1;
+  for (let i = 0; i < 10; i++) {
+    const spread = (Math.random() - 0.5) * 1.8;
+    const s = 2 + Math.random() * 3.5;
+    particles.push({
+      x, y,
+      vx: (dx/d) * s + spread,
+      vy: (dy/d) * s + spread,
+      life:1, r:3.5, color: i%2 ? '#ffd700' : '#ff9500'
+    });
+  }
+}
+
+function spawnWin(x, y) {
+  const cols = ['#ffd700','#ff6b6b','#4ecdc4','#ffe66d','#a8e6cf','#c084fc'];
+  for (let i = 0; i < 70; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 2.5 + Math.random() * 7;
+    particles.push({x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 4,
+      life:1, r: 3+Math.random()*3, color: cols[i%cols.length], big:true});
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.14;
+    p.life -= p.big ? 0.02 : 0.035;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  AIM LINE PREVIEW
+// ═══════════════════════════════════════════════════════
+function previewBoost(tx, ty) {
+  // Simulate a few steps to show trajectory
+  const dx = tx - ball.x, dy = ty - ball.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const power = BOOST_FORCE * Math.min(dist / 150, 1) * 0.6 + BOOST_FORCE * 0.4;
+  let px = ball.x, py = ball.y;
+  let pvx = ball.vx + (dx/dist)*power;
+  let pvy = ball.vy + (dy/dist)*power;
+  const spd = Math.hypot(pvx, pvy);
+  if (spd > MAX_SPEED) { pvx = pvx/spd*MAX_SPEED; pvy = pvy/spd*MAX_SPEED; }
+  const dots = [];
+  for (let i = 0; i < 55; i++) {
+    pvy += GRAVITY;
+    px += pvx; py += pvy;
+    if (px < BALL_R) { px = BALL_R; pvx = Math.abs(pvx) * WALL_COEF; }
+    if (px > CW - BALL_R) { px = CW - BALL_R; pvx = -Math.abs(pvx) * WALL_COEF; }
+    if (py > CH - BALL_R) { py = CH - BALL_R; pvy = -Math.abs(pvy) * FLOOR_COEF; pvx *= FLOOR_FRIC; }
+    dots.push({x:px, y:py, t: i/55});
+    if (py < -20) break;
+    // Stop if hits platform
+    let hit = false;
+    for (const p of platforms) {
+      if (px > p.x && px < p.x+p.w && py > p.y-BALL_R && py < p.y+p.h+BALL_R) { hit=true; break; }
+    }
+    if (hit) break;
+  }
+  return dots;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW
+// ═══════════════════════════════════════════════════════
+function drawBg() {
+  const lv = LEVELS[currentLevel];
+  const g = ctx.createLinearGradient(0, 0, 0, CH);
+  g.addColorStop(0, lv.bg[0]);
+  g.addColorStop(1, lv.bg[1]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Subtle star field for dark levels (levels 4+)
+  if (currentLevel >= 3) {
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    for (let i = 0; i < 50; i++) {
+      const sx = (i * 97 + currentLevel * 37) % CW;
+      const sy = (i * 73 + currentLevel * 53) % CH;
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+  }
+}
+
+function drawPlatforms() {
+  for (const p of platforms) {
+    // Body
+    const g = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+    g.addColorStop(0, '#3c6b3c');
+    g.addColorStop(1, '#1a341a');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.roundRect(p.x, p.y, p.w, p.h, 5);
+    ctx.fill();
+    // Top highlight
+    ctx.fillStyle = 'rgba(120,220,120,0.30)';
+    ctx.fillRect(p.x + 3, p.y + 1, p.w - 6, 3);
+    // Bottom shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(p.x + 2, p.y + p.h - 4, p.w - 4, 4);
+  }
+}
+
+function drawGoal() {
+  const lv = LEVELS[currentLevel];
+  const {x, y} = lv.goal;
+  goalPulse += 0.055;
+
+  // Outer glow
+  const gr = ctx.createRadialGradient(x, y, GOAL_R - 2, x, y, GOAL_R + 20 + Math.sin(goalPulse)*5);
+  gr.addColorStop(0, 'rgba(255,215,0,0.40)');
+  gr.addColorStop(1, 'rgba(255,215,0,0.00)');
+  ctx.fillStyle = gr;
+  ctx.beginPath();
+  ctx.arc(x, y, GOAL_R + 26, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Star
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(goalPulse * 0.4);
+  ctx.fillStyle = '#ffd700';
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur  = 16;
+  drawStar5(GOAL_R, GOAL_R * 0.42);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawStar5(outer, inner) {
+  const PI2 = Math.PI * 2;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a   = (i / 10) * PI2 - Math.PI / 2;
+    const r   = i % 2 === 0 ? outer : inner;
+    i === 0 ? ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r)
+            : ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawTrail() {
+  for (const t of trail) {
+    if (t.life <= 0) continue;
+    ctx.fillStyle = `rgba(251,191,36,${t.life * 0.30})`;
+    const r = BALL_R * 0.55 * t.life;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, Math.max(r, 0.5), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawBall() {
+  squishT = Math.max(0, squishT - 0.07);
+  const sq = squishT * 0.38;
+  const rx = BALL_R * (squishAx === 0 ? 1 + sq * 0.5 : 1 - sq * 0.4);
+  const ry = BALL_R * (squishAx === 0 ? 1 - sq * 0.4 : 1 + sq * 0.5);
+
+  ctx.save();
+  ctx.translate(ball.x, ball.y);
+
+  // Shadow beneath ball
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(0, ry + 5, rx * 0.85, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main body gradient
+  const bg = ctx.createRadialGradient(-rx*0.3, -ry*0.3, 1, 0, 0, Math.max(rx, ry));
+  bg.addColorStop(0.0, '#ffe566');
+  bg.addColorStop(0.5, '#f59e0b');
+  bg.addColorStop(1.0, '#b45309');
+  ctx.fillStyle = bg;
+  ctx.shadowColor = '#f59e0b';
+  ctx.shadowBlur  = 12;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Shine
+  ctx.fillStyle = 'rgba(255,255,255,0.40)';
+  ctx.beginPath();
+  ctx.ellipse(-rx*0.27, -ry*0.28, rx*0.30, ry*0.20, -0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes — look toward velocity
+  const angle = Math.atan2(ball.vy, ball.vx);
+  const ex = Math.cos(angle) * rx * 0.25;
+  const ey = Math.sin(angle) * ry * 0.25;
+  const er = 2.8;
+
+  ctx.fillStyle = '#5a2a00';
+  ctx.beginPath(); ctx.arc(ex - Math.sin(angle)*er*1.1, ey + Math.cos(angle)*er*1.1, er,   0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex + Math.sin(angle)*er*1.1, ey - Math.cos(angle)*er*1.1, er,   0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(ex - Math.sin(angle)*er*1.1 + 0.7, ey + Math.cos(angle)*er*1.1 - 0.7, 1.1, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex + Math.sin(angle)*er*1.1 + 0.7, ey - Math.cos(angle)*er*1.1 - 0.7, 1.1, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+function drawAimPreview() {
+  if (gameState !== 'playing') return;
+  const mx = mousePos.x, my = mousePos.y;
+  const dx = mx - ball.x, dy = my - ball.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 12) return;
+
+  // Dashed line from ball to cursor
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = 'rgba(255,215,0,0.45)';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(ball.x, ball.y);
+  ctx.lineTo(mx, my);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Click indicator
+  ctx.strokeStyle = 'rgba(255,215,0,0.6)';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath();
+  ctx.arc(mx, my, 6, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Trajectory preview dots
+  const dots = previewBoost(mx, my);
+  for (let i = 0; i < dots.length; i++) {
+    const d = dots[i];
+    const a = (1 - d.t) * 0.65;
+    ctx.fillStyle = `rgba(255,215,0,${a})`;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, 3 * (1 - d.t * 0.5), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.fillStyle = p.color + Math.round(p.life * 255).toString(16).padStart(2, '0');
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(p.r * p.life, 0.5), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawHUD() {
+  const lv = LEVELS[currentLevel];
+  // Level name — top-left pill
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  rrect(ctx, 8, 8, 110, 24, 7); ctx.fill();
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillText(`Lvl ${currentLevel+1}: ${lv.name}`, 14, 24);
+
+  // Boosts — top-right pill
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  rrect(ctx, CW - 94, 8, 86, 24, 7); ctx.fill();
+  ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'right';
+  ctx.fillText(`Boosts: ${boosts}`, CW - 10, 24);
+}
+
+function drawIdleHint() {
+  if (gameState !== 'playing') return;
+  const spd = Math.hypot(ball.vx, ball.vy);
+  if (spd > 1.5) return;
+  const p = (Math.sin(Date.now() * 0.0028) + 1) / 2;
+  ctx.fillStyle = `rgba(251,191,36,${0.4 + p * 0.45})`;
+  ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillText('Click to boost!', ball.x, ball.y - BALL_R - 14);
+}
+
+function drawWinOverlay() {
+  winT += 0.022;
+  const alpha = Math.min(winT * 2.2, 0.88);
+
+  // Dim overlay
+  ctx.fillStyle = `rgba(0,0,0,${alpha * 0.55})`;
+  ctx.fillRect(0, 0, CW, CH);
+
+  const scale = Math.min(1, winT * 2.8);
+  ctx.save();
+  ctx.translate(CW / 2, CH / 2 - 50);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = '#ffd700';
+  ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 28;
+  ctx.font = 'bold 40px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillText('⭐ Level Clear! ⭐', 0, 0);
+  ctx.shadowBlur = 0;
+
+  const stars = levelStars[currentLevel];
+  ctx.font = 'bold 32px Segoe UI';
+  ctx.fillText(['','⭐','⭐⭐','⭐⭐⭐'][stars] || '', 0, 48);
+
+  ctx.font = '17px Segoe UI';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText(`${boosts} boost${boosts !== 1 ? 's' : ''}`, 0, 84);
+  ctx.restore();
+
+  // Next-level button (appears after brief delay)
+  if (winT > 0.55) {
+    const bx = CW/2 - 82, by = CH/2 + 40;
+    ctx.fillStyle = 'rgba(124,58,237,0.92)';
+    rrect(ctx, bx, by, 164, 44, 10); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText(
+      currentLevel < LEVELS.length - 1 ? '▶ Next Level' : '🏆 You Win!',
+      CW/2, by + 28
+    );
+  }
+}
+
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════
+function loop() {
+  requestAnimationFrame(loop);
+
+  if (gameState === 'playing') {
+    stepPhysics();
+    updateParticles();
+  } else if (gameState === 'win') {
+    updateParticles();
+  }
+
+  drawBg();
+  drawTrail();
+  drawPlatforms();
+  drawGoal();
+  drawParticles();
+  drawAimPreview();
+  drawBall();
+  drawHUD();
+  if (gameState === 'playing') drawIdleHint();
+  if (gameState === 'win')     drawWinOverlay();
+}
+requestAnimationFrame(loop);
+
+// ═══════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════
+function canvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  return {
+    x: cx * (CW / rect.width),
+    y: cy * (CH / rect.height)
+  };
+}
+
+canvas.addEventListener('mousemove', e => {
+  mousePos = canvasPos(e);
+});
+
+canvas.addEventListener('click', e => {
+  const pos = canvasPos(e);
+
+  // Win state: click next-level button
+  if (gameState === 'win') {
+    const bx = CW/2 - 82, by = CH/2 + 40;
+    if (pos.x >= bx && pos.x <= bx+164 && pos.y >= by && pos.y <= by+44) {
+      if (currentLevel < LEVELS.length - 1) {
+        loadLevel(currentLevel + 1);
+        startMusic();
+      }
+    }
+    return;
+  }
+
+  if (gameState !== 'playing') return;
+  applyBoost(pos.x, pos.y);
+});
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const pos = canvasPos(e);
+  if (gameState === 'win') {
+    const bx = CW/2 - 82, by = CH/2 + 40;
+    if (pos.x >= bx && pos.x <= bx+164 && pos.y >= by && pos.y <= by+44) {
+      if (currentLevel < LEVELS.length - 1) { loadLevel(currentLevel + 1); startMusic(); }
+    }
+    return;
+  }
+  if (gameState !== 'playing') return;
+  applyBoost(pos.x, pos.y);
+}, {passive: false});
+
+// ═══════════════════════════════════════════════════════
+//  MODAL + BUTTONS
+// ═══════════════════════════════════════════════════════
+function buildLevelGrid() {
+  const grid = document.getElementById('levelGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < LEVELS.length; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'lvl-btn' +
+      (i === currentLevel ? ' active' : '') +
+      (levelDone[i] ? ' done' : '');
+    btn.textContent = i + 1;
+    btn.title = LEVELS[i].name;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentLevel = i;
+    });
+    grid.appendChild(btn);
+  }
+}
+
+function openModal(isResume) {
+  buildLevelGrid();
+  document.getElementById('modalStartBtn').textContent =
+    isResume ? '▶ Resume Game' : '▶ Start Game';
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  savedState = gameState;
+  gameState = 'idle';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.add('hidden');
+  if (savedState === 'idle' || savedState === null) {
+    loadLevel(currentLevel);
+  } else {
+    gameState = savedState;
+  }
+  savedState = null;
+  startMusic();
+}
+
+document.getElementById('howBtn').addEventListener('click', () => {
+  openModal(gameState !== 'idle');
+});
+document.getElementById('modalStartBtn').addEventListener('click', closeModal);
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+  loadLevel(currentLevel);
+  startMusic();
+});
+
+// Launch with modal
+openModal(false);
+</script>
+</body>
+</html>

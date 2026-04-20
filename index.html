@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameZone — Free Online Games</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d1a;
+      --surface: #14142b;
+      --card: #1c1c38;
+      --card-hover: #22224a;
+      --border: #2a2a50;
+      --accent: #7c3aed;
+      --accent2: #06b6d4;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .logo span { color: var(--accent2); }
+
+    .search-bar {
+      flex: 1;
+      max-width: 400px;
+      position: relative;
+    }
+    .search-bar input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 0.5rem 1rem 0.5rem 2.8rem;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-bar input::placeholder { color: var(--muted); }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar .search-icon {
+      position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: 0.9rem;
+    }
+
+    nav { margin-left: auto; display: flex; gap: 1.5rem; }
+    nav a {
+      color: var(--muted); text-decoration: none; font-size: 0.9rem;
+      font-weight: 500; transition: color 0.2s;
+    }
+    nav a:hover { color: var(--text); }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 3.5rem 2rem 2rem;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.6rem;
+    }
+    .hero h1 .highlight {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 520px;
+    }
+
+    /* ── SECTION ── */
+    .section {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 2rem 4rem;
+    }
+    .section-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .section-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .section-header .count {
+      background: var(--border);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 50px;
+    }
+
+    /* ── CARD GRID ── */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .game-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .game-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(124, 58, 237, 0.25);
+      border-color: var(--accent);
+      background: var(--card-hover);
+    }
+
+    .card-thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-thumb svg { width: 100%; height: 100%; display: block; }
+
+    .card-body { padding: 1rem; }
+    .card-tags { display: flex; gap: 0.4rem; margin-bottom: 0.55rem; flex-wrap: wrap; }
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+    }
+    .tag-puzzle { background: rgba(124,58,237,0.2); color: #a78bfa; }
+    .tag-arcade { background: rgba(6,182,212,0.2); color: #67e8f9; }
+    .tag-classic { background: rgba(245,158,11,0.2); color: #fcd34d; }
+    .tag-casual { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .tag-action { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .tag-runner { background: rgba(249,115,22,0.2); color: #fdba74; }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .card-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 0.9rem;
+    }
+
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(135deg, var(--accent), #5b21b6);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 1.1rem;
+      border-radius: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .game-card:hover .play-btn { opacity: 0.9; transform: scale(1.03); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">🎮</div>
+      Game<span>Zone</span>
+    </a>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search games…" />
+    </div>
+    <nav>
+      <a href="#">New</a>
+      <a href="#">Top</a>
+      <a href="#">Categories</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>Play <span class="highlight">free online games</span><br />no download needed</h1>
+  <p>Jump straight into hundreds of browser games — no sign-up, no installs. Just click and play.</p>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <h2>All Games</h2>
+    <span class="count">4</span>
+  </div>
+
+  <div class="games-grid">
+
+    <!-- ── Blocks Classic ── -->
+    <a class="game-card" href="games/blocks-classic/index.html" target="_blank" rel="noopener">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg1" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#1a0a3a"/>
+              <stop offset="100%" stop-color="#0d0d1a"/>
+            </radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#bg1)"/>
+          <!-- Grid lines hint -->
+          <g opacity="0.06">
+            <line x1="50" y1="0" x2="50" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="80" y1="0" x2="80" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="110" y1="0" x2="110" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="140" y1="0" x2="140" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="170" y1="0" x2="170" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="200" y1="0" x2="200" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="230" y1="0" x2="230" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="260" y1="0" x2="260" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="30" x2="320" y2="30" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="60" x2="320" y2="60" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="90" x2="320" y2="90" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="120" x2="320" y2="120" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="150" x2="320" y2="150" stroke="#fff" stroke-width="1"/>
+          </g>
+          <!-- I piece (cyan) falling -->
+          <g opacity="0.9">
+            <rect x="110" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+            <rect x="140" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+            <rect x="170" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+            <rect x="200" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+          </g>
+          <!-- T piece (purple) -->
+          <rect x="140" y="75" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="110" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="140" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="170" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
+          <!-- Bottom stack -->
+          <rect x="50"  y="135" width="28" height="28" rx="4" fill="#ef4444"/>
+          <rect x="80"  y="135" width="28" height="28" rx="4" fill="#f59e0b"/>
+          <rect x="110" y="135" width="28" height="28" rx="4" fill="#22c55e"/>
+          <rect x="140" y="135" width="28" height="28" rx="4" fill="#3b82f6"/>
+          <rect x="170" y="135" width="28" height="28" rx="4" fill="#ef4444"/>
+          <rect x="200" y="135" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="230" y="135" width="28" height="28" rx="4" fill="#f59e0b"/>
+          <!-- L piece (orange) -->
+          <rect x="230" y="75"  width="28" height="28" rx="4" fill="#f97316"/>
+          <rect x="230" y="105" width="28" height="28" rx="4" fill="#f97316"/>
+          <rect x="260" y="105" width="28" height="28" rx="4" fill="#f97316"/>
+          <!-- Score text -->
+          <text x="16" y="24" font-family="monospace" font-size="11" fill="#94a3b8">SCORE</text>
+          <text x="16" y="42" font-family="monospace" font-size="18" font-weight="bold" fill="#a855f7">3820</text>
+          <text x="16" y="60" font-family="monospace" font-size="11" fill="#94a3b8">LVL 4</text>
+          <!-- Glow effect on falling piece -->
+          <rect x="109" y="14" width="120" height="30" rx="5" fill="none" stroke="#00f5ff" stroke-width="1.5" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="tag tag-puzzle">Puzzle</span>
+          <span class="tag tag-classic">Classic</span>
+        </div>
+        <div class="card-title">Blocks Classic</div>
+        <div class="card-desc">Stack falling blocks to clear lines and rack up points. A timeless puzzle game that tests your spatial thinking and reflexes.</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
+    <!-- ── Bubble Shooter ── -->
+    <a class="game-card" href="games/bubble-shooter/index.html" target="_blank" rel="noopener">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg2" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#0a1a2e"/>
+              <stop offset="100%" stop-color="#0d0d1a"/>
+            </radialGradient>
+            <radialGradient id="rb" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#f87171"/>
+              <stop offset="100%" stop-color="#b91c1c"/>
+            </radialGradient>
+            <radialGradient id="gb" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#4ade80"/>
+              <stop offset="100%" stop-color="#15803d"/>
+            </radialGradient>
+            <radialGradient id="bb" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#60a5fa"/>
+              <stop offset="100%" stop-color="#1d4ed8"/>
+            </radialGradient>
+            <radialGradient id="yb" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#fde047"/>
+              <stop offset="100%" stop-color="#a16207"/>
+            </radialGradient>
+            <radialGradient id="pb" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#c084fc"/>
+              <stop offset="100%" stop-color="#7e22ce"/>
+            </radialGradient>
+            <radialGradient id="ob" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#fb923c"/>
+              <stop offset="100%" stop-color="#c2410c"/>
+            </radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#bg2)"/>
+          <!-- Row 1 -->
+          <circle cx="35"  cy="22" r="14" fill="url(#rb)"/>
+          <circle cx="63"  cy="22" r="14" fill="url(#gb)"/>
+          <circle cx="91"  cy="22" r="14" fill="url(#bb)"/>
+          <circle cx="119" cy="22" r="14" fill="url(#rb)"/>
+          <circle cx="147" cy="22" r="14" fill="url(#yb)"/>
+          <circle cx="175" cy="22" r="14" fill="url(#pb)"/>
+          <circle cx="203" cy="22" r="14" fill="url(#ob)"/>
+          <circle cx="231" cy="22" r="14" fill="url(#rb)"/>
+          <circle cx="259" cy="22" r="14" fill="url(#gb)"/>
+          <circle cx="287" cy="22" r="14" fill="url(#bb)"/>
+          <!-- Row 2 (offset) -->
+          <circle cx="49"  cy="46" r="14" fill="url(#pb)"/>
+          <circle cx="77"  cy="46" r="14" fill="url(#rb)"/>
+          <circle cx="105" cy="46" r="14" fill="url(#yb)"/>
+          <circle cx="133" cy="46" r="14" fill="url(#gb)"/>
+          <circle cx="161" cy="46" r="14" fill="url(#bb)"/>
+          <circle cx="189" cy="46" r="14" fill="url(#rb)"/>
+          <circle cx="217" cy="46" r="14" fill="url(#ob)"/>
+          <circle cx="245" cy="46" r="14" fill="url(#pb)"/>
+          <circle cx="273" cy="46" r="14" fill="url(#yb)"/>
+          <!-- Row 3 -->
+          <circle cx="35"  cy="70" r="14" fill="url(#ob)"/>
+          <circle cx="63"  cy="70" r="14" fill="url(#pb)"/>
+          <circle cx="91"  cy="70" r="14" fill="url(#gb)"/>
+          <circle cx="119" cy="70" r="14" fill="url(#rb)"/>
+          <circle cx="147" cy="70" r="14" fill="url(#bb)"/>
+          <circle cx="175" cy="70" r="14" fill="url(#yb)"/>
+          <circle cx="203" cy="70" r="14" fill="url(#ob)"/>
+          <circle cx="231" cy="70" r="14" fill="url(#gb)"/>
+          <circle cx="259" cy="70" r="14" fill="url(#pb)"/>
+          <circle cx="287" cy="70" r="14" fill="url(#rb)"/>
+          <!-- Row 4 (partial, with some popped gaps) -->
+          <circle cx="49"  cy="94" r="14" fill="url(#bb)"/>
+          <circle cx="77"  cy="94" r="14" fill="url(#rb)"/>
+          <!-- gap (popped) -->
+          <circle cx="133" cy="94" r="14" fill="url(#yb)"/>
+          <circle cx="161" cy="94" r="14" fill="url(#yb)"/>
+          <!-- gap (popped) -->
+          <circle cx="217" cy="94" r="14" fill="url(#gb)"/>
+          <circle cx="245" cy="94" r="14" fill="url(#pb)"/>
+          <circle cx="273" cy="94" r="14" fill="url(#ob)"/>
+          <!-- Shooter cannon -->
+          <circle cx="160" cy="162" r="12" fill="#1c1c38" stroke="#7c3aed" stroke-width="2"/>
+          <circle cx="160" cy="162" r="7"  fill="url(#bb)"/>
+          <!-- Trajectory line -->
+          <line x1="160" y1="150" x2="190" y2="110" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.6"/>
+          <line x1="190" y1="110" x2="133" y2="94"  stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.6"/>
+          <!-- Aim indicator -->
+          <circle cx="133" cy="94" r="15" fill="none" stroke="#fde047" stroke-width="2" stroke-dasharray="3,3" opacity="0.8"/>
+          <!-- Score -->
+          <text x="10" y="145" font-family="monospace" font-size="11" fill="#94a3b8">SCORE</text>
+          <text x="10" y="163" font-family="monospace" font-size="18" font-weight="bold" fill="#06b6d4">1240</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-casual">Casual</span>
+        </div>
+        <div class="card-title">Bubble Shooter</div>
+        <div class="card-desc">Aim and shoot colorful bubbles to match groups of 3 or more. Clear the board before the bubbles reach the bottom!</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
+    <!-- ── Count Masters ── -->
+    <a class="game-card" href="games/count-masters/index.html" target="_blank" rel="noopener">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg3" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#1a0a0a"/>
+              <stop offset="100%" stop-color="#0d0d1a"/>
+            </radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#bg3)"/>
+          <!-- Road -->
+          <rect x="90" y="0" width="140" height="180" fill="#1a1a30"/>
+          <line x1="90"  y1="0" x2="90"  y2="180" stroke="#3a3a60" stroke-width="2"/>
+          <line x1="230" y1="0" x2="230" y2="180" stroke="#3a3a60" stroke-width="2"/>
+          <line x1="160" y1="0" x2="160" y2="180" stroke="rgba(255,255,255,0.08)" stroke-width="2" stroke-dasharray="16,16"/>
+          <!-- Trees left -->
+          <circle cx="55" cy="40"  r="18" fill="#1a3a1a"/>
+          <circle cx="55" cy="100" r="18" fill="#1a3a1a"/>
+          <circle cx="55" cy="160" r="18" fill="#1a3a1a"/>
+          <circle cx="55" cy="40"  r="12" fill="#2d5a2d"/>
+          <circle cx="55" cy="100" r="12" fill="#2d5a2d"/>
+          <circle cx="55" cy="160" r="12" fill="#2d5a2d"/>
+          <!-- Trees right -->
+          <circle cx="265" cy="60"  r="18" fill="#1a3a1a"/>
+          <circle cx="265" cy="130" r="18" fill="#1a3a1a"/>
+          <circle cx="265" cy="60"  r="12" fill="#2d5a2d"/>
+          <circle cx="265" cy="130" r="12" fill="#2d5a2d"/>
+          <!-- Green gate -->
+          <rect x="91"  y="55" width="66" height="40" rx="5" fill="#15803d" opacity="0.9"/>
+          <rect x="163" y="55" width="66" height="40" rx="5" fill="#b91c1c" opacity="0.9"/>
+          <text x="124" y="80" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">×3</text>
+          <text x="196" y="80" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">−8</text>
+          <!-- Enemy group at top -->
+          <!-- enemy stickmen (red, tiny) -->
+          <g fill="#f87171" stroke="#f87171" stroke-width="1">
+            <circle cx="140" cy="18" r="3"/><line x1="140" y1="21" x2="140" y2="30"/>
+            <line x1="136" y1="25" x2="144" y2="25"/>
+            <line x1="140" y1="30" x2="136" y2="36"/><line x1="140" y1="30" x2="144" y2="36"/>
+
+            <circle cx="155" cy="18" r="3"/><line x1="155" y1="21" x2="155" y2="30"/>
+            <line x1="151" y1="25" x2="159" y2="25"/>
+            <line x1="155" y1="30" x2="151" y2="36"/><line x1="155" y1="30" x2="159" y2="36"/>
+
+            <circle cx="170" cy="18" r="3"/><line x1="170" y1="21" x2="170" y2="30"/>
+            <line x1="166" y1="25" x2="174" y2="25"/>
+            <line x1="170" y1="30" x2="166" y2="36"/><line x1="170" y1="30" x2="174" y2="36"/>
+
+            <circle cx="148" cy="10" r="3"/><line x1="148" y1="13" x2="148" y2="22"/>
+            <line x1="144" y1="17" x2="152" y2="17"/>
+            <line x1="148" y1="22" x2="144" y2="28"/><line x1="148" y1="22" x2="152" y2="28"/>
+
+            <circle cx="163" cy="10" r="3"/><line x1="163" y1="13" x2="163" y2="22"/>
+            <line x1="159" y1="17" x2="167" y2="17"/>
+            <line x1="163" y1="22" x2="159" y2="28"/><line x1="163" y1="22" x2="167" y2="28"/>
+          </g>
+          <!-- Enemy count badge -->
+          <rect x="138" y="38" width="44" height="14" rx="7" fill="rgba(185,28,28,0.85)"/>
+          <text x="160" y="48" font-family="monospace" font-size="9" fill="white" text-anchor="middle">ENEMY: 30</text>
+          <!-- Player stickmen (white, larger crowd) -->
+          <g fill="#e2e8f0" stroke="#e2e8f0" stroke-width="1.2">
+            <!-- Row 1 -->
+            <circle cx="136" cy="148" r="3.5"/><line x1="136" y1="152" x2="136" y2="162"/>
+            <line x1="131" y1="156" x2="141" y2="156"/>
+            <line x1="136" y1="162" x2="131" y2="170"/><line x1="136" y1="162" x2="141" y2="170"/>
+
+            <circle cx="151" cy="148" r="3.5"/><line x1="151" y1="152" x2="151" y2="162"/>
+            <line x1="146" y1="156" x2="156" y2="156"/>
+            <line x1="151" y1="162" x2="146" y2="170"/><line x1="151" y1="162" x2="156" y2="170"/>
+
+            <circle cx="166" cy="148" r="3.5"/><line x1="166" y1="152" x2="166" y2="162"/>
+            <line x1="161" y1="156" x2="171" y2="156"/>
+            <line x1="166" y1="162" x2="161" y2="170"/><line x1="166" y1="162" x2="171" y2="170"/>
+
+            <circle cx="181" cy="148" r="3.5"/><line x1="181" y1="152" x2="181" y2="162"/>
+            <line x1="176" y1="156" x2="186" y2="156"/>
+            <line x1="181" y1="162" x2="176" y2="170"/><line x1="181" y1="162" x2="186" y2="170"/>
+            <!-- Row 2 staggered -->
+            <circle cx="143" cy="137" r="3.5"/><line x1="143" y1="141" x2="143" y2="151"/>
+            <line x1="138" y1="145" x2="148" y2="145"/>
+            <line x1="143" y1="151" x2="138" y2="159"/><line x1="143" y1="151" x2="148" y2="159"/>
+
+            <circle cx="158" cy="137" r="3.5"/><line x1="158" y1="141" x2="158" y2="151"/>
+            <line x1="153" y1="145" x2="163" y2="145"/>
+            <line x1="158" y1="151" x2="153" y2="159"/><line x1="158" y1="151" x2="163" y2="159"/>
+
+            <circle cx="173" cy="137" r="3.5"/><line x1="173" y1="141" x2="173" y2="151"/>
+            <line x1="168" y1="145" x2="178" y2="145"/>
+            <line x1="173" y1="151" x2="168" y2="159"/><line x1="173" y1="151" x2="178" y2="159"/>
+          </g>
+          <!-- Player count badge -->
+          <rect x="138" y="174" width="44" height="14" rx="7" fill="rgba(6,182,212,0.85)"/>
+          <text x="160" y="184" font-family="monospace" font-size="9" fill="white" text-anchor="middle">ARMY: ×3!</text>
+          <!-- +count popup -->
+          <text x="115" y="110" font-family="Arial,sans-serif" font-size="15" font-weight="bold" fill="#4ade80" opacity="0.9">+20</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="tag tag-action">Action</span>
+          <span class="tag tag-runner">Runner</span>
+        </div>
+        <div class="card-title">Count Masters: Stickman</div>
+        <div class="card-desc">Grow your stickman army by running through multiplier gates. Crush the enemy crowd at the end of each level!</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
+    <!-- ── Ping Pong ── -->
+    <a class="game-card" href="games/ping-pong/index.html" target="_blank" rel="noopener">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg4" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#0c1a2e"/>
+              <stop offset="100%" stop-color="#0d0d1a"/>
+            </radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#bg4)"/>
+          <!-- Table surface -->
+          <rect x="0" y="0" width="320" height="180" fill="#0f2040" rx="0"/>
+          <!-- Table border glow -->
+          <rect x="2" y="2" width="316" height="176" fill="none" stroke="rgba(6,182,212,0.3)" stroke-width="2" rx="4"/>
+          <!-- Net -->
+          <line x1="160" y1="0" x2="160" y2="180" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,6"/>
+          <rect x="156" y="-4" width="8" height="12" rx="2" fill="#e2e8f0"/>
+          <rect x="156" y="172" width="8" height="12" rx="2" fill="#e2e8f0"/>
+          <!-- Centre line -->
+          <line x1="160" y1="0" x2="160" y2="180" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="10,10"/>
+          <!-- Centre circle -->
+          <circle cx="160" cy="90" r="30" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <!-- Left paddle (cyan) -->
+          <rect x="18" y="64" width="12" height="52" rx="6" fill="#06b6d4"/>
+          <rect x="20" y="68" width="8" height="18" rx="4" fill="rgba(255,255,255,0.25)"/>
+          <!-- Right paddle (red) -->
+          <rect x="290" y="72" width="12" height="52" rx="6" fill="#f87171"/>
+          <rect x="292" y="76" width="8" height="18" rx="4" fill="rgba(255,255,255,0.25)"/>
+          <!-- Ball with glow -->
+          <circle cx="200" cy="85" r="12" fill="rgba(255,220,50,0.2)"/>
+          <circle cx="200" cy="85" r="8"  fill="#ffd54f"/>
+          <circle cx="197" cy="82" r="3"  fill="rgba(255,255,255,0.4)"/>
+          <!-- Ball trail -->
+          <circle cx="215" cy="92" r="5" fill="rgba(255,213,79,0.35)"/>
+          <circle cx="228" cy="98" r="3" fill="rgba(255,213,79,0.18)"/>
+          <!-- Score -->
+          <text x="72"  y="28" font-family="monospace" font-size="22" font-weight="bold" fill="#06b6d4" text-anchor="middle">3</text>
+          <text x="248" y="28" font-family="monospace" font-size="22" font-weight="bold" fill="#f87171" text-anchor="middle">2</text>
+          <text x="160" y="175" font-family="monospace" font-size="9" fill="#94a3b8" text-anchor="middle">RALLY × 7</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-classic">Classic</span>
+        </div>
+        <div class="card-title">Ping Pong</div>
+        <div class="card-desc">Challenge the AI in a fast-paced table tennis match. Win sets, build rallies, and smash your way to a 2-set victory!</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
+    <!-- ── Bounce Rush ── -->
+    <a class="game-card" href="games/bounce-rush/index.html" target="_blank" rel="noopener">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg5" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#0c1f09"/>
+              <stop offset="100%" stop-color="#060e04"/>
+            </radialGradient>
+            <radialGradient id="ballGrad" cx="35%" cy="35%" r="60%">
+              <stop offset="0%"   stop-color="#ffe566"/>
+              <stop offset="55%"  stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#b45309"/>
+            </radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#bg5)"/>
+          <!-- Platforms with gaps -->
+          <rect x="0"   y="148" width="105" height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="0"   y="148" width="105" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+          <rect x="215" y="148" width="105" height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="215" y="148" width="105" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+
+          <rect x="0"   y="106" width="70"  height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="0"   y="106" width="70"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+          <rect x="180" y="106" width="140" height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="180" y="106" width="140" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+
+          <rect x="90"  y="65"  width="90"  height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="90"  y="65"  width="90"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+          <rect x="240" y="65"  width="80"  height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="240" y="65"  width="80"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+
+          <!-- Ball trail -->
+          <circle cx="175" cy="155" r="5"  fill="rgba(251,191,36,0.25)"/>
+          <circle cx="168" cy="140" r="5"  fill="rgba(251,191,36,0.35)"/>
+          <circle cx="158" cy="124" r="6"  fill="rgba(251,191,36,0.45)"/>
+          <circle cx="148" cy="106" r="7"  fill="rgba(251,191,36,0.55)"/>
+          <!-- Ball -->
+          <circle cx="136" cy="90"  r="14" fill="rgba(245,158,11,0.2)"/>
+          <circle cx="136" cy="90"  r="12" fill="url(#ballGrad)"/>
+          <ellipse cx="130" cy="85" rx="4" ry="2.5" fill="rgba(255,255,255,0.38)"/>
+          <circle  cx="132" cy="89" r="2.2" fill="#5a2a00"/>
+          <circle  cx="140" cy="89" r="2.2" fill="#5a2a00"/>
+          <!-- Goal star (glow) -->
+          <circle cx="50" cy="38" r="14" fill="rgba(255,215,0,0.18)"/>
+          <polygon points="50,27 53,35 62,35 55,41 58,49 50,43 42,49 45,41 38,35 47,35"
+                   fill="#ffd700"/>
+          <!-- Aim line from ball to click point -->
+          <line x1="136" y1="90" x2="50" y2="38" stroke="rgba(255,215,0,0.5)" stroke-width="1.5" stroke-dasharray="5,4"/>
+          <!-- Click indicator -->
+          <circle cx="50" cy="38" r="6" fill="none" stroke="rgba(255,215,0,0.7)" stroke-width="1.5"/>
+          <!-- Trajectory preview dots -->
+          <circle cx="120" cy="76"  r="2.5" fill="rgba(255,215,0,0.5)"/>
+          <circle cx="102" cy="62"  r="2.5" fill="rgba(255,215,0,0.38)"/>
+          <circle cx="82"  cy="50"  r="2"   fill="rgba(255,215,0,0.28)"/>
+          <!-- HUD -->
+          <text x="170" y="18"  font-family="monospace" font-size="10" fill="#fbbf24">Boosts: 3</text>
+          <text x="8"   y="175" font-family="monospace" font-size="10" fill="#4ade80">Lvl 3: Forest</text>
+          <text x="280" y="175" font-family="monospace" font-size="10" fill="#fbbf24" text-anchor="middle">⭐⭐☆</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-casual">Casual</span>
+        </div>
+        <div class="card-title">Bounce Rush</div>
+        <div class="card-desc">Click anywhere to rocket your bouncy ball through platform gaps toward the golden star. 8 levels, fewer boosts = more stars!</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<footer>
+  &copy; 2026 GameZone &mdash; Free browser games, no download required.
+</footer>
+
+</body>
+</html>
