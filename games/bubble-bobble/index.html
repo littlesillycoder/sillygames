@@ -311,9 +311,9 @@ class Player {
 
     this.shooting=false;
     if (this.shootCD===0 && consume('shoot')) {
-      this.shooting=true; this.shootCD=18;
-      SFX.shoot();
-      onShoot(this.x, this.y-PH/2, this.facingRight);
+      if (onShoot(this.x, this.y-PH/2, this.facingRight)) {
+        this.shooting=true; this.shootCD=18; SFX.shoot();
+      }
     }
 
     this.vy = Math.min(this.vy+GRAVITY, MAX_FALL);
@@ -501,7 +501,7 @@ class GiantFruit {
     this.vx = (Math.random() > 0.5 ? 1 : -1) * 2.5;
     this.vy = 0;
     this.radius = 28;
-    this.timer = 300; // 5 seconds
+    this.timer = 480; // 8 seconds
     this.dead = false;
     this.spin = 0;
     this.type = Math.floor(Math.random() * 4);
@@ -823,7 +823,10 @@ function initLevel() {
 }
 
 function onShoot(x,y,right) {
-  if(bubbles.filter(b=>!b.captured).length<5) bubbles.push(new Bubble(x,y,right));
+  if(bubbles.filter(b=>!b.captured).length<5){
+    bubbles.push(new Bubble(x,y,right)); return true;
+  }
+  return false;
 }
 
 // ─── Main loop ───────────────────────────────────────────────
