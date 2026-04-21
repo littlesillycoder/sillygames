@@ -256,12 +256,12 @@ window.addEventListener('keyup', e => {
 function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return false; }
 
 // ─── Game State ───────────────────────────────────────────────
-const gs = { score:0, hi:0, lives:3, level:1, state:'title', clearDelay:0 };
+const gs = { score:0, hi:0, lives:3, level:1, state:'title', clearDelay:0, harvestDelay:0 };
 function addScore(n) { gs.score+=n; if(gs.score>gs.hi) gs.hi=gs.score; }
 
 let paused = false;
 function togglePause() {
-  if (gs.state !== 'playing') return;
+  if (gs.state !== 'playing' && gs.state !== 'harvest') return;
   paused = !paused;
   const btn = document.getElementById('pauseBtn');
   if (btn) btn.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
@@ -719,6 +719,21 @@ function drawTitle(ctx, frame) {
   ctx.fillText('← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+72);
 }
 
+function drawHarvest(ctx) {
+  const sec = Math.ceil(gs.harvestDelay / 60);
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, CH/2 - 34, CW, 50);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#4ecdc4';
+  ctx.font = 'bold 15px monospace';
+  ctx.fillText('COLLECT FRUITS!', CW/2, CH/2 - 10);
+  ctx.fillStyle = '#f5c518';
+  ctx.font = 'bold 22px monospace';
+  ctx.fillText(sec, CW/2, CH/2 + 18);
+  ctx.restore();
+}
+
 function drawClear(ctx) {
   ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,CW,CH);
   ctx.textAlign='center';
@@ -819,6 +834,10 @@ function update() {
     if(--gs.clearDelay<=0){ gs.level++; gs.state='playing'; initLevel(); }
     return;
   }
+  // harvest: game keeps running so player can collect fruits/giant fruit
+  if(gs.state==='harvest'){
+    if(--gs.harvestDelay<=0){ gs.state='levelClear'; gs.clearDelay=90; }
+  }
 
   // update objects
   player.update(map, onShoot);
@@ -899,7 +918,7 @@ function update() {
     if(gs.score - levelStartScore >= BONUS_THRESHOLD && !giantFruit){
       giantFruit = new GiantFruit();
     }
-    gs.state='levelClear'; gs.clearDelay=180; SFX.clear();
+    gs.state='harvest'; gs.harvestDelay=180; SFX.clear();
   }
 }
 
@@ -913,6 +932,7 @@ function render() {
   enemies.forEach(e=>drawEnemy(ctx,e));
   drawPlayer(ctx, player);
   if(giantFruit && !giantFruit.dead) drawGiantFruit(ctx, giantFruit);
+  if(gs.state==='harvest')    drawHarvest(ctx);
   if(gs.state==='levelClear') drawClear(ctx);
   if(gs.state==='gameOver')   drawGameOver(ctx,frame);
   if(paused) drawPaused(ctx);
