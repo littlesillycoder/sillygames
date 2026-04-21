@@ -349,15 +349,16 @@ class Bubble {
     this.wobble+=0.14;
 
     if (this.captured) {
-      if (!this.captured.captured) { this.captured=null; this.floating=true; }
-      else {
-        this.vy = -BFLOAT*0.6;
-        this.x += this.vx*0.04;
-        this.y += this.vy;
-        if (this.x<0) this.x+=CW; if(this.x>=CW) this.x-=CW;
-        if (this.y < TILE+this.radius) { this.y=TILE+this.radius; }
-        this.captured.x=this.x; this.captured.y=this.y;
+      if (!this.captured.captured) {
+        // Enemy escaped — pop the bubble immediately instead of leaving an empty ghost
+        this.dead=true; SFX.pop(); return;
       }
+      this.vy = -BFLOAT*0.6;
+      this.x += this.vx*0.04;
+      this.y += this.vy;
+      if (this.x<0) this.x+=CW; if(this.x>=CW) this.x-=CW;
+      if (this.y < TILE+this.radius) { this.y=TILE+this.radius; }
+      this.captured.x=this.x; this.captured.y=this.y;
       return;
     }
 
@@ -376,9 +377,9 @@ class Bubble {
   }
 
   onPlayer(p) {
-    return !this.dead && this.captured &&
-      Math.abs(this.x-p.x)<this.radius+10 &&
-      Math.abs(this.y-p.bottom)<this.radius+6 && p.vy>=0;
+    if (this.dead || !this.captured) return false;
+    const dx=Math.abs(this.x-p.x), dy=Math.abs(this.y-(p.y-PH/2));
+    return dx<this.radius+10 && dy<this.radius+12;
   }
 }
 
@@ -442,9 +443,18 @@ class Enemy {
 }
 
 class Fruit {
-  constructor(x,y,type,lifetime=300){ this.x=x;this.y=y;this.type=type%4;this.timer=lifetime;this.dead=false;this.score=FRUIT_SCORES[this.type]; }
-  update(){ if(--this.timer<=0)this.dead=true; }
-  touches(p){ return Math.abs(this.x-p.x)<20&&Math.abs(this.y-p.y)<20; }
+  constructor(x,y,type,lifetime=300){ this.x=x;this.y=y;this.vy=0;this.grounded=false;this.type=type%4;this.timer=lifetime;this.dead=false;this.score=FRUIT_SCORES[this.type]; }
+  update(map){
+    if(--this.timer<=0){ this.dead=true; return; }
+    if(!this.grounded){
+      this.vy=Math.min(this.vy+0.5, 9);
+      this.y+=this.vy;
+      const row=Math.floor(this.y/TILE), col=Math.floor(this.x/TILE);
+      if(row<ROWS && isFloor(map,col,row)){ this.y=row*TILE-6; this.vy=0; this.grounded=true; }
+      if(this.y>=CH){ this.y=CH-6; this.vy=0; this.grounded=true; }
+    }
+  }
+  touches(p){ return Math.abs(this.x-p.x)<20&&Math.abs(this.y-p.y)<22; }
 }
 
 // ─── Renderer ────────────────────────────────────────────────
@@ -702,9 +712,28 @@ function update() {
   // update objects
   player.update(map, onShoot);
   if(player.dead && player.deadTimer<=0) player.reset(CW/2, CH-TILE*2);
+
+  // Bubble riding: player can land on free (uncaptured) bubbles
+  if (!player.dead && !player.onGround && player.vy >= 0) {
+    for (const b of bubbles) {
+      if (b.dead || b.captured) continue;
+      const dx = Math.abs(b.x - player.x);
+      const topY = b.y - b.radius;
+      const dy = player.bottom - topY;
+      if (dx < b.radius + 6 && dy >= -4 && dy <= 10) {
+        player.y = topY + 1;          // sit on top of bubble
+        player.vy = 0;
+        player.onGround = true;
+        b.floating = true;
+        b.vx = (b.vx + player.vx * 0.3) * 0.85; // bubble drifts in walk direction
+        break;
+      }
+    }
+  }
+
   bubbles.forEach(b=>b.update(map));
   enemies.forEach(e=>e.update(map, player.x, player.y));
-  fruits.forEach(f=>f.update());
+  fruits.forEach(f=>f.update(map));
 
   // bubble vs enemy
   for(const b of bubbles){
