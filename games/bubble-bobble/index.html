@@ -14,14 +14,15 @@ body{background:#0a0a18;display:flex;justify-content:center;align-items:center;m
 #sidebar-right .score-val{color:#f5c518;font-size:13px}
 #sidebar-right .lives-row{margin-top:8px}
 #game-col{display:flex;flex-direction:column;align-items:center;gap:0}
-#hud-bar{width:312px;height:30px;background:#0d0d1a;border:2px solid #2a2a50;border-bottom:none;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
-#hud-bar span{font-size:11px;color:#aaa}
-#hud-bar .val{color:#fff;font-size:12px;font-weight:bold}
-#hud-bar .hival{color:#f5c518;font-size:12px;font-weight:bold}
+#hud-bar{width:312px;height:44px;background:#0d0d1a;border:2px solid #2a2a50;border-bottom:none;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 8px;gap:4px}
+#hud-scores{display:flex;gap:14px;align-items:center}
+#hud-bar span{font-size:10px;color:#aaa}
+#hud-bar .val{color:#fff;font-size:11px;font-weight:bold}
+#hud-bar .hival{color:#f5c518;font-size:11px;font-weight:bold}
+#hud-btns{display:flex;gap:6px}
 canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none;image-rendering:pixelated}
-#lives-bar{width:312px;height:28px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-bottom:none;display:flex;align-items:center;padding:0 8px;gap:4px}
-#btn-bar{width:312px;height:34px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-radius:0 0 4px 4px;display:flex;align-items:center;justify-content:center;gap:10px}
-.gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:11px;padding:4px 14px;border-radius:4px;cursor:pointer;transition:background 0.15s,color 0.15s}
+#lives-bar{width:312px;height:28px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-radius:0 0 4px 4px;display:flex;align-items:center;padding:0 8px;gap:4px}
+.gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;transition:background 0.15s,color 0.15s}
 .gbtn:hover{background:#2a2a55;color:#fff}
 .gbtn.pause-btn{color:#4ecdc4;border-color:#4ecdc4}
 .gbtn.exit-btn{color:#ff6b6b;border-color:#ff6b6b}
@@ -51,16 +52,18 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 
   <div id="game-col">
     <div id="hud-bar">
-      <div><span>1UP&nbsp;</span><span class="val" id="score-disp">000000</span></div>
-      <div><span>HI&nbsp;</span><span class="hival" id="hi-disp">000000</span></div>
-      <div><span>LV&nbsp;</span><span class="val" id="lv-disp">01</span></div>
+      <div id="hud-scores">
+        <div><span>1UP </span><span class="val" id="score-disp">000000</span></div>
+        <div><span>HI </span><span class="hival" id="hi-disp">000000</span></div>
+        <div><span>LV </span><span class="val" id="lv-disp">01</span></div>
+      </div>
+      <div id="hud-btns">
+        <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
+        <button class="gbtn exit-btn" onclick="exitToTitle()">✕ EXIT</button>
+      </div>
     </div>
     <canvas id="game" width="312" height="624"></canvas>
     <div id="lives-bar"></div>
-    <div id="btn-bar">
-      <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
-      <button class="gbtn exit-btn" onclick="exitToTitle()">✕ EXIT</button>
-    </div>
   </div>
 
   <div id="sidebar-right">
@@ -486,6 +489,50 @@ class Fruit {
   touches(p){ return Math.abs(this.x-p.x)<20&&Math.abs(this.y-p.y)<22; }
 }
 
+// ─── Giant Bonus Fruit ───────────────────────────────────────
+const GIANT_SCORE = 5000;
+class GiantFruit {
+  constructor() {
+    this.x = CW / 2;
+    this.y = TILE * 3;
+    this.vx = (Math.random() > 0.5 ? 1 : -1) * 2.5;
+    this.vy = 0;
+    this.radius = 28;
+    this.timer = 420; // 7 seconds
+    this.dead = false;
+    this.spin = 0;
+    this.type = Math.floor(Math.random() * 4);
+    this.collected = false;
+    this.flashTimer = 0;
+  }
+  update(map) {
+    if (this.dead) return;
+    if (--this.timer <= 0) { this.dead = true; return; }
+    this.spin += 0.04;
+    this.vy = Math.min(this.vy + 0.35, 7);
+    this.x += this.vx;
+    this.y += this.vy;
+    // Bounce off canvas sides
+    if (this.x < this.radius + TILE)        { this.x = this.radius + TILE;       this.vx =  Math.abs(this.vx); }
+    if (this.x > CW - this.radius - TILE)   { this.x = CW - this.radius - TILE;  this.vx = -Math.abs(this.vx); }
+    // Bounce off ceiling tile
+    if (this.y < this.radius + TILE)        { this.y = this.radius + TILE;        this.vy =  Math.abs(this.vy); }
+    // Bounce off floor / platforms
+    const row = Math.floor((this.y + this.radius) / TILE);
+    const col = Math.floor(this.x / TILE);
+    if (row < ROWS && isFloor(map, col, row)) {
+      this.y = row * TILE - this.radius;
+      this.vy = -Math.abs(this.vy) * 0.78;
+      if (Math.abs(this.vy) < 1) this.vy = -3.5; // keep bouncing
+    }
+    if (this.flashTimer > 0) this.flashTimer--;
+  }
+  touches(p) {
+    const dx = this.x - p.x, dy = this.y - (p.y - PH/2);
+    return Math.sqrt(dx*dx + dy*dy) < this.radius + 14;
+  }
+}
+
 // ─── Renderer ────────────────────────────────────────────────
 function rr(ctx,x,y,w,h,r){ // rounded rect path
   ctx.beginPath();
@@ -620,6 +667,36 @@ function drawFruit(ctx, f) {
   ctx.globalAlpha=1; ctx.restore();
 }
 
+function drawGiantFruit(ctx, gf) {
+  if (gf.dead) return;
+  const x=gf.x, y=gf.y, r=gf.radius;
+  const alpha = gf.timer < 90 ? gf.timer / 90 : 1;
+  const pulse = 1 + Math.sin(gf.spin * 3) * 0.06;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // Glow halo
+  const glow = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 2);
+  glow.addColorStop(0, 'rgba(255,220,50,0.35)');
+  glow.addColorStop(1, 'rgba(255,220,50,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(x, y, r * 2, 0, Math.PI*2); ctx.fill();
+  // Draw scaled-up fruit
+  ctx.translate(x, y);
+  ctx.rotate(gf.spin);
+  ctx.scale(pulse * 2, pulse * 2);
+  ctx.translate(-x, -y);
+  drawFruit(ctx, {x, y, type: gf.type, timer: 999});
+  ctx.restore();
+  // "BONUS!" label
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f5c518';
+  ctx.font = 'bold 10px monospace';
+  ctx.fillText('BONUS!', x, y - r - 6);
+  ctx.restore();
+}
+
 function drawTitle(ctx, frame) {
   ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,CW,CH);
   // stars
@@ -669,6 +746,9 @@ function adjColor(hex, amt) {
 
 // ─── Game objects ────────────────────────────────────────────
 let player, bubbles, enemies, fruits, map, brickColor, frame=0;
+let giantFruit = null;
+let levelStartScore = 0;
+const BONUS_THRESHOLD = 300; // points earned this level to trigger bonus fruit
 
 function spawnEnemies() {
   enemies=[];
@@ -696,7 +776,9 @@ function spawnLevelFruits(map) {
 function initLevel() {
   map=getMap(gs.level); brickColor=getBrickColor(gs.level);
   bubbles=[];
-  fruits=spawnLevelFruits(map);  // pre-spawn bonus fruits on platforms
+  fruits=spawnLevelFruits(map);
+  giantFruit=null;
+  levelStartScore=gs.score;
   player=new Player(CW/2, CH-TILE*2);
   spawnEnemies();
   gs.clearDelay=0;
@@ -800,12 +882,24 @@ function update() {
     }
   }
 
+  // giant fruit update & collect
+  if(giantFruit && !giantFruit.dead){
+    giantFruit.update(map);
+    if(!player.dead && giantFruit.touches(player)){
+      addScore(GIANT_SCORE); SFX.clear(); giantFruit.dead=true;
+    }
+  }
+
   bubbles=bubbles.filter(b=>!b.dead);
   enemies=enemies.filter(e=>!e.dead);
   fruits=fruits.filter(f=>!f.dead);
 
   if(enemies.length===0 && gs.state==='playing'){
-    gs.state='levelClear'; gs.clearDelay=120; SFX.clear();
+    // Spawn bonus giant fruit if player earned enough points this level
+    if(gs.score - levelStartScore >= BONUS_THRESHOLD && !giantFruit){
+      giantFruit = new GiantFruit();
+    }
+    gs.state='levelClear'; gs.clearDelay=180; SFX.clear();
   }
 }
 
@@ -818,6 +912,7 @@ function render() {
   bubbles.forEach(b=>{ drawBubble(ctx,b); if(b.captured)drawEnemyInBubble(ctx,b.captured,b); });
   enemies.forEach(e=>drawEnemy(ctx,e));
   drawPlayer(ctx, player);
+  if(giantFruit && !giantFruit.dead) drawGiantFruit(ctx, giantFruit);
   if(gs.state==='levelClear') drawClear(ctx);
   if(gs.state==='gameOver')   drawGameOver(ctx,frame);
   if(paused) drawPaused(ctx);
