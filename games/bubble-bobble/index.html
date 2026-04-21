@@ -19,7 +19,12 @@ body{background:#0a0a18;display:flex;justify-content:center;align-items:center;m
 #hud-bar .val{color:#fff;font-size:12px;font-weight:bold}
 #hud-bar .hival{color:#f5c518;font-size:12px;font-weight:bold}
 canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none;image-rendering:pixelated}
-#lives-bar{width:312px;height:28px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-radius:0 0 4px 4px;display:flex;align-items:center;padding:0 8px;gap:4px}
+#lives-bar{width:312px;height:28px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-bottom:none;display:flex;align-items:center;padding:0 8px;gap:4px}
+#btn-bar{width:312px;height:34px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-radius:0 0 4px 4px;display:flex;align-items:center;justify-content:center;gap:10px}
+.gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:11px;padding:4px 14px;border-radius:4px;cursor:pointer;transition:background 0.15s,color 0.15s}
+.gbtn:hover{background:#2a2a55;color:#fff}
+.gbtn.pause-btn{color:#4ecdc4;border-color:#4ecdc4}
+.gbtn.exit-btn{color:#ff6b6b;border-color:#ff6b6b}
 </style>
 </head>
 <body>
@@ -30,6 +35,7 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div><span class="key">↑</span> / <span class="key">Z</span> Jump</div>
     <div><span class="key">X</span> / <span class="key">Space</span> Shoot</div>
     <div><span class="key">Enter</span> Start</div>
+    <div><span class="key">P</span> / <span class="key">Esc</span> Pause</div>
     <br>
     <h2>How to Play</h2>
     <div>Shoot bubbles to</div>
@@ -50,7 +56,11 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
       <div><span>LV&nbsp;</span><span class="val" id="lv-disp">01</span></div>
     </div>
     <canvas id="game" width="312" height="624"></canvas>
-    <div id="lives-bar" id="lives-bar"></div>
+    <div id="lives-bar"></div>
+    <div id="btn-bar">
+      <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
+      <button class="gbtn exit-btn" onclick="exitToTitle()">✕ EXIT</button>
+    </div>
   </div>
 
   <div id="sidebar-right">
@@ -233,7 +243,8 @@ window.addEventListener('keydown', e => {
   if (e.code==='ArrowUp'  || e.code==='KeyZ')              { pressed.add('jump');  e.preventDefault(); }
   if (e.code==='KeyX'     || e.code==='Space')             { pressed.add('shoot'); e.preventDefault(); }
   if (e.code==='Enter')                                      pressed.add('enter');
-  if (e.code==='ArrowDown') e.preventDefault();
+  if (e.code==='ArrowDown')                                  e.preventDefault();
+  if (e.code==='KeyP' || e.code==='Escape')                  togglePause();
 });
 window.addEventListener('keyup', e => {
   if (e.code==='ArrowLeft')  keys.left=false;
@@ -244,6 +255,24 @@ function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return 
 // ─── Game State ───────────────────────────────────────────────
 const gs = { score:0, hi:0, lives:3, level:1, state:'title', clearDelay:0 };
 function addScore(n) { gs.score+=n; if(gs.score>gs.hi) gs.hi=gs.score; }
+
+let paused = false;
+function togglePause() {
+  if (gs.state !== 'playing') return;
+  paused = !paused;
+  const btn = document.getElementById('pauseBtn');
+  if (btn) btn.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+  // Clear stale inputs when resuming so held keys don't fire
+  if (!paused) { pressed.clear(); keys.left=false; keys.right=false; }
+}
+function exitToTitle() {
+  paused = false;
+  gs.state = 'title';
+  bubbles=[]; fruits=[]; enemies=[];
+  pressed.clear(); keys.left=false; keys.right=false;
+  const btn = document.getElementById('pauseBtn');
+  if (btn) btn.textContent = '⏸ PAUSE';
+}
 
 // ─── Player ──────────────────────────────────────────────────
 const PW=20, PH=20;
@@ -275,7 +304,7 @@ class Player {
     if (consume('jump') && this.onGround) { this.vy=JUMP; this.onGround=false; SFX.jump(); }
 
     this.shooting=false;
-    if (consume('shoot') && this.shootCD===0) {
+    if (this.shootCD===0 && consume('shoot')) {
       this.shooting=true; this.shootCD=18;
       SFX.shoot();
       onShoot(this.x, this.y-PH/2, this.facingRight);
@@ -791,7 +820,15 @@ function render() {
   drawPlayer(ctx, player);
   if(gs.state==='levelClear') drawClear(ctx);
   if(gs.state==='gameOver')   drawGameOver(ctx,frame);
+  if(paused) drawPaused(ctx);
   updateHUD();
+}
+
+function drawPaused(ctx) {
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,CW,CH);
+  ctx.textAlign='center';
+  ctx.fillStyle='#4ecdc4'; ctx.font='bold 28px monospace'; ctx.fillText('PAUSED',CW/2,CH/2-16);
+  ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText('P / ESC or ▶ RESUME to continue',CW/2,CH/2+16);
 }
 
 // Init
@@ -801,7 +838,7 @@ bubbles=[]; fruits=[]; enemies=[];
 player=new Player(CW/2, CH-TILE*2);
 updateHUD();
 
-(function loop(){ update(); render(); requestAnimationFrame(loop); })();
+(function loop(){ if(!paused) update(); render(); requestAnimationFrame(loop); })();
 </script>
 </body>
 </html>
