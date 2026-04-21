@@ -823,10 +823,7 @@ function initLevel() {
 }
 
 function onShoot(x,y,right) {
-  if(bubbles.filter(b=>!b.captured).length<5){
-    bubbles.push(new Bubble(x,y,right)); return true;
-  }
-  return false;
+  bubbles.push(new Bubble(x,y,right)); return true;
 }
 
 // ─── Main loop ───────────────────────────────────────────────
