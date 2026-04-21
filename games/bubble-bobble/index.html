@@ -175,6 +175,25 @@ function isSolid(map, col, row) {
   const c = ((col % COLS) + COLS) % COLS;
   return map[row][c] === 1;
 }
+// Border tiles (top/bottom walls, left/right walls) block all movement.
+// Interior platform tiles only block falling — can jump up through them.
+function isBorder(col, row) {
+  return col === 0 || col === COLS-1 || row === 0 || row === ROWS-1;
+}
+function isFloor(map, col, row) { // blocks falling — all solid tiles
+  return isSolid(map, col, row);
+}
+function isCeiling(map, col, row) { // blocks rising — only border tiles
+  if (row < 0) return true;
+  if (row >= ROWS) return false;
+  const c = ((col % COLS) + COLS) % COLS;
+  return map[row][c] === 1 && isBorder(c, row);
+}
+function isWall(map, col, row) { // blocks horizontal — only border columns
+  if (row < 0 || row >= ROWS) return false;
+  const c = ((col % COLS) + COLS) % COLS;
+  return map[row][c] === 1 && (c === 0 || c === COLS-1);
+}
 
 // ─── Audio ───────────────────────────────────────────────────
 let audioCtx = null;
@@ -277,25 +296,27 @@ class Player {
     const r1=Math.floor(this.top/TILE), r2=Math.floor((this.bottom-1)/TILE);
     for (let r=r1; r<=r2; r++) {
       const cL=Math.floor(this.left/TILE), cR=Math.floor((this.right-1)/TILE);
-      if (isSolid(map,cL,r))       this.x = (cL+1)*TILE + PW/2;
-      else if (isSolid(map,cR,r))  this.x = cR*TILE - PW/2;
+      if (isWall(map,cL,r))       this.x = (cL+1)*TILE + PW/2;
+      else if (isWall(map,cR,r))  this.x = cR*TILE - PW/2;
     }
   }
 
   _resolveY(map) {
     const c1=Math.floor(this.left/TILE), c2=Math.floor((this.right-1)/TILE);
     if (this.vy>=0) {
+      // Falling — all solid tiles act as floor
       const row=Math.floor(this.bottom/TILE);
       if (row<ROWS) {
         let hit=false;
-        for(let c=c1;c<=c2;c++) if(isSolid(map,c,row)){hit=true;break;}
+        for(let c=c1;c<=c2;c++) if(isFloor(map,c,row)){hit=true;break;}
         if(hit){ this.y=row*TILE; this.vy=0; this.onGround=true; }
       }
     } else {
+      // Rising — only border tiles act as ceiling (can jump through platforms)
       const row=Math.floor(this.top/TILE);
       if (row>=0) {
         let hit=false;
-        for(let c=c1;c<=c2;c++) if(isSolid(map,c,row)){hit=true;break;}
+        for(let c=c1;c<=c2;c++) if(isCeiling(map,c,row)){hit=true;break;}
         if(hit){ this.y=(row+1)*TILE+PH; this.vy=0; }
       }
     }
@@ -362,7 +383,7 @@ class Bubble {
 }
 
 // ─── Enemy ───────────────────────────────────────────────────
-const ESPEED=1.8, ECHASE=3.0, EANGRY=3.8, EJUMP=-11, EW=18, EH=18;
+const ESPEED=0.8, ECHASE=1.6, EANGRY=2.4, EJUMP=-10, EW=18, EH=18;
 const ESCAPE_TIME=300;
 const FRUIT_SCORES=[100,200,500,1000];
 
@@ -404,12 +425,12 @@ class Enemy {
     if(this.vy>=0){
       const row=Math.floor(this.bottom/TILE);
       const c1=Math.floor(this.left/TILE),c2=Math.floor((this.right-1)/TILE);
-      let hit=false; for(let c=c1;c<=c2;c++)if(isSolid(map,c,row)){hit=true;break;}
+      let hit=false; for(let c=c1;c<=c2;c++)if(isFloor(map,c,row)){hit=true;break;}
       if(hit){this.y=row*TILE;this.vy=0;this.onGround=true;}
     } else {
       const row=Math.floor(this.top/TILE);
       const c1=Math.floor(this.left/TILE),c2=Math.floor((this.right-1)/TILE);
-      for(let c=c1;c<=c2;c++)if(isSolid(map,c,row)){this.y=(row+1)*TILE+EH;this.vy=0;break;}
+      for(let c=c1;c<=c2;c++)if(isCeiling(map,c,row)){this.y=(row+1)*TILE+EH;this.vy=0;break;}
     }
     if(this.bottom>CH){this.y=CH;this.vy=0;this.onGround=true;}
     if(this.top<0){this.y=EH;this.vy=0;}
@@ -421,7 +442,7 @@ class Enemy {
 }
 
 class Fruit {
-  constructor(x,y,type){ this.x=x;this.y=y;this.type=type%4;this.timer=180;this.dead=false;this.score=FRUIT_SCORES[this.type]; }
+  constructor(x,y,type,lifetime=300){ this.x=x;this.y=y;this.type=type%4;this.timer=lifetime;this.dead=false;this.score=FRUIT_SCORES[this.type]; }
   update(){ if(--this.timer<=0)this.dead=true; }
   touches(p){ return Math.abs(this.x-p.x)<20&&Math.abs(this.y-p.y)<20; }
 }
@@ -617,9 +638,26 @@ function spawnEnemies() {
   for(let i=0;i<count;i++) enemies.push(new Enemy(xs[i%xs.length], TILE*4, i));
 }
 
+// Scan the map for interior platform surfaces and place bonus fruits on them
+function spawnLevelFruits(map) {
+  const pool = [];
+  for (let r = 2; r < ROWS-1; r++) {
+    for (let c = 1; c < COLS-1; c++) {
+      // Platform surface: solid tile with empty space above it
+      if (map[r][c] === 1 && map[r-1][c] === 0) {
+        pool.push({ x: (c + 0.5) * TILE, y: r * TILE - TILE * 0.6 });
+      }
+    }
+  }
+  // Shuffle and pick up to 5 fruits
+  pool.sort(() => Math.random() - 0.5);
+  return pool.slice(0, 5).map((p, i) => new Fruit(p.x, p.y, i % 4, 600));
+}
+
 function initLevel() {
   map=getMap(gs.level); brickColor=getBrickColor(gs.level);
-  bubbles=[]; fruits=[];
+  bubbles=[];
+  fruits=spawnLevelFruits(map);  // pre-spawn bonus fruits on platforms
   player=new Player(CW/2, CH-TILE*2);
   spawnEnemies();
   gs.clearDelay=0;
