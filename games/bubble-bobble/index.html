@@ -257,7 +257,10 @@ function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return 
 
 // ─── Game State ───────────────────────────────────────────────
 const gs = { score:0, hi:0, lives:3, level:1, state:'title', clearDelay:0, harvestDelay:0 };
-function addScore(n) { gs.score+=n; if(gs.score>gs.hi) gs.hi=gs.score; }
+function addScore(n, x, y) {
+  gs.score+=n; if(gs.score>gs.hi) gs.hi=gs.score;
+  if(x!==undefined && popups) popups.push({x, y, text:'+'+n, life:60, maxLife:60});
+}
 
 let paused = false;
 function togglePause() {
@@ -498,7 +501,7 @@ class GiantFruit {
     this.vx = (Math.random() > 0.5 ? 1 : -1) * 2.5;
     this.vy = 0;
     this.radius = 28;
-    this.timer = 420; // 7 seconds
+    this.timer = 300; // 5 seconds
     this.dead = false;
     this.spin = 0;
     this.type = Math.floor(Math.random() * 4);
@@ -719,6 +722,25 @@ function drawTitle(ctx, frame) {
   ctx.fillText('← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+72);
 }
 
+function drawPopups(ctx) {
+  if(!popups || !popups.length) return;
+  ctx.save();
+  ctx.textAlign='center';
+  for(const p of popups){
+    const alpha=p.life/p.maxLife;
+    const scale=0.7+0.5*(1-alpha); // starts big, shrinks
+    ctx.globalAlpha=alpha;
+    ctx.font=`bold ${Math.round(11*scale)}px monospace`;
+    ctx.fillStyle='#f5c518';
+    ctx.strokeStyle='rgba(0,0,0,0.6)';
+    ctx.lineWidth=2;
+    ctx.strokeText(p.text, p.x, p.y);
+    ctx.fillText(p.text, p.x, p.y);
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
 function drawHarvest(ctx) {
   const sec = Math.ceil(gs.harvestDelay / 60);
   ctx.save();
@@ -760,7 +782,7 @@ function adjColor(hex, amt) {
 }
 
 // ─── Game objects ────────────────────────────────────────────
-let player, bubbles, enemies, fruits, map, brickColor, frame=0;
+let player, bubbles, enemies, fruits, popups, map, brickColor, frame=0;
 let giantFruit = null;
 let levelStartScore = 0;
 const BONUS_THRESHOLD = 300; // points earned this level to trigger bonus fruit
@@ -792,6 +814,7 @@ function initLevel() {
   map=getMap(gs.level); brickColor=getBrickColor(gs.level);
   bubbles=[];
   fruits=spawnLevelFruits(map);
+  popups=[];
   giantFruit=null;
   levelStartScore=gs.score;
   player=new Player(CW/2, CH-TILE*2);
@@ -882,7 +905,7 @@ function update() {
       if(b.onPlayer(player)){
         const e=b.captured; b.dead=true; e.dead=true; SFX.pop();
         fruits.push(new Fruit(b.x,b.y,Math.floor(Math.random()*4)));
-        addScore(100); break;
+        addScore(100, b.x, b.y); break;
       }
     }
   }
@@ -897,7 +920,7 @@ function update() {
   // player vs fruit
   if(!player.dead){
     for(const f of fruits){
-      if(!f.dead && f.touches(player)){ addScore(f.score); SFX.fruit(); f.dead=true; }
+      if(!f.dead && f.touches(player)){ addScore(f.score, f.x, f.y); SFX.fruit(); f.dead=true; }
     }
   }
 
@@ -905,13 +928,15 @@ function update() {
   if(giantFruit && !giantFruit.dead){
     giantFruit.update(map);
     if(!player.dead && giantFruit.touches(player)){
-      addScore(GIANT_SCORE); SFX.clear(); giantFruit.dead=true;
+      addScore(GIANT_SCORE, giantFruit.x, giantFruit.y); SFX.clear(); giantFruit.dead=true;
     }
   }
 
   bubbles=bubbles.filter(b=>!b.dead);
   enemies=enemies.filter(e=>!e.dead);
   fruits=fruits.filter(f=>!f.dead);
+  popups.forEach(p=>{ p.life--; p.y-=0.8; });
+  popups=popups.filter(p=>p.life>0);
 
   if(enemies.length===0 && gs.state==='playing'){
     // Spawn bonus giant fruit if player earned enough points this level
@@ -932,6 +957,7 @@ function render() {
   enemies.forEach(e=>drawEnemy(ctx,e));
   drawPlayer(ctx, player);
   if(giantFruit && !giantFruit.dead) drawGiantFruit(ctx, giantFruit);
+  drawPopups(ctx);
   if(gs.state==='harvest')    drawHarvest(ctx);
   if(gs.state==='levelClear') drawClear(ctx);
   if(gs.state==='gameOver')   drawGameOver(ctx,frame);
