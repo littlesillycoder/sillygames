@@ -186,11 +186,35 @@ const BRICK_COLORS = [
   '#f39c12','#1abc9c','#e91e63','#607d8b','#ff5722'
 ];
 
+// Words sourced from CEFR B1 vocabulary list — mixed lengths across levels
 const WORD_LIST = [
-  'CAT','DOG','SUN','POP','FLY','HOP','BUB','BOB','RUN','BIG',
-  'FROG','JUMP','STAR','FISH','BIRD','PLAY','WAVE','BLUE','PINK','GOLD',
-  'BUNNY','HAPPY','SMILE','CANDY','MAGIC','BRAVE','CLOUD','TIGER','DANCE','OCEAN',
-  'BUBBLE','DRAGON','CASTLE','FRIEND','YELLOW','PURPLE','ORANGE','SILVER','COOKIE','ROCKET'
+  'GHOST','BEE','BATTLE','SKILL','AIM','CAREER','BAKE',
+  'ALARM','TIN','BUBBLE','EDGE','BASIC','KEY','BEAUTY',
+  'IRON','BRAND','SPY','BELIEF','CALM','GIANT','FUR',
+  'BORDER','COAL','BRAVE','BAN','CASTLE','FOLD','BURST',
+  'MUD','CHARGE','FUEL','CLAIM','SHY','CHOICE','HIRE',
+  'COACH','TAX','COMMIT','HUNT','DANCE','CAP','COTTON',
+  'KEEN','DOUBT','YARD','CREATE','KIND','FLOOD','YELL',
+  'CREDIT','LACK','FORCE','WOOL','CUSTOM','LEAD','FRAME',
+  'WING','DAMAGE','LEAF','GUARD','WAVE','DONATE','NAIL',
+  'JUDGE','WARN','DRAGON','PACK','LABEL','TUBE','EFFECT',
+  'PATH','LAYER','TAPE','EFFORT','PIPE','LIMIT','SORT',
+  'ENERGY','RACE','MAGIC','TAIL','ESCAPE','ROLL','MODEL',
+  'ROPE','FIGURE','RULE','SHELF','SAND','FRIEND','SEED',
+  'SHIFT','SHINE','FUTURE','GATHER','SIGHT','GENTLE','SOLVE',
+  'SPEED','GLOBAL','SPORT','STAFF','GROWTH','STICK','GUITAR',
+  'SWORD','HEALTH','TOPIC','HONEST','TOTAL','IMPACT','TRADE',
+  'INCOME','TREAT','ISLAND','TREND','JUNGLE','TRICK','LISTEN',
+  'TRUTH','MARKET','UPSET','MEMBER','VALUE','MEMORY','WASTE',
+  'MIRROR','WHALE','MUSCLE','WORTH','NATIVE','YOUTH','NEEDLE',
+  'NOTICE','OBJECT','PALACE','PARENT','PLANET','POLICE','PROFIT',
+  'PROPER','PUBLIC','RESULT','REVIEW','RIBBON','ROCKET','RUBBER',
+  'SAFETY','SAMPLE','SCHOOL','SCREEN','SECRET','SELECT','SHADOW',
+  'SILVER','SIMPLE','SINGLE','SOCCER','SPREAD','SPRING','SQUARE',
+  'STABLE','STATUE','STREET','STRONG','STUDIO','SUMMIT','SUNSET',
+  'SUPPLY','SYSTEM','TALENT','TEMPLE','TENNIS','THEORY','TICKET',
+  'TIMBER','TOMATO','TUNNEL','TURTLE','UNIQUE','UPDATE','USEFUL',
+  'VISION','VOLUME','WANDER','WINTER','WISDOM','YELLOW'
 ];
 
 function generateLevel(n) {
@@ -596,7 +620,7 @@ class LetterBubble {
     this.x = TILE*2 + Math.random()*(CW - TILE*4);
     this.y = TILE*3 + Math.random()*(CH - TILE*8);
     this.vx = (Math.random()-0.5)*1.4;
-    this.vy = -0.3 - Math.random()*0.6;
+    this.vy = (Math.random()-0.5)*1.4;  // random direction, not always upward
     this.radius = 15;
     this.wobble = Math.random()*Math.PI*2;
     this.dead = false;
@@ -605,14 +629,18 @@ class LetterBubble {
   update() {
     if (this.dead) return;
     this.wobble += 0.07;
-    this.vy = Math.max(this.vy - 0.008, -1.2);
-    this.vx += (Math.random()-0.5)*0.04;
+    // gentle random nudge in any direction — no constant upward force
+    this.vx += (Math.random()-0.5)*0.06;
+    this.vy += (Math.random()-0.5)*0.06;
+    // clamp speed
     this.vx = Math.max(-1.4, Math.min(1.4, this.vx));
+    this.vy = Math.max(-1.4, Math.min(1.4, this.vy));
     this.x += this.vx; this.y += this.vy;
-    if (this.x < this.radius+TILE)     { this.x=this.radius+TILE;     this.vx= Math.abs(this.vx); }
-    if (this.x > CW-this.radius-TILE)  { this.x=CW-this.radius-TILE;  this.vx=-Math.abs(this.vx); }
-    if (this.y < this.radius+TILE)     { this.y=this.radius+TILE;     this.vy= Math.abs(this.vy)*0.5; }
-    if (this.y > CH-this.radius-TILE)  { this.y=CH-this.radius-TILE;  this.vy=-Math.abs(this.vy); }
+    // bounce off all walls with full rebound
+    if (this.x < this.radius+TILE)    { this.x=this.radius+TILE;    this.vx= Math.abs(this.vx); }
+    if (this.x > CW-this.radius-TILE) { this.x=CW-this.radius-TILE; this.vx=-Math.abs(this.vx); }
+    if (this.y < this.radius+TILE)    { this.y=this.radius+TILE;    this.vy= Math.abs(this.vy); }
+    if (this.y > CH-this.radius-TILE) { this.y=CH-this.radius-TILE; this.vy=-Math.abs(this.vy); }
   }
   touches(p) {
     const dx=this.x-p.x, dy=this.y-(p.y-PH/2);
