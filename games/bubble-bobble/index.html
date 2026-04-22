@@ -179,9 +179,53 @@ const LEVELS = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1],
   ]
 ];
-const BRICK_COLORS = ['#e87c2e','#4a90d9','#9b59b6'];
+const BRICK_COLORS = [
+  '#e87c2e','#4a90d9','#9b59b6','#27ae60','#e74c3c',
+  '#f39c12','#1abc9c','#e91e63','#607d8b','#ff5722'
+];
 
-function getMap(lvl) { return LEVELS[(lvl-1) % LEVELS.length]; }
+function generateLevel(n) {
+  let seed = n * 1664525 + 1013904223;
+  const rnd = () => {
+    seed = (Math.imul(seed ^ (seed>>>16), 0x45d9f3b)) >>> 0;
+    seed = (Math.imul(seed ^ (seed>>>16), 0x45d9f3b)) >>> 0;
+    return seed / 4294967296;
+  };
+  const map = Array.from({length:ROWS}, (_,r) =>
+    (r===0||r===ROWS-1) ? [1,1,1,1,1,1,1,1,1,1,1,1,1] : [1,0,0,0,0,0,0,0,0,0,0,0,1]
+  );
+  const numP = Math.min(5 + Math.floor((n-4)/5), 9);
+  for (let i = 0; i < numP; i++) {
+    const pr = 3 + Math.floor(i * 19 / numP);
+    if (pr < 1 || pr >= ROWS-1) continue;
+    const row = [1,0,0,0,0,0,0,0,0,0,0,0,1];
+    const t = Math.floor(rnd() * 5);
+    const w = 3 + Math.floor(rnd() * 4);
+    if (t === 0) {
+      for (let c=1; c<=w; c++) row[c]=1;
+    } else if (t === 1) {
+      for (let c=11; c>=12-w; c--) row[c]=1;
+    } else if (t === 2) {
+      const lw=2+Math.floor(rnd()*3), rw=2+Math.floor(rnd()*3);
+      for (let c=1; c<=lw; c++) row[c]=1;
+      for (let c=11; c>=12-rw; c--) row[c]=1;
+    } else if (t === 3) {
+      const cs=Math.max(1, Math.floor(6-w/2));
+      for (let c=cs; c<cs+w && c<=11; c++) row[c]=1;
+    } else {
+      const l=1+Math.floor(rnd()*3), r2=8+Math.floor(rnd()*2);
+      for (let c=l; c<=l+2 && c<=5; c++) row[c]=1;
+      for (let c=r2; c<=r2+2 && c<=11; c++) row[c]=1;
+    }
+    map[pr] = row;
+  }
+  return map;
+}
+
+function getMap(lvl) {
+  if (lvl <= LEVELS.length) return LEVELS[lvl-1];
+  return generateLevel(lvl);
+}
 function getBrickColor(lvl) { return BRICK_COLORS[(lvl-1) % BRICK_COLORS.length]; }
 function isSolid(map, col, row) {
   if (row < 0 || row >= ROWS) return true;
@@ -700,6 +744,23 @@ function drawGiantFruit(ctx, gf) {
   ctx.restore();
 }
 
+function drawWin(ctx, frame) {
+  ctx.fillStyle='#0a0a18'; ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle='#f5c518';
+  for(let i=0;i<24;i++){
+    ctx.fillRect(((i*79+frame)%CW), ((i*53+Math.floor(frame*0.7))%CH), 2, 2);
+  }
+  ctx.textAlign='center';
+  ctx.fillStyle='#f5c518'; ctx.font='bold 28px monospace'; ctx.fillText('YOU WIN!', CW/2, CH/2-54);
+  ctx.fillStyle='#4ecdc4'; ctx.font='bold 14px monospace'; ctx.fillText('All 50 Levels Clear!', CW/2, CH/2-22);
+  ctx.fillStyle='white'; ctx.font='12px monospace';
+  ctx.fillText('Score: '+String(gs.score).padStart(6,'0'), CW/2, CH/2+10);
+  if(Math.floor(frame/30)%2===0){
+    ctx.fillStyle='#aaa'; ctx.font='10px monospace';
+    ctx.fillText('Press ENTER to Play Again', CW/2, CH/2+40);
+  }
+}
+
 function drawTitle(ctx, frame) {
   ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,CW,CH);
   // stars
@@ -789,7 +850,7 @@ const BONUS_THRESHOLD = 300; // points earned this level to trigger bonus fruit
 
 function spawnEnemies() {
   enemies=[];
-  const count=[4,6,8][(gs.level-1)%3];
+  const count=Math.min(4+Math.floor((gs.level-1)/4), 12);
   const xs=[TILE*3,TILE*9,TILE*5,TILE*7,TILE*4,TILE*8,TILE*2,TILE*10];
   for(let i=0;i<count;i++) enemies.push(new Enemy(xs[i%xs.length], TILE*4, i));
 }
@@ -854,7 +915,14 @@ function update() {
     return;
   }
   if(gs.state==='levelClear'){
-    if(--gs.clearDelay<=0){ gs.level++; gs.state='playing'; initLevel(); }
+    if(--gs.clearDelay<=0){
+      if(gs.level>=50){ gs.state='win'; }
+      else { gs.level++; gs.state='playing'; initLevel(); }
+    }
+    return;
+  }
+  if(gs.state==='win'){
+    if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.state='playing'; initLevel(); }
     return;
   }
   // harvest: game keeps running so player can collect fruits/giant fruit
@@ -943,12 +1011,13 @@ function update() {
     if(gs.score - levelStartScore >= BONUS_THRESHOLD && !giantFruit){
       giantFruit = new GiantFruit();
     }
-    gs.state='harvest'; gs.harvestDelay=180; SFX.clear();
+    gs.state='harvest'; gs.harvestDelay=480; SFX.clear();
   }
 }
 
 function render() {
   if(gs.state==='title'){ drawTitle(ctx,frame); updateHUD(); return; }
+  if(gs.state==='win'){ drawWin(ctx,frame); updateHUD(); return; }
 
   ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,CW,CH);
   drawLevel(ctx, map, brickColor);
