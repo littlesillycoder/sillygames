@@ -511,13 +511,14 @@ function buildLevel(lvl) {
   scrollSpeed = cfg.speed + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 0.15 : 0);
 
   const gateCount = 10 + Math.min(lvl - 1, 5);
-  const spacing = Math.floor((levelLength - 800) / gateCount);
+  const spacing = 350; // fixed 350px gap between each gate
+  levelLength = 600 + gateCount * spacing; // level grows to fit all gates
 
   // Shuffle gate pairs for this level
   const shuffled = [...GATE_PAIRS].sort(() => Math.random() - 0.5);
 
   for (let i = 0; i < gateCount; i++) {
-    const dist = 250 + i * spacing;
+    const dist = 300 + i * spacing;
     const pair = shuffled[i % shuffled.length];
 
     // Randomize which side is good/bad
