@@ -398,11 +398,11 @@ function playDefeat() {
 //  LEVEL CONFIG
 // ═══════════════════════════════════════════════
 const LEVEL_CFG = [
-  { enemyCount: 28,  speed: 2.2, startCount: 10 },
-  { enemyCount: 65,  speed: 2.6, startCount: null },
-  { enemyCount: 120, speed: 2.9, startCount: null },
-  { enemyCount: 200, speed: 3.2, startCount: null },
-  { enemyCount: 300, speed: 3.5, startCount: null },
+  { enemyCount: 85,  speed: 2.2, startCount: 10 },
+  { enemyCount: 180, speed: 2.6, startCount: null },
+  { enemyCount: 320, speed: 2.9, startCount: null },
+  { enemyCount: 500, speed: 3.2, startCount: null },
+  { enemyCount: 750, speed: 3.5, startCount: null },
 ];
 
 const GATE_PAIRS = [
@@ -416,6 +416,26 @@ const GATE_PAIRS = [
   [{ op:'+', v:30}, { op:'/', v:3  }],
   [{ op:'x', v:2 }, { op:'+', v:12 }],
   [{ op:'+', v:18}, { op:'x', v:3  }],
+  [{ op:'x', v:5 }, { op:'-', v:20 }],
+  [{ op:'+', v:35}, { op:'/', v:4  }],
+  [{ op:'x', v:3 }, { op:'-', v:12 }],
+  [{ op:'+', v:40}, { op:'/', v:2  }],
+  [{ op:'x', v:6 }, { op:'-', v:25 }],
+  [{ op:'+', v:50}, { op:'/', v:3  }],
+  [{ op:'x', v:2 }, { op:'-', v:6  }],
+  [{ op:'+', v:28}, { op:'/', v:5  }],
+  [{ op:'x', v:4 }, { op:'-', v:18 }],
+  [{ op:'+', v:45}, { op:'x', v:2  }],
+  [{ op:'/', v:2 }, { op:'+', v:22 }],
+  [{ op:'-', v:7 }, { op:'x', v:4  }],
+  [{ op:'/', v:3 }, { op:'+', v:35 }],
+  [{ op:'-', v:14}, { op:'x', v:3  }],
+  [{ op:'/', v:4 }, { op:'+', v:40 }],
+  [{ op:'-', v:16}, { op:'x', v:5  }],
+  [{ op:'+', v:60}, { op:'/', v:6  }],
+  [{ op:'x', v:7 }, { op:'-', v:30 }],
+  [{ op:'+', v:55}, { op:'/', v:4  }],
+  [{ op:'x', v:3 }, { op:'-', v:22 }],
 ];
 
 // ═══════════════════════════════════════════════
@@ -490,14 +510,14 @@ function buildLevel(lvl) {
   const cfg = LEVEL_CFG[Math.min(lvl - 1, LEVEL_CFG.length - 1)];
   scrollSpeed = cfg.speed + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 0.15 : 0);
 
-  const gateCount = 3 + Math.min(lvl - 1, 4);
-  const spacing = Math.floor((levelLength - 600) / gateCount);
+  const gateCount = 10 + Math.min(lvl - 1, 5);
+  const spacing = Math.floor((levelLength - 800) / gateCount);
 
   // Shuffle gate pairs for this level
   const shuffled = [...GATE_PAIRS].sort(() => Math.random() - 0.5);
 
   for (let i = 0; i < gateCount; i++) {
-    const dist = 350 + i * spacing;
+    const dist = 250 + i * spacing;
     const pair = shuffled[i % shuffled.length];
 
     // Randomize which side is good/bad
@@ -507,14 +527,14 @@ function buildLevel(lvl) {
 
     objects.push({ type: 'gate', dist, left, right, triggered: false });
 
-    // Occasional obstacle between gates
-    if (i < gateCount - 1 && Math.random() < 0.4) {
-      objects.push({ type: 'obstacle', dist: dist + spacing * 0.55, side: Math.random() < 0.5 ? 'left' : 'right', triggered: false });
+    // Occasional obstacle between gates (less frequent with more gates)
+    if (i < gateCount - 1 && Math.random() < 0.25) {
+      objects.push({ type: 'obstacle', dist: dist + spacing * 0.6, side: Math.random() < 0.5 ? 'left' : 'right', triggered: false });
     }
   }
 
   // Enemy at end
-  const eCount = cfg.enemyCount + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 60 : 0);
+  const eCount = cfg.enemyCount + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 150 : 0);
   objects.push({ type: 'enemy', dist: levelLength - 180, count: eCount, triggered: false });
 }
 
