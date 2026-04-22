@@ -48,6 +48,8 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div style="color:#ff6b6b">⚠ Angry enemies</div>
     <div>escape after 5s</div>
     <div>and speed up!</div>
+    <br>
+    <div id="word-progress" style="text-align:center"></div>
   </div>
 
   <div id="game-col">
@@ -184,6 +186,13 @@ const BRICK_COLORS = [
   '#f39c12','#1abc9c','#e91e63','#607d8b','#ff5722'
 ];
 
+const WORD_LIST = [
+  'CAT','DOG','SUN','POP','FLY','HOP','BUB','BOB','RUN','BIG',
+  'FROG','JUMP','STAR','FISH','BIRD','PLAY','WAVE','BLUE','PINK','GOLD',
+  'BUNNY','HAPPY','SMILE','CANDY','MAGIC','BRAVE','CLOUD','TIGER','DANCE','OCEAN',
+  'BUBBLE','DRAGON','CASTLE','FRIEND','YELLOW','PURPLE','ORANGE','SILVER','COOKIE','ROCKET'
+];
+
 function generateLevel(n) {
   let seed = n * 1664525 + 1013904223;
   const rnd = () => {
@@ -318,7 +327,7 @@ function togglePause() {
 function exitToTitle() {
   paused = false;
   gs.state = 'title';
-  bubbles=[]; fruits=[]; enemies=[];
+  bubbles=[]; fruits=[]; enemies=[]; letterBubbles=[]; popups=[];
   pressed.clear(); keys.left=false; keys.right=false;
   const btn = document.getElementById('pauseBtn');
   if (btn) btn.textContent = '⏸ PAUSE';
@@ -580,6 +589,37 @@ class GiantFruit {
   }
 }
 
+class LetterBubble {
+  constructor(letter, idx) {
+    this.letter = letter;
+    this.idx = idx;
+    this.x = TILE*2 + Math.random()*(CW - TILE*4);
+    this.y = TILE*3 + Math.random()*(CH - TILE*8);
+    this.vx = (Math.random()-0.5)*1.4;
+    this.vy = -0.3 - Math.random()*0.6;
+    this.radius = 15;
+    this.wobble = Math.random()*Math.PI*2;
+    this.dead = false;
+    this.hue = (idx * 55 + 30) % 360;
+  }
+  update() {
+    if (this.dead) return;
+    this.wobble += 0.07;
+    this.vy = Math.max(this.vy - 0.008, -1.2);
+    this.vx += (Math.random()-0.5)*0.04;
+    this.vx = Math.max(-1.4, Math.min(1.4, this.vx));
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < this.radius+TILE)     { this.x=this.radius+TILE;     this.vx= Math.abs(this.vx); }
+    if (this.x > CW-this.radius-TILE)  { this.x=CW-this.radius-TILE;  this.vx=-Math.abs(this.vx); }
+    if (this.y < this.radius+TILE)     { this.y=this.radius+TILE;     this.vy= Math.abs(this.vy)*0.5; }
+    if (this.y > CH-this.radius-TILE)  { this.y=CH-this.radius-TILE;  this.vy=-Math.abs(this.vy); }
+  }
+  touches(p) {
+    const dx=this.x-p.x, dy=this.y-(p.y-PH/2);
+    return Math.sqrt(dx*dx+dy*dy) < this.radius+12;
+  }
+}
+
 // ─── Renderer ────────────────────────────────────────────────
 function rr(ctx,x,y,w,h,r){ // rounded rect path
   ctx.beginPath();
@@ -783,6 +823,64 @@ function drawTitle(ctx, frame) {
   ctx.fillText('← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+72);
 }
 
+function drawLetterBubble(ctx, lb) {
+  if(lb.dead) return;
+  const x=lb.x, y=lb.y, r=lb.radius+Math.sin(lb.wobble)*1.5;
+  ctx.save();
+  // Glow
+  const grd=ctx.createRadialGradient(x,y,0,x,y,r*2);
+  grd.addColorStop(0,`hsla(${lb.hue},90%,70%,0.3)`);
+  grd.addColorStop(1,`hsla(${lb.hue},90%,70%,0)`);
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y,r*2,0,Math.PI*2); ctx.fill();
+  // Fill
+  ctx.globalAlpha=0.88;
+  ctx.fillStyle=`hsl(${lb.hue},75%,55%)`;
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  // Outline
+  ctx.strokeStyle=`hsl(${lb.hue},85%,35%)`; ctx.lineWidth=2; ctx.stroke();
+  // Shine
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.beginPath(); ctx.ellipse(x-r*0.28,y-r*0.32,r*0.28,r*0.16,-0.5,0,Math.PI*2); ctx.fill();
+  // Letter
+  ctx.globalAlpha=1;
+  ctx.fillStyle='white';
+  ctx.font=`bold ${Math.round(r*1.1)}px monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(lb.letter, x, y+1);
+  ctx.textBaseline='alphabetic';
+  ctx.restore();
+}
+
+function drawWordComplete(ctx) {
+  const a=Math.min(wordCompleteTimer/30,1);
+  ctx.save(); ctx.globalAlpha=a;
+  ctx.fillStyle='rgba(0,0,20,0.75)'; ctx.fillRect(0,CH/2-62,CW,100);
+  ctx.textAlign='center';
+  ctx.fillStyle='#f5c518'; ctx.font='bold 13px monospace';
+  ctx.fillText('✨  W O R D  C O M P L E T E !  ✨',CW/2,CH/2-36);
+  ctx.fillStyle='#4ecdc4'; ctx.font=`bold 30px monospace`;
+  ctx.fillText(currentWord,CW/2,CH/2+4);
+  ctx.fillStyle='#aaa'; ctx.font='10px monospace';
+  ctx.fillText('+500 BONUS!',CW/2,CH/2+26);
+  ctx.restore();
+}
+
+function updateWordSidebar() {
+  const el=document.getElementById('word-progress');
+  if(!el||!currentWord) return;
+  let html=`<h2 style="color:#f5c518">Spell It!</h2>`;
+  html+=`<div style="font-size:10px;color:#aaa;margin-bottom:6px;letter-spacing:2px">${currentWord}</div>`;
+  html+='<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:6px">';
+  for(let i=0;i<currentWord.length;i++){
+    const got=collectedLetters[i];
+    html+=`<div style="width:22px;height:22px;border-radius:50%;background:${got?'#f5c518':'#222'};border:2px solid ${got?'#f5c518':'#444'};display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;color:${got?'#000':'#555'}">${currentWord[i]}</div>`;
+  }
+  html+='</div>';
+  const done=collectedLetters.filter(Boolean).length;
+  html+=`<div style="font-size:10px;color:#aaa">${done}/${currentWord.length} letters</div>`;
+  el.innerHTML=html;
+}
+
 function drawPopups(ctx) {
   if(!popups || !popups.length) return;
   ctx.save();
@@ -843,7 +941,8 @@ function adjColor(hex, amt) {
 }
 
 // ─── Game objects ────────────────────────────────────────────
-let player, bubbles, enemies, fruits, popups, map, brickColor, frame=0;
+let player, bubbles, enemies, fruits, popups, letterBubbles, map, brickColor, frame=0;
+let currentWord='', collectedLetters=[], wordCompleteTimer=0;
 let giantFruit = null;
 let levelStartScore = 0;
 const BONUS_THRESHOLD = 300; // points earned this level to trigger bonus fruit
@@ -877,6 +976,10 @@ function initLevel() {
   fruits=spawnLevelFruits(map);
   popups=[];
   giantFruit=null;
+  currentWord = WORD_LIST[(gs.level-1) % WORD_LIST.length];
+  collectedLetters = new Array(currentWord.length).fill(false);
+  wordCompleteTimer = 0;
+  letterBubbles = currentWord.split('').map((l,i) => new LetterBubble(l,i));
   levelStartScore=gs.score;
   player=new Player(CW/2, CH-TILE*2);
   spawnEnemies();
@@ -902,6 +1005,7 @@ function updateHUD(){
   const lx=lc.getContext('2d');
   lx.fillStyle='#4ecdc4';
   for(let i=0;i<gs.lives;i++){ lx.beginPath(); lx.ellipse(12+i*22,11,8,7,0,0,Math.PI*2); lx.fill(); }
+  updateWordSidebar();
 }
 
 function update() {
@@ -1006,6 +1110,27 @@ function update() {
   popups.forEach(p=>{ p.life--; p.y-=0.8; });
   popups=popups.filter(p=>p.life>0);
 
+  // letter bubbles
+  letterBubbles.forEach(lb=>lb.update());
+  if(!player.dead){
+    for(const lb of letterBubbles){
+      if(!lb.dead && lb.touches(player)){
+        lb.dead=true;
+        collectedLetters[lb.idx]=true;
+        addScore(50, lb.x, lb.y);
+        SFX.fruit();
+        if(collectedLetters.every(c=>c)){
+          wordCompleteTimer=180;
+          addScore(500, CW/2, CH/3);
+          SFX.clear();
+        }
+        updateWordSidebar();
+      }
+    }
+  }
+  letterBubbles=letterBubbles.filter(lb=>!lb.dead);
+  if(wordCompleteTimer>0) wordCompleteTimer--;
+
   if(enemies.length===0 && gs.state==='playing'){
     // Spawn bonus giant fruit if player earned enough points this level
     if(gs.score - levelStartScore >= BONUS_THRESHOLD && !giantFruit){
@@ -1025,8 +1150,10 @@ function render() {
   bubbles.forEach(b=>{ drawBubble(ctx,b); if(b.captured)drawEnemyInBubble(ctx,b.captured,b); });
   enemies.forEach(e=>drawEnemy(ctx,e));
   drawPlayer(ctx, player);
+  letterBubbles.forEach(lb=>drawLetterBubble(ctx,lb));
   if(giantFruit && !giantFruit.dead) drawGiantFruit(ctx, giantFruit);
   drawPopups(ctx);
+  if(wordCompleteTimer>0) drawWordComplete(ctx);
   if(gs.state==='harvest')    drawHarvest(ctx);
   if(gs.state==='levelClear') drawClear(ctx);
   if(gs.state==='gameOver')   drawGameOver(ctx,frame);
@@ -1044,7 +1171,7 @@ function drawPaused(ctx) {
 // Init
 gs.state='title';
 map=getMap(1); brickColor=getBrickColor(1);
-bubbles=[]; fruits=[]; enemies=[];
+bubbles=[]; fruits=[]; enemies=[]; letterBubbles=[]; popups=[];
 player=new Player(CW/2, CH-TILE*2);
 updateHUD();
 
