@@ -1067,6 +1067,17 @@ function adjColor(hex, amt) {
   return `rgb(${r},${g},${b})`;
 }
 
+// ─── Word shuffle ─────────────────────────────────────────────
+let shuffledWords = [], wordIndex = 0;
+function shuffleWords() {
+  shuffledWords = [...WORD_LIST].sort(() => Math.random() - 0.5);
+  wordIndex = 0;
+}
+function nextWord() {
+  if (wordIndex >= shuffledWords.length) shuffleWords(); // safety reshuffle
+  return shuffledWords[wordIndex++];
+}
+
 // ─── Game objects ────────────────────────────────────────────
 let player, bubbles, enemies, fruits, popups, letterBubbles, map, brickColor, frame=0;
 let currentWord='', collectedLetters=[], wordCompleteTimer=0;
@@ -1104,7 +1115,7 @@ function initLevel() {
   popups=[];
   giantFruit=null;
   lifeBubble = (gs.level % 5 === 0) ? new LifeBubble() : null;
-  currentWord = WORD_LIST[(gs.level-1) % WORD_LIST.length];
+  currentWord = nextWord();
   collectedLetters = new Array(currentWord.length).fill(false);
   wordCompleteTimer = 0;
   letterBubbles = currentWord.split('').map((l,i) => new LetterBubble(l,i));
@@ -1145,12 +1156,12 @@ function update() {
       if(consume('menudown')) titleCursor = 1;
       if(consume('newgame'))  titleCursor = 1;
       if(consume('enter')){
-        if(titleCursor === 0){ gs.level=sv.level; gs.score=sv.score; gs.lives=sv.lives; gs.wordStreak=sv.wordStreak||0; gs.state='playing'; initLevel(); }
-        else { clearSave(); gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; titleCursor=0; gs.state='playing'; initLevel(); }
+        if(titleCursor === 0){ gs.level=sv.level; gs.score=sv.score; gs.lives=sv.lives; gs.wordStreak=sv.wordStreak||0; shuffleWords(); gs.state='playing'; initLevel(); }
+        else { clearSave(); gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; titleCursor=0; shuffleWords(); gs.state='playing'; initLevel(); }
       }
     } else {
       consume('menuup'); consume('menudown'); consume('newgame'); titleCursor=0;
-      if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; gs.state='playing'; initLevel(); }
+      if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; shuffleWords(); gs.state='playing'; initLevel(); }
     }
     return;
   }
@@ -1166,7 +1177,7 @@ function update() {
     return;
   }
   if(gs.state==='win'){
-    if(consume('enter')){ clearSave(); gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; gs.state='playing'; initLevel(); }
+    if(consume('enter')){ clearSave(); gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; shuffleWords(); gs.state='playing'; initLevel(); }
     return;
   }
   // harvest: game keeps running so player can collect fruits/giant fruit
@@ -1322,6 +1333,7 @@ function drawPaused(ctx) {
 
 // Init
 gs.state='title';
+shuffleWords();
 map=getMap(1); brickColor=getBrickColor(1);
 bubbles=[]; fruits=[]; enemies=[]; letterBubbles=[]; popups=[];
 player=new Player(CW/2, CH-TILE*2);
