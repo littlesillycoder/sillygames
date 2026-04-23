@@ -320,11 +320,12 @@ const pressed = new Set();
 window.addEventListener('keydown', e => {
   if (e.code==='ArrowLeft')  keys.left=true;
   if (e.code==='ArrowRight') keys.right=true;
-  if (e.code==='ArrowUp'  || e.code==='KeyZ')              { pressed.add('jump');  e.preventDefault(); }
-  if (e.code==='KeyX'     || e.code==='Space')             { pressed.add('shoot'); e.preventDefault(); }
+  if (e.code==='ArrowUp'  || e.code==='KeyZ')              { pressed.add('jump');    e.preventDefault(); }
+  if (e.code==='ArrowUp')                                    pressed.add('menuup');
+  if (e.code==='ArrowDown')                                 { pressed.add('menudown'); e.preventDefault(); }
+  if (e.code==='KeyX'     || e.code==='Space')             { pressed.add('shoot');   e.preventDefault(); }
   if (e.code==='Enter')                                      pressed.add('enter');
   if (e.code==='KeyN')                                       pressed.add('newgame');
-  if (e.code==='ArrowDown')                                  e.preventDefault();
   if (e.code==='KeyP' || e.code==='Escape')                  togglePause();
 });
 window.addEventListener('keyup', e => {
@@ -347,6 +348,7 @@ function clearSave() {
 
 // ─── Game State ───────────────────────────────────────────────
 const gs = { score:0, hi:0, lives:3, level:1, state:'title', clearDelay:0, harvestDelay:0 };
+let titleCursor = 0; // 0 = Continue, 1 = New Game
 function addScore(n, x, y) {
   gs.score+=n; if(gs.score>gs.hi) gs.hi=gs.score;
   if(x!==undefined && popups) popups.push({x, y, text:'+'+n, life:60, maxLife:60});
@@ -364,6 +366,7 @@ function togglePause() {
 function exitToTitle() {
   paused = false;
   gs.state = 'title';
+  titleCursor = 0;
   bubbles=[]; fruits=[]; enemies=[]; letterBubbles=[]; popups=[];
   pressed.clear(); keys.left=false; keys.right=false;
   const btn = document.getElementById('pauseBtn');
@@ -859,19 +862,26 @@ function drawTitle(ctx, frame) {
   ctx.fillStyle='#4ecdc4'; ctx.font='bold 36px monospace'; ctx.fillText('BOBBLE',CW/2,CH/2-10);
   const sv = loadSave();
   if(sv){
-    if(Math.floor(frame/30)%2===0){
-      ctx.fillStyle='#4ecdc4'; ctx.font='bold 13px monospace';
-      ctx.fillText('ENTER  Continue (Level '+String(sv.level).padStart(2,'0')+')',CW/2,CH/2+36);
-    }
-    ctx.fillStyle='#aaa'; ctx.font='12px monospace';
-    ctx.fillText('N  New Game',CW/2,CH/2+58);
+    const opts = [
+      { label:'Continue (Level '+String(sv.level).padStart(2,'0')+')', color:'#4ecdc4' },
+      { label:'New Game',                                               color:'#ff6b6b' }
+    ];
+    opts.forEach((opt, i) => {
+      const y = CH/2 + 34 + i * 28;
+      const selected = titleCursor === i;
+      ctx.font = (selected ? 'bold ' : '') + '13px monospace';
+      ctx.fillStyle = selected ? opt.color : '#667';
+      ctx.fillText((selected ? '▶ ' : '  ') + opt.label, CW/2, y);
+    });
+    ctx.fillStyle='#555'; ctx.font='10px monospace';
+    ctx.fillText('↑ ↓ to select   Enter to confirm',CW/2,CH/2+98);
   } else {
     if(Math.floor(frame/30)%2===0){
       ctx.fillStyle='white'; ctx.font='14px monospace'; ctx.fillText('Press ENTER to Start',CW/2,CH/2+36);
     }
   }
   ctx.fillStyle='#667'; ctx.font='11px monospace';
-  ctx.fillText('← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+80);
+  ctx.fillText('← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+118);
 }
 
 function drawLetterBubble(ctx, lb) {
@@ -1063,12 +1073,17 @@ function update() {
   frame++;
   if(gs.state==='title'){
     const sv = loadSave();
-    if(consume('enter')){
-      if(sv){ gs.level=sv.level; gs.score=sv.score; gs.lives=sv.lives; }
-      else { gs.score=0; gs.lives=3; gs.level=1; }
-      gs.state='playing'; initLevel();
-    } else if(consume('newgame')){
-      clearSave(); gs.score=0; gs.lives=3; gs.level=1; gs.state='playing'; initLevel();
+    if(sv){
+      if(consume('menuup'))   titleCursor = 0;
+      if(consume('menudown')) titleCursor = 1;
+      if(consume('newgame'))  titleCursor = 1;
+      if(consume('enter')){
+        if(titleCursor === 0){ gs.level=sv.level; gs.score=sv.score; gs.lives=sv.lives; gs.state='playing'; initLevel(); }
+        else { clearSave(); gs.score=0; gs.lives=3; gs.level=1; titleCursor=0; gs.state='playing'; initLevel(); }
+      }
+    } else {
+      consume('menuup'); consume('menudown'); consume('newgame'); titleCursor=0;
+      if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.state='playing'; initLevel(); }
     }
     return;
   }
@@ -1143,7 +1158,7 @@ function update() {
   // player vs enemy
   if(!player.dead && player.invincible===0){
     for(const e of enemies){
-      if(e.touches(player)){ if(player.die()){ gs.lives--; if(gs.lives<=0){ gs.state='gameOver'; localStorage.setItem(SAVE_KEY,JSON.stringify({level:gs.level,score:gs.score,lives:3})); } else { saveProgress(); } } break; }
+      if(e.touches(player)){ if(player.die()){ gs.lives--; if(gs.lives<=0){ gs.state='gameOver'; localStorage.setItem(SAVE_KEY,JSON.stringify({level:Math.max(1,gs.level-3),score:0,lives:3})); } else { saveProgress(); } } break; }
     }
   }
 
