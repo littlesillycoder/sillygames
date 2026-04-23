@@ -26,6 +26,10 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 .gbtn:hover{background:#2a2a55;color:#fff}
 .gbtn.pause-btn{color:#4ecdc4;border-color:#4ecdc4}
 .gbtn.exit-btn{color:#ff6b6b;border-color:#ff6b6b}
+.gbtn.google-btn{color:#fff;border-color:#4285f4;background:#1c1c38}
+.gbtn.google-btn:hover{background:#4285f4}
+.gbtn.signout-btn{color:#aaa;border-color:#555;font-size:9px;padding:2px 7px}
+#auth-status{font-size:9px;color:#4ecdc4;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -62,6 +66,9 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
       <div id="hud-btns">
         <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
         <button class="gbtn exit-btn" onclick="exitToTitle()">✕ EXIT</button>
+      </div>
+      <div id="auth-bar" style="display:flex;align-items:center;gap:4px">
+        <button class="gbtn google-btn" onclick="googleSignIn()">G  Sign in</button>
       </div>
     </div>
     <canvas id="game" width="312" height="624"></canvas>
@@ -337,7 +344,9 @@ function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
 function saveProgress() {
-  localStorage.setItem(SAVE_KEY, JSON.stringify({ level:gs.level, score:gs.score, lives:gs.lives, wordStreak:gs.wordStreak }));
+  const data = { level:gs.level, score:gs.score, lives:gs.lives, wordStreak:gs.wordStreak, savedAt:Date.now() };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  if (typeof saveToCloud === 'function') saveToCloud(data);
 }
 function loadSave() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch(e) { return null; }
@@ -1236,7 +1245,7 @@ function update() {
   // player vs enemy
   if(!player.dead && player.invincible===0){
     for(const e of enemies){
-      if(e.touches(player)){ if(player.die()){ gs.lives--; if(gs.lives<=0){ gs.state='gameOver'; localStorage.setItem(SAVE_KEY,JSON.stringify({level:Math.max(1,gs.level-3),score:0,lives:3})); } else { saveProgress(); } } break; }
+      if(e.touches(player)){ if(player.die()){ gs.lives--; if(gs.lives<=0){ gs.state='gameOver'; const gd={level:Math.max(1,gs.level-3),score:0,lives:3,wordStreak:gs.wordStreak,savedAt:Date.now()}; localStorage.setItem(SAVE_KEY,JSON.stringify(gd)); if(typeof saveToCloud==='function') saveToCloud(gd); } else { saveProgress(); } } break; }
     }
   }
 
@@ -1340,6 +1349,80 @@ player=new Player(CW/2, CH-TILE*2);
 updateHUD();
 
 (function loop(){ if(!paused) update(); render(); requestAnimationFrame(loop); })();
+</script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD87pzmNs8VsyqiDn5qur0wmfxuyQvy6N4",
+  authDomain: "sillygames-29493.firebaseapp.com",
+  projectId: "sillygames-29493",
+  storageBucket: "sillygames-29493.firebasestorage.app",
+  messagingSenderId: "823493598031",
+  appId: "1:823493598031:web:2d47adfb1ec6f6ec03c33a"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let currentUser = null;
+
+// ─── Cloud save helpers ───────────────────────────────────────
+function cloudRef(uid) {
+  return db.collection('users').doc(uid).collection('games').doc('bubbleBobble');
+}
+async function saveToCloud(data) {
+  if (!currentUser) return;
+  try { await cloudRef(currentUser.uid).set(data); } catch(e) { console.warn('Cloud save failed', e); }
+}
+async function loadFromCloud() {
+  if (!currentUser) return null;
+  try {
+    const snap = await cloudRef(currentUser.uid).get();
+    return snap.exists ? snap.data() : null;
+  } catch(e) { console.warn('Cloud load failed', e); return null; }
+}
+async function syncOnLogin() {
+  const cloud = await loadFromCloud();
+  const local = loadSave();
+  if (!cloud && !local) return;
+  if (!cloud && local)  { await saveToCloud(local); return; }
+  if (cloud && !local)  { localStorage.setItem(SAVE_KEY, JSON.stringify(cloud)); return; }
+  // Both exist — use whichever is newer
+  if ((cloud.savedAt||0) > (local.savedAt||0)) {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(cloud));
+  } else {
+    await saveToCloud(local);
+  }
+}
+
+// ─── Auth state ───────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  currentUser = user;
+  updateAuthUI();
+  if (user) await syncOnLogin();
+});
+
+function googleSignIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => console.warn('Sign-in failed', e));
+}
+function googleSignOut() {
+  auth.signOut();
+}
+function updateAuthUI() {
+  const bar = document.getElementById('auth-bar');
+  if (!bar) return;
+  if (currentUser) {
+    bar.innerHTML = `<span id="auth-status">☁ ${currentUser.email}</span>
+      <button class="gbtn signout-btn" onclick="googleSignOut()">Sign out</button>`;
+  } else {
+    bar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()">G  Sign in</button>`;
+  }
+}
 </script>
 </body>
 </html>
