@@ -1155,7 +1155,7 @@ function update() {
     return;
   }
   if(gs.state==='gameOver'){
-    if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; gs.state='playing'; initLevel(); }
+    if(consume('enter')){ const sv=loadSave(); gs.score=0; gs.lives=3; gs.wordStreak=sv?.wordStreak||0; gs.level=sv?.level||1; gs.state='playing'; initLevel(); }
     return;
   }
   if(gs.state==='levelClear'){
