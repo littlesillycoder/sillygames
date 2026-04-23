@@ -337,7 +337,7 @@ function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
 function saveProgress() {
-  localStorage.setItem(SAVE_KEY, JSON.stringify({ level:gs.level, score:gs.score, lives:gs.lives }));
+  localStorage.setItem(SAVE_KEY, JSON.stringify({ level:gs.level, score:gs.score, lives:gs.lives, wordStreak:gs.wordStreak }));
 }
 function loadSave() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch(e) { return null; }
@@ -347,7 +347,7 @@ function clearSave() {
 }
 
 // ─── Game State ───────────────────────────────────────────────
-const gs = { score:0, hi:0, lives:3, level:1, state:'title', clearDelay:0, harvestDelay:0 };
+const gs = { score:0, hi:0, lives:3, level:1, state:'title', clearDelay:0, harvestDelay:0, wordStreak:0 };
 let titleCursor = 0; // 0 = Continue, 1 = New Game
 function addScore(n, x, y) {
   gs.score+=n; if(gs.score>gs.hi) gs.hi=gs.score;
@@ -367,7 +367,7 @@ function exitToTitle() {
   paused = false;
   gs.state = 'title';
   titleCursor = 0;
-  bubbles=[]; fruits=[]; enemies=[]; letterBubbles=[]; popups=[];
+  bubbles=[]; fruits=[]; enemies=[]; letterBubbles=[]; popups=[]; lifeBubble=null; giantFruit=null;
   pressed.clear(); keys.left=false; keys.right=false;
   const btn = document.getElementById('pauseBtn');
   if (btn) btn.textContent = '⏸ PAUSE';
@@ -664,6 +664,37 @@ class LetterBubble {
   }
 }
 
+class LifeBubble {
+  constructor() {
+    this.x = TILE*2 + Math.random()*(CW - TILE*4);
+    this.y = TILE*3 + Math.random()*(CH - TILE*8);
+    this.vx = (Math.random()-0.5)*1.6;
+    this.vy = (Math.random()-0.5)*1.6;
+    this.radius = 18;
+    this.wobble = 0;
+    this.timer = 600; // 10 seconds
+    this.dead = false;
+  }
+  update() {
+    if (this.dead) return;
+    if (--this.timer <= 0) { this.dead = true; return; }
+    this.wobble += 0.08;
+    this.vx += (Math.random()-0.5)*0.07;
+    this.vy += (Math.random()-0.5)*0.07;
+    this.vx = Math.max(-1.6, Math.min(1.6, this.vx));
+    this.vy = Math.max(-1.6, Math.min(1.6, this.vy));
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < this.radius+TILE)    { this.x=this.radius+TILE;    this.vx= Math.abs(this.vx); }
+    if (this.x > CW-this.radius-TILE) { this.x=CW-this.radius-TILE; this.vx=-Math.abs(this.vx); }
+    if (this.y < this.radius+TILE)    { this.y=this.radius+TILE;    this.vy= Math.abs(this.vy); }
+    if (this.y > CH-this.radius-TILE) { this.y=CH-this.radius-TILE; this.vy=-Math.abs(this.vy); }
+  }
+  touches(p) {
+    const dx=this.x-p.x, dy=this.y-(p.y-PH/2);
+    return Math.sqrt(dx*dx+dy*dy) < this.radius+12;
+  }
+}
+
 // ─── Renderer ────────────────────────────────────────────────
 function rr(ctx,x,y,w,h,r){ // rounded rect path
   ctx.beginPath();
@@ -912,6 +943,35 @@ function drawLetterBubble(ctx, lb) {
   ctx.restore();
 }
 
+function drawLifeBubble(ctx, lb) {
+  if(lb.dead) return;
+  const x=lb.x, y=lb.y, r=lb.radius+Math.sin(lb.wobble)*2;
+  const flash = lb.timer < 180 && Math.floor(lb.timer/15)%2===0; // flash last 3s
+  ctx.save();
+  // Outer glow
+  const grd=ctx.createRadialGradient(x,y,0,x,y,r*2.2);
+  grd.addColorStop(0,'rgba(80,255,120,0.35)');
+  grd.addColorStop(1,'rgba(80,255,120,0)');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y,r*2.2,0,Math.PI*2); ctx.fill();
+  // Fill
+  ctx.globalAlpha = flash ? 0.5 : 0.9;
+  ctx.fillStyle='rgba(60,220,100,0.5)';
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  // Outline
+  ctx.strokeStyle=flash ? '#fff' : '#2ecc71'; ctx.lineWidth=2.5; ctx.stroke();
+  // Shine
+  ctx.fillStyle='rgba(255,255,255,0.55)';
+  ctx.beginPath(); ctx.ellipse(x-r*0.28,y-r*0.32,r*0.3,r*0.18,-0.5,0,Math.PI*2); ctx.fill();
+  // 1UP text
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#fff';
+  ctx.font=`bold ${Math.round(r*0.75)}px monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('1UP', x, y+1);
+  ctx.textBaseline='alphabetic';
+  ctx.restore();
+}
+
 function drawWordComplete(ctx) {
   const a=Math.min(wordCompleteTimer/30,1);
   ctx.save(); ctx.globalAlpha=a;
@@ -939,6 +999,12 @@ function updateWordSidebar() {
   html+='</div>';
   const done=collectedLetters.filter(Boolean).length;
   html+=`<div style="font-size:10px;color:#aaa">${done}/${currentWord.length} letters</div>`;
+  // Word streak progress
+  html+=`<div style="margin-top:10px"><h2 style="color:#2ecc71;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Extra Life</h2>`;
+  html+=`<div style="font-size:10px;color:#aaa;margin-bottom:4px">Spell 3 words → ♥</div>`;
+  const bars = [0,1,2].map(i => `<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${i<gs.wordStreak?'#2ecc71':'#222'};border:2px solid ${i<gs.wordStreak?'#2ecc71':'#444'};margin:0 2px;font-size:11px;line-height:16px;text-align:center">${i<gs.wordStreak?'♥':''}</span>`).join('');
+  html+=`<div style="display:flex;justify-content:center">${bars}</div>`;
+  html+=`<div style="font-size:10px;color:#aaa;margin-top:4px">${gs.wordStreak}/3 words</div></div>`;
   el.innerHTML=html;
 }
 
@@ -951,7 +1017,7 @@ function drawPopups(ctx) {
     const scale=0.7+0.5*(1-alpha); // starts big, shrinks
     ctx.globalAlpha=alpha;
     ctx.font=`bold ${Math.round(11*scale)}px monospace`;
-    ctx.fillStyle='#f5c518';
+    ctx.fillStyle=p.color||'#f5c518';
     ctx.strokeStyle='rgba(0,0,0,0.6)';
     ctx.lineWidth=2;
     ctx.strokeText(p.text, p.x, p.y);
@@ -1004,7 +1070,7 @@ function adjColor(hex, amt) {
 // ─── Game objects ────────────────────────────────────────────
 let player, bubbles, enemies, fruits, popups, letterBubbles, map, brickColor, frame=0;
 let currentWord='', collectedLetters=[], wordCompleteTimer=0;
-let giantFruit = null;
+let giantFruit = null, lifeBubble = null;
 let levelStartScore = 0;
 const BONUS_THRESHOLD = 300; // points earned this level to trigger bonus fruit
 
@@ -1037,6 +1103,7 @@ function initLevel() {
   fruits=spawnLevelFruits(map);
   popups=[];
   giantFruit=null;
+  lifeBubble = (gs.level % 5 === 0) ? new LifeBubble() : null;
   currentWord = WORD_LIST[(gs.level-1) % WORD_LIST.length];
   collectedLetters = new Array(currentWord.length).fill(false);
   wordCompleteTimer = 0;
@@ -1078,17 +1145,17 @@ function update() {
       if(consume('menudown')) titleCursor = 1;
       if(consume('newgame'))  titleCursor = 1;
       if(consume('enter')){
-        if(titleCursor === 0){ gs.level=sv.level; gs.score=sv.score; gs.lives=sv.lives; gs.state='playing'; initLevel(); }
-        else { clearSave(); gs.score=0; gs.lives=3; gs.level=1; titleCursor=0; gs.state='playing'; initLevel(); }
+        if(titleCursor === 0){ gs.level=sv.level; gs.score=sv.score; gs.lives=sv.lives; gs.wordStreak=sv.wordStreak||0; gs.state='playing'; initLevel(); }
+        else { clearSave(); gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; titleCursor=0; gs.state='playing'; initLevel(); }
       }
     } else {
       consume('menuup'); consume('menudown'); consume('newgame'); titleCursor=0;
-      if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.state='playing'; initLevel(); }
+      if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; gs.state='playing'; initLevel(); }
     }
     return;
   }
   if(gs.state==='gameOver'){
-    if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.state='playing'; initLevel(); }
+    if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; gs.state='playing'; initLevel(); }
     return;
   }
   if(gs.state==='levelClear'){
@@ -1099,7 +1166,7 @@ function update() {
     return;
   }
   if(gs.state==='win'){
-    if(consume('enter')){ gs.score=0; gs.lives=3; gs.level=1; gs.state='playing'; initLevel(); }
+    if(consume('enter')){ clearSave(); gs.score=0; gs.lives=3; gs.level=1; gs.wordStreak=0; gs.state='playing'; initLevel(); }
     return;
   }
   // harvest: game keeps running so player can collect fruits/giant fruit
@@ -1176,6 +1243,14 @@ function update() {
       addScore(GIANT_SCORE, giantFruit.x, giantFruit.y); SFX.clear(); giantFruit.dead=true;
     }
   }
+  if(lifeBubble && !lifeBubble.dead){
+    lifeBubble.update();
+    if(!player.dead && lifeBubble.touches(player)){
+      gs.lives++; lifeBubble.dead=true;
+      popups.push({x:lifeBubble.x, y:lifeBubble.y, text:'♥ +1 LIFE!', life:120, maxLife:120, color:'#ff6b9d'});
+      SFX.clear();
+    }
+  }
 
   bubbles=bubbles.filter(b=>!b.dead);
   enemies=enemies.filter(e=>!e.dead);
@@ -1196,6 +1271,9 @@ function update() {
           wordCompleteTimer=180;
           addScore(500, CW/2, CH/3);
           SFX.clear();
+          gs.wordStreak++;
+          if(gs.wordStreak>=3){ gs.lives++; gs.wordStreak=0; popups.push({x:CW/2,y:CH/3-30,text:'♥ +1 LIFE!',life:120,maxLife:120,color:'#ff6b9d'}); SFX.clear(); }
+          saveProgress();
         }
         updateWordSidebar();
       }
@@ -1224,6 +1302,7 @@ function render() {
   enemies.forEach(e=>drawEnemy(ctx,e));
   drawPlayer(ctx, player);
   letterBubbles.forEach(lb=>drawLetterBubble(ctx,lb));
+  if(lifeBubble && !lifeBubble.dead) drawLifeBubble(ctx, lifeBubble);
   if(giantFruit && !giantFruit.dead) drawGiantFruit(ctx, giantFruit);
   drawPopups(ctx);
   if(wordCompleteTimer>0) drawWordComplete(ctx);
