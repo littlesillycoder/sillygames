@@ -57,7 +57,7 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div id="word-progress" style="text-align:center"></div>
     <br>
     <div id="auth-bar" style="text-align:center">
-      <button class="gbtn google-btn" onclick="googleSignIn()">G  Sign in</button>
+      <button class="gbtn google-btn" onclick="googleSignIn()">Google Sign In</button>
     </div>
   </div>
 
@@ -1422,7 +1422,7 @@ function updateAuthUI() {
     bar.innerHTML = `<span id="auth-status">☁ ${currentUser.email}</span>
       <button class="gbtn signout-btn" onclick="googleSignOut()" style="width:100%">Sign out</button>`;
   } else {
-    bar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()" style="width:100%">G  Sign in</button>`;
+    bar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()" style="width:100%">Google Sign In</button>`;
   }
 }
 </script>
