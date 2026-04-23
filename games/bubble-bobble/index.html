@@ -29,7 +29,8 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 .gbtn.google-btn{color:#fff;border-color:#4285f4;background:#1c1c38}
 .gbtn.google-btn:hover{background:#4285f4}
 .gbtn.signout-btn{color:#aaa;border-color:#555;font-size:9px;padding:2px 7px}
-#auth-status{font-size:9px;color:#4ecdc4;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#auth-status{font-size:10px;color:#4ecdc4;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
+#auth-bar{margin-top:4px}
 </style>
 </head>
 <body>
@@ -54,6 +55,10 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div>and speed up!</div>
     <br>
     <div id="word-progress" style="text-align:center"></div>
+    <br>
+    <div id="auth-bar" style="text-align:center">
+      <button class="gbtn google-btn" onclick="googleSignIn()">G  Sign in</button>
+    </div>
   </div>
 
   <div id="game-col">
@@ -66,9 +71,6 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
       <div id="hud-btns">
         <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
         <button class="gbtn exit-btn" onclick="exitToTitle()">✕ EXIT</button>
-      </div>
-      <div id="auth-bar" style="display:flex;align-items:center;gap:4px">
-        <button class="gbtn google-btn" onclick="googleSignIn()">G  Sign in</button>
       </div>
     </div>
     <canvas id="game" width="312" height="624"></canvas>
@@ -1418,9 +1420,9 @@ function updateAuthUI() {
   if (!bar) return;
   if (currentUser) {
     bar.innerHTML = `<span id="auth-status">☁ ${currentUser.email}</span>
-      <button class="gbtn signout-btn" onclick="googleSignOut()">Sign out</button>`;
+      <button class="gbtn signout-btn" onclick="googleSignOut()" style="width:100%">Sign out</button>`;
   } else {
-    bar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()">G  Sign in</button>`;
+    bar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()" style="width:100%">G  Sign in</button>`;
   }
 }
 </script>
