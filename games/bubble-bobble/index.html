@@ -341,7 +341,7 @@ window.addEventListener('keydown', e => {
   if (e.code==='ArrowUp')                                    pressed.add('menuup');
   if (e.code==='ArrowDown')                                 { pressed.add('menudown'); e.preventDefault(); }
   if (e.code==='KeyX'     || e.code==='Space')             { pressed.add('shoot');   e.preventDefault(); }
-  if (e.code==='Enter')                                    { pressed.add('enter'); if(paused) togglePause(); }
+  if (e.code==='Enter')                                    { pressed.add('enter'); if(gs.state==='playing'||gs.state==='harvest'||paused) togglePause(); }
   if (e.code==='KeyN')                                       pressed.add('newgame');
   if (e.code==='KeyP' || e.code==='Escape')                  togglePause();
 });
