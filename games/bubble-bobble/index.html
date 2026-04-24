@@ -94,6 +94,14 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div>after hitting wall.</div>
     <div>Pop quickly for</div>
     <div>bonus chain!</div>
+    <br>
+    <h2>Extra Lives</h2>
+    <div>Max 6 lives</div>
+    <div>Spell 3 words</div>
+    <div>→ +1 life</div>
+    <div>Catch 1UP bubble</div>
+    <div>every 5th level</div>
+    <div>→ +1 life</div>
   </div>
 </div>
 
@@ -1268,7 +1276,7 @@ function update() {
   if(lifeBubble && !lifeBubble.dead){
     lifeBubble.update();
     if(!player.dead && lifeBubble.touches(player)){
-      gs.lives++; lifeBubble.dead=true;
+      gs.lives=Math.min(gs.lives+1,6); lifeBubble.dead=true;
       popups.push({x:lifeBubble.x, y:lifeBubble.y, text:'♥ +1 LIFE!', life:120, maxLife:120, color:'#ff6b9d'});
       SFX.clear();
     }
@@ -1294,7 +1302,7 @@ function update() {
           addScore(500, CW/2, CH/3);
           SFX.clear();
           gs.wordStreak++;
-          if(gs.wordStreak>=3){ gs.lives++; gs.wordStreak=0; popups.push({x:CW/2,y:CH/3-30,text:'♥ +1 LIFE!',life:120,maxLife:120,color:'#ff6b9d'}); SFX.clear(); }
+          if(gs.wordStreak>=3){ gs.lives=Math.min(gs.lives+1,6); gs.wordStreak=0; popups.push({x:CW/2,y:CH/3-30,text:'♥ +1 LIFE!',life:120,maxLife:120,color:'#ff6b9d'}); SFX.clear(); }
           saveProgress();
         }
         updateWordSidebar();
