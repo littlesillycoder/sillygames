@@ -994,11 +994,18 @@ function drawLifeBubble(ctx, lb) {
 function drawWordComplete(ctx) {
   const a=Math.min(wordCompleteTimer/30,1);
   ctx.save(); ctx.globalAlpha=a;
-  // no background — canvas is already dark
   ctx.textAlign='center';
-  ctx.fillStyle='#4ecdc4'; ctx.font=`bold 28px monospace`;
+  // Word — white with dark outline so it reads against any brick colour
+  ctx.font=`bold 28px monospace`;
+  ctx.strokeStyle='rgba(0,0,0,0.85)'; ctx.lineWidth=5; ctx.lineJoin='round';
+  ctx.strokeText(currentWord,CW/2,TILE*2+42);
+  ctx.fillStyle='#ffffff';
   ctx.fillText(currentWord,CW/2,TILE*2+42);
-  ctx.fillStyle='#f5c518'; ctx.font='10px monospace';
+  // Bonus
+  ctx.font='10px monospace';
+  ctx.strokeStyle='rgba(0,0,0,0.85)'; ctx.lineWidth=3;
+  ctx.strokeText('+500 BONUS!',CW/2,TILE*2+60);
+  ctx.fillStyle='#f5c518';
   ctx.fillText('+500 BONUS!',CW/2,TILE*2+60);
   ctx.restore();
 }
