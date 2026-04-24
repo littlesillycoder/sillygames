@@ -994,14 +994,14 @@ function drawLifeBubble(ctx, lb) {
 function drawWordComplete(ctx) {
   const a=Math.min(wordCompleteTimer/30,1);
   ctx.save(); ctx.globalAlpha=a;
-  ctx.fillStyle='rgba(0,0,20,0.75)'; ctx.fillRect(0,CH/2-62,CW,100);
+  ctx.fillStyle='rgba(0,0,20,0.75)'; ctx.fillRect(0,0,CW,90);
   ctx.textAlign='center';
   ctx.fillStyle='#f5c518'; ctx.font='bold 13px monospace';
-  ctx.fillText('✨  W O R D  C O M P L E T E !  ✨',CW/2,CH/2-36);
+  ctx.fillText('✨  W O R D  C O M P L E T E !  ✨',CW/2,22);
   ctx.fillStyle='#4ecdc4'; ctx.font=`bold 30px monospace`;
-  ctx.fillText(currentWord,CW/2,CH/2+4);
+  ctx.fillText(currentWord,CW/2,58);
   ctx.fillStyle='#aaa'; ctx.font='10px monospace';
-  ctx.fillText('+500 BONUS!',CW/2,CH/2+26);
+  ctx.fillText('+500 BONUS!',CW/2,78);
   ctx.restore();
 }
 
@@ -1417,6 +1417,9 @@ auth.onAuthStateChanged(async user => {
 });
 
 function googleSignIn() {
+  if (gs.state === 'playing' || gs.state === 'harvest') {
+    if (!paused) togglePause();
+  }
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(e => console.warn('Sign-in failed', e));
 }
