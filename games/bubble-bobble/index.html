@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Bubble Bobble Classic</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4ecdc4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bubble Bobble">
+<link rel="apple-touch-icon" href="icons/icon.svg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a18;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:monospace;overflow:hidden}
@@ -1547,6 +1554,13 @@ function googleSignIn() {
 }
 function googleSignOut() {
   auth.signOut();
+}
+
+// ─── Service Worker (PWA) ────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW reg failed', e));
+  });
 }
 function updateAuthUI() {
   const bar = document.getElementById('auth-bar');

@@ -1,0 +1,25 @@
+{
+  "name": "Bubble Bobble",
+  "short_name": "Bubble Bobble",
+  "description": "Classic Bubble Bobble arcade game — trap enemies in bubbles and pop them!",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a18",
+  "theme_color": "#4ecdc4",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

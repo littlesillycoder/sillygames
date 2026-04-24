@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="#0a0a18"/>
+
+  <!-- Bubble outline (big bubble around character) -->
+  <circle cx="256" cy="230" r="175" fill="rgba(100,200,255,0.15)" stroke="rgba(60,160,220,0.8)" stroke-width="6"/>
+  <!-- Bubble shine -->
+  <ellipse cx="200" cy="170" rx="44" ry="26" fill="rgba(255,255,255,0.25)"/>
+
+  <!-- Body -->
+  <ellipse cx="256" cy="230" rx="88" ry="80" fill="#4ecdc4"/>
+
+  <!-- Eye white -->
+  <circle cx="290" cy="206" r="26" fill="white"/>
+  <!-- Eye pupil -->
+  <circle cx="296" cy="206" r="14" fill="#111"/>
+  <!-- Eye shine -->
+  <circle cx="302" cy="198" r="6" fill="white"/>
+
+  <!-- Mouth (smile) -->
+  <path d="M268 248 Q290 268 312 248" stroke="#2a8a84" stroke-width="7" fill="none" stroke-linecap="round"/>
+
+  <!-- Left foot -->
+  <ellipse cx="226" cy="308" rx="36" ry="22" transform="rotate(-10,226,308)" fill="#3ab8b0"/>
+  <!-- Right foot -->
+  <ellipse cx="286" cy="308" rx="36" ry="22" transform="rotate(10,286,308)" fill="#3ab8b0"/>
+
+  <!-- Small bubble top-right (decorative) -->
+  <circle cx="390" cy="120" r="38" fill="rgba(100,200,255,0.12)" stroke="rgba(60,160,220,0.6)" stroke-width="4"/>
+  <ellipse cx="376" cy="108" rx="10" ry="6" fill="rgba(255,255,255,0.3)"/>
+
+  <!-- Small bubble bottom-left (decorative) -->
+  <circle cx="110" cy="370" r="28" fill="rgba(100,200,255,0.12)" stroke="rgba(60,160,220,0.6)" stroke-width="3"/>
+  <ellipse cx="100" cy="360" rx="7" ry="4" fill="rgba(255,255,255,0.3)"/>
+</svg>
