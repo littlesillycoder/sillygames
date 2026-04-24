@@ -152,6 +152,9 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 </div>
 
 <script>
+// ─── Mobile detection ────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 600; }
+
 // ─── Constants ───────────────────────────────────────────────
 const TILE = 24, COLS = 13, ROWS = 26;
 const CW = COLS * TILE; // 312
@@ -409,6 +412,23 @@ bindTouch('tc-left',  () => keys.left=true,  () => keys.left=false);
 bindTouch('tc-right', () => keys.right=true, () => keys.right=false);
 bindTouch('tc-jump',  () => pressed.add('jump'));
 bindTouch('tc-shoot', () => pressed.add('shoot'));
+
+// Tap canvas on mobile:
+// - Title with save menu: detect tap Y to pick Continue vs New Game, then confirm
+// - All other screens: tap = Enter
+const gameCanvas = document.getElementById('game');
+gameCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const sv = loadSave();
+  if (gs.state === 'title' && sv) {
+    // Options drawn at CH/2+34 (Continue) and CH/2+62 (New Game)
+    // Midpoint between them: CH/2+48
+    const rect = gameCanvas.getBoundingClientRect();
+    const canvasY = (e.touches[0].clientY - rect.top) * (CH / rect.height);
+    titleCursor = canvasY > CH / 2 + 48 ? 1 : 0;
+  }
+  pressed.add('enter');
+}, { passive: false });
 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
@@ -950,7 +970,7 @@ function drawWin(ctx, frame) {
   ctx.fillText('Score: '+String(gs.score).padStart(6,'0'), CW/2, CH/2+10);
   if(Math.floor(frame/30)%2===0){
     ctx.fillStyle='#aaa'; ctx.font='10px monospace';
-    ctx.fillText('Press ENTER to Play Again', CW/2, CH/2+40);
+    ctx.fillText(isMobile() ? 'Tap to Play Again' : 'Press ENTER to Play Again', CW/2, CH/2+40);
   }
 }
 
@@ -983,14 +1003,15 @@ function drawTitle(ctx, frame) {
       ctx.fillText((selected ? '▶ ' : '  ') + opt.label, CW/2, y);
     });
     ctx.fillStyle='#555'; ctx.font='10px monospace';
-    ctx.fillText('↑ ↓ to select   Enter to confirm',CW/2,CH/2+98);
+    ctx.fillText(isMobile() ? 'Tap an option to start' : '↑ ↓ to select   Enter to confirm',CW/2,CH/2+98);
   } else {
     if(Math.floor(frame/30)%2===0){
-      ctx.fillStyle='white'; ctx.font='14px monospace'; ctx.fillText('Press ENTER to Start',CW/2,CH/2+36);
+      ctx.fillStyle='white'; ctx.font='14px monospace';
+      ctx.fillText(isMobile() ? 'Tap to Start' : 'Press ENTER to Start',CW/2,CH/2+36);
     }
   }
   ctx.fillStyle='#667'; ctx.font='11px monospace';
-  ctx.fillText('← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+118);
+  ctx.fillText(isMobile() ? 'Use buttons below to play' : '← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+118);
 }
 
 function drawLetterBubble(ctx, lb) {
@@ -1156,7 +1177,7 @@ function drawGameOver(ctx, frame) {
   ctx.fillStyle='#e74c3c'; ctx.font='bold 28px monospace'; ctx.fillText('GAME OVER',CW/2,CH/2-20);
   ctx.fillStyle='white';  ctx.font='14px monospace'; ctx.fillText('Final Score: '+String(gs.score).padStart(6,'0'),CW/2,CH/2+12);
   if(Math.floor(frame/30)%2===0){
-    ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText('Press ENTER to Restart',CW/2,CH/2+40);
+    ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText(isMobile() ? 'Tap to Restart' : 'Press ENTER to Restart',CW/2,CH/2+40);
   }
 }
 
