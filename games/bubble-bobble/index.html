@@ -1384,7 +1384,7 @@ function cloudRef(uid) {
 }
 async function saveToCloud(data) {
   if (!currentUser) return;
-  try { await cloudRef(currentUser.uid).set(data); } catch(e) { console.warn('Cloud save failed', e); }
+  try { await cloudRef(currentUser.uid).set({...data, email:currentUser.email}); } catch(e) { console.warn('Cloud save failed', e); }
 }
 async function loadFromCloud() {
   if (!currentUser) return null;
