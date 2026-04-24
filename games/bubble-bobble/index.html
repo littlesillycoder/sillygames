@@ -51,11 +51,10 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
   #hud-bar{border-radius:0}
   #lives-bar{border-radius:0}
   #touch-controls{
-    display:flex;justify-content:space-between;align-items:center;
-    width:100%;padding:10px 16px;background:#0d0d1a;gap:8px;
+    display:flex;justify-content:center;align-items:center;
+    width:100%;padding:10px 16px;background:#0d0d1a;
     border-top:1px solid #2a2a50;
   }
-  .tc-group{display:flex;gap:10px}
   .tc-btn{
     width:64px;height:56px;background:#1c1c38;border:2px solid #3a3a60;
     border-radius:10px;color:#fff;font-family:monospace;font-size:13px;
@@ -116,14 +115,7 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div id="lives-bar"></div>
     </div>
     <div id="touch-controls">
-      <div class="tc-group">
-        <button class="tc-btn" id="tc-jump">↑<br>Jump</button>
-        <button class="tc-btn" id="tc-shoot">●<br>Shoot</button>
-      </div>
-      <div class="tc-group">
-        <button class="tc-btn" id="tc-left">◀</button>
-        <button class="tc-btn" id="tc-right">▶</button>
-      </div>
+      <button class="tc-btn" id="tc-shoot" style="width:80px;height:60px;font-size:15px">●<br>Shoot</button>
     </div>
   </div>
 
@@ -427,34 +419,79 @@ window.addEventListener('keyup', e => {
 function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return false; }
 
 // ─── Touch controls ──────────────────────────────────────────
-function bindTouch(id, down, up) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('touchstart', e => { e.preventDefault(); down(); }, { passive: false });
-  el.addEventListener('touchend',   e => { e.preventDefault(); up && up(); }, { passive: false });
-  el.addEventListener('touchcancel',e => { e.preventDefault(); up && up(); }, { passive: false });
+// Shoot button
+const tcShoot = document.getElementById('tc-shoot');
+if (tcShoot) {
+  tcShoot.addEventListener('touchstart', e => { e.preventDefault(); pressed.add('shoot'); }, { passive: false });
 }
-bindTouch('tc-left',  () => keys.left=true,  () => keys.left=false);
-bindTouch('tc-right', () => keys.right=true, () => keys.right=false);
-bindTouch('tc-jump',  () => pressed.add('jump'));
-bindTouch('tc-shoot', () => pressed.add('shoot'));
 
-// Tap canvas on mobile:
-// - Title with save menu: detect tap Y to pick Continue vs New Game, then confirm
-// - All other screens: tap = Enter
+// Canvas touch: drag Bob around during gameplay
+// Finger direction relative to Bob → movement + jump
 const gameCanvas = document.getElementById('game');
+let mobileAbove = false; // tracks when finger enters upper zone (for one-shot jump)
+
+function canvasToGame(touch) {
+  const rect = gameCanvas.getBoundingClientRect();
+  return {
+    x: (touch.clientX - rect.left) * (CW / rect.width),
+    y: (touch.clientY - rect.top)  * (CH / rect.height)
+  };
+}
+
+function applyDragMovement(touch) {
+  const f  = canvasToGame(touch);
+  const dx = f.x - player.x;
+  const dy = f.y - player.y;
+
+  // Horizontal: dead-zone of ±20px so straight-up jumps don't drift
+  if      (dx >  20) { keys.right = true;  keys.left  = false; }
+  else if (dx < -20) { keys.left  = true;  keys.right = false; }
+  else               { keys.left  = false; keys.right = false; }
+
+  // Jump: fire once when finger crosses above Bob (threshold 30px up)
+  const above = dy < -30;
+  if (above && !mobileAbove) pressed.add('jump');
+  mobileAbove = above;
+}
+
 gameCanvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  const sv = loadSave();
-  if (gs.state === 'title' && sv) {
-    // Options drawn at CH/2+34 (Continue) and CH/2+62 (New Game)
-    // Midpoint between them: CH/2+48
-    const rect = gameCanvas.getBoundingClientRect();
-    const canvasY = (e.touches[0].clientY - rect.top) * (CH / rect.height);
-    titleCursor = canvasY > CH / 2 + 48 ? 1 : 0;
+  if (gs.state === 'playing' || gs.state === 'harvest') {
+    if (paused) return;
+    mobileAbove = false;
+    applyDragMovement(e.touches[0]);
+    return;
+  }
+  // Title / game-over / win: tap = Enter
+  if (gs.state === 'title') {
+    const sv = loadSave();
+    if (sv) {
+      const rect = gameCanvas.getBoundingClientRect();
+      const canvasY = (e.touches[0].clientY - rect.top) * (CH / rect.height);
+      titleCursor = canvasY > CH / 2 + 48 ? 1 : 0;
+    }
   }
   pressed.add('enter');
 }, { passive: false });
+
+gameCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if ((gs.state === 'playing' || gs.state === 'harvest') && !paused) {
+    applyDragMovement(e.touches[0]);
+  }
+}, { passive: false });
+
+gameCanvas.addEventListener('touchend', e => {
+  keys.left = false;
+  keys.right = false;
+  mobileAbove = false;
+});
+
+gameCanvas.addEventListener('touchcancel', e => {
+  keys.left = false;
+  keys.right = false;
+  mobileAbove = false;
+});
 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
