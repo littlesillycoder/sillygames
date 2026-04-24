@@ -36,13 +36,13 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 #touch-controls{display:none}
 #mobile-auth{display:none}
 @media (max-width:600px){
-  body{align-items:flex-start;overflow-y:auto}
-  #layout{flex-direction:column;align-items:center;gap:0}
+  body{overflow:hidden;height:100svh;height:100vh}
+  #layout{flex-direction:column;align-items:center;gap:0;height:100%}
   #sidebar-left,#sidebar-right{display:none}
-  #game-col{width:100vw}
-  #hud-bar{width:100%;border-radius:0;box-sizing:border-box}
-  canvas{width:100vw !important;height:auto !important;border-left:none;border-right:none}
-  #lives-bar{width:100%;border-radius:0;box-sizing:border-box}
+  #game-col{display:flex;flex-direction:column;align-items:center;width:100%;height:100%}
+  #game-area{transform-origin:top center;flex-shrink:0}
+  #hud-bar{border-radius:0}
+  #lives-bar{border-radius:0}
   #touch-controls{
     display:flex;justify-content:space-between;align-items:center;
     width:100%;padding:10px 16px;background:#0d0d1a;gap:8px;
@@ -93,6 +93,7 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
   </div>
 
   <div id="game-col">
+    <div id="game-area">
     <div id="hud-bar">
       <div id="hud-scores">
         <div><span>1UP </span><span class="val" id="score-disp">000000</span></div>
@@ -106,6 +107,7 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     </div>
     <canvas id="game" width="312" height="624"></canvas>
     <div id="lives-bar"></div>
+    </div>
     <div id="touch-controls">
       <div class="tc-group">
         <button class="tc-btn" id="tc-jump">↑<br>Jump</button>
@@ -152,8 +154,25 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 </div>
 
 <script>
-// ─── Mobile detection ────────────────────────────────────────
+// ─── Mobile detection & scaling ──────────────────────────────
 function isMobile() { return window.innerWidth <= 600; }
+
+function applyMobileScale() {
+  if (!isMobile()) return;
+  const area = document.getElementById('game-area');
+  const tc   = document.getElementById('touch-controls');
+  if (!area) return;
+  const tcH    = tc ? tc.offsetHeight : 80;
+  const availW = window.innerWidth;
+  const availH = window.innerHeight - tcH;
+  // #game-area natural size: 312 wide, 696 tall (hud 44 + canvas 624 + lives 28)
+  const scale  = Math.min(availW / 312, availH / 696);
+  area.style.transform = `scale(${scale})`;
+  // Collapse the layout gap caused by transform (which doesn't affect flow)
+  area.style.marginBottom = `${Math.round(696 * (scale - 1))}px`;
+}
+window.addEventListener('resize', applyMobileScale);
+window.addEventListener('load',   applyMobileScale);
 
 // ─── Constants ───────────────────────────────────────────────
 const TILE = 24, COLS = 13, ROWS = 26;
