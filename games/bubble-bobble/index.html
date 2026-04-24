@@ -31,6 +31,37 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 .gbtn.signout-btn{color:#aaa;border-color:#555;font-size:9px;padding:2px 7px}
 #auth-status{font-size:10px;color:#4ecdc4;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
 #auth-bar{margin-top:4px}
+
+/* ── Mobile ── */
+#touch-controls{display:none}
+#mobile-auth{display:none}
+@media (max-width:600px){
+  body{align-items:flex-start;overflow-y:auto}
+  #layout{flex-direction:column;align-items:center;gap:0}
+  #sidebar-left,#sidebar-right{display:none}
+  #game-col{width:100vw}
+  #hud-bar{width:100%;border-radius:0;box-sizing:border-box}
+  canvas{width:100vw !important;height:auto !important;border-left:none;border-right:none}
+  #lives-bar{width:100%;border-radius:0;box-sizing:border-box}
+  #touch-controls{
+    display:flex;justify-content:space-between;align-items:center;
+    width:100%;padding:10px 16px;background:#0d0d1a;gap:8px;
+    border-top:1px solid #2a2a50;
+  }
+  .tc-group{display:flex;gap:10px}
+  .tc-btn{
+    width:64px;height:56px;background:#1c1c38;border:2px solid #3a3a60;
+    border-radius:10px;color:#fff;font-family:monospace;font-size:13px;
+    font-weight:bold;cursor:pointer;user-select:none;-webkit-user-select:none;
+    display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tc-btn:active{background:#2a2a55;border-color:#4ecdc4}
+  #mobile-auth{
+    display:block;position:fixed;top:8px;right:8px;z-index:100;
+  }
+  #mobile-auth .gbtn{font-size:9px;padding:4px 8px}
+}
 </style>
 </head>
 <body>
@@ -75,6 +106,16 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     </div>
     <canvas id="game" width="312" height="624"></canvas>
     <div id="lives-bar"></div>
+    <div id="touch-controls">
+      <div class="tc-group">
+        <button class="tc-btn" id="tc-jump">↑<br>Jump</button>
+        <button class="tc-btn" id="tc-shoot">●<br>Shoot</button>
+      </div>
+      <div class="tc-group">
+        <button class="tc-btn" id="tc-left">◀</button>
+        <button class="tc-btn" id="tc-right">▶</button>
+      </div>
+    </div>
   </div>
 
   <div id="sidebar-right">
@@ -103,6 +144,11 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div>every 5th level</div>
     <div>→ +1 life</div>
   </div>
+</div>
+
+<!-- Mobile auth overlay (fixed top-right, hidden on desktop) -->
+<div id="mobile-auth">
+  <button class="gbtn google-btn" onclick="googleSignIn()">Google Sign In</button>
 </div>
 
 <script>
@@ -350,6 +396,19 @@ window.addEventListener('keyup', e => {
   if (e.code==='ArrowRight') keys.right=false;
 });
 function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return false; }
+
+// ─── Touch controls ──────────────────────────────────────────
+function bindTouch(id, down, up) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('touchstart', e => { e.preventDefault(); down(); }, { passive: false });
+  el.addEventListener('touchend',   e => { e.preventDefault(); up && up(); }, { passive: false });
+  el.addEventListener('touchcancel',e => { e.preventDefault(); up && up(); }, { passive: false });
+}
+bindTouch('tc-left',  () => keys.left=true,  () => keys.left=false);
+bindTouch('tc-right', () => keys.right=true, () => keys.right=false);
+bindTouch('tc-jump',  () => pressed.add('jump'));
+bindTouch('tc-shoot', () => pressed.add('shoot'));
 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
@@ -1451,12 +1510,14 @@ function googleSignOut() {
 }
 function updateAuthUI() {
   const bar = document.getElementById('auth-bar');
-  if (!bar) return;
+  const mobileBar = document.getElementById('mobile-auth');
   if (currentUser) {
-    bar.innerHTML = `<span id="auth-status">☁ ${currentUser.email}</span>
+    if (bar) bar.innerHTML = `<span id="auth-status">☁ ${currentUser.email}</span>
       <button class="gbtn signout-btn" onclick="googleSignOut()" style="width:100%">Sign out</button>`;
+    if (mobileBar) mobileBar.innerHTML = `<button class="gbtn signout-btn" onclick="googleSignOut()">Sign out</button>`;
   } else {
-    bar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()" style="width:100%">Google Sign In</button>`;
+    if (bar) bar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()" style="width:100%">Google Sign In</button>`;
+    if (mobileBar) mobileBar.innerHTML = `<button class="gbtn google-btn" onclick="googleSignIn()">Google Sign In</button>`;
   }
 }
 </script>
