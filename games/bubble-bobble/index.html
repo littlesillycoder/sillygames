@@ -994,12 +994,37 @@ function drawLifeBubble(ctx, lb) {
 function drawWordComplete(ctx) {
   const a=Math.min(wordCompleteTimer/30,1);
   ctx.save(); ctx.globalAlpha=a;
-  const WORD_COLORS=['#f5c518','#ff6b9d','#a29bfe','#55efc4','#fdcb6e','#74b9ff','#fd79a8','#e17055','#00cec9','#6c5ce7'];
+  // Draw each letter as a full-size bubble (r=15), row centred on canvas
+  const r = 15, spacing = r*2 + 6;
+  const totalW = currentWord.length * spacing - 6;
+  const startX = CW/2 - totalW/2 + r;
+  const by = TILE*2 + r + 4;
+  for(let i=0;i<currentWord.length;i++){
+    const x = startX + i*spacing, hue = (i*55+30)%360;
+    // Glow
+    const grd=ctx.createRadialGradient(x,by,0,x,by,r*2);
+    grd.addColorStop(0,`hsla(${hue},90%,70%,0.3)`);
+    grd.addColorStop(1,`hsla(${hue},90%,70%,0)`);
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,by,r*2,0,Math.PI*2); ctx.fill();
+    // Fill
+    ctx.globalAlpha=0.88;
+    ctx.fillStyle=`hsl(${hue},75%,55%)`;
+    ctx.beginPath(); ctx.arc(x,by,r,0,Math.PI*2); ctx.fill();
+    // Outline
+    ctx.strokeStyle=`hsl(${hue},85%,35%)`; ctx.lineWidth=2; ctx.stroke();
+    // Shine
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.ellipse(x-r*0.28,by-r*0.32,r*0.28,r*0.16,-0.5,0,Math.PI*2); ctx.fill();
+    // Letter
+    ctx.globalAlpha=1;
+    ctx.fillStyle='white'; ctx.font=`bold ${Math.round(r*1.1)}px monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(currentWord[i],x,by+1);
+    ctx.textBaseline='alphabetic';
+  }
   ctx.textAlign='center';
-  ctx.fillStyle=WORD_COLORS[(gs.level-1) % WORD_COLORS.length]; ctx.font=`bold 28px monospace`;
-  ctx.fillText(currentWord,CW/2,TILE*2+42);
   ctx.fillStyle='#f5c518'; ctx.font='10px monospace';
-  ctx.fillText('+500 BONUS!',CW/2,TILE*2+60);
+  ctx.fillText('+500 BONUS!',CW/2,by+r+14);
   ctx.restore();
 }
 
