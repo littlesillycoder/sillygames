@@ -994,7 +994,7 @@ function drawLifeBubble(ctx, lb) {
 function drawWordComplete(ctx) {
   const a=Math.min(wordCompleteTimer/30,1);
   ctx.save(); ctx.globalAlpha=a;
-  ctx.fillStyle='rgba(0,0,20,0.75)'; ctx.fillRect(0,TILE*2,CW,70);
+  // no background — canvas is already dark
   ctx.textAlign='center';
   ctx.fillStyle='#4ecdc4'; ctx.font=`bold 28px monospace`;
   ctx.fillText(currentWord,CW/2,TILE*2+42);
@@ -1345,7 +1345,7 @@ function drawPaused(ctx) {
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,CW,CH);
   ctx.textAlign='center';
   ctx.fillStyle='#4ecdc4'; ctx.font='bold 28px monospace'; ctx.fillText('PAUSED',CW/2,CH/2-16);
-  ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText('P / ESC or ▶ RESUME to continue',CW/2,CH/2+16);
+  ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText('P / ESC / Enter or ▶ RESUME',CW/2,CH/2+16);
 }
 
 // Init
