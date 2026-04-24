@@ -341,7 +341,7 @@ window.addEventListener('keydown', e => {
   if (e.code==='ArrowUp')                                    pressed.add('menuup');
   if (e.code==='ArrowDown')                                 { pressed.add('menudown'); e.preventDefault(); }
   if (e.code==='KeyX'     || e.code==='Space')             { pressed.add('shoot');   e.preventDefault(); }
-  if (e.code==='Enter')                                      pressed.add('enter');
+  if (e.code==='Enter')                                    { pressed.add('enter'); if(paused) togglePause(); }
   if (e.code==='KeyN')                                       pressed.add('newgame');
   if (e.code==='KeyP' || e.code==='Escape')                  togglePause();
 });
@@ -994,14 +994,12 @@ function drawLifeBubble(ctx, lb) {
 function drawWordComplete(ctx) {
   const a=Math.min(wordCompleteTimer/30,1);
   ctx.save(); ctx.globalAlpha=a;
-  ctx.fillStyle='rgba(0,0,20,0.75)'; ctx.fillRect(0,0,CW,90);
+  ctx.fillStyle='rgba(0,0,20,0.75)'; ctx.fillRect(0,TILE*2,CW,70);
   ctx.textAlign='center';
-  ctx.fillStyle='#f5c518'; ctx.font='bold 13px monospace';
-  ctx.fillText('✨  W O R D  C O M P L E T E !  ✨',CW/2,22);
-  ctx.fillStyle='#4ecdc4'; ctx.font=`bold 30px monospace`;
-  ctx.fillText(currentWord,CW/2,58);
-  ctx.fillStyle='#aaa'; ctx.font='10px monospace';
-  ctx.fillText('+500 BONUS!',CW/2,78);
+  ctx.fillStyle='#4ecdc4'; ctx.font=`bold 28px monospace`;
+  ctx.fillText(currentWord,CW/2,TILE*2+42);
+  ctx.fillStyle='#f5c518'; ctx.font='10px monospace';
+  ctx.fillText('+500 BONUS!',CW/2,TILE*2+60);
   ctx.restore();
 }
 
