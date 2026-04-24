@@ -1224,7 +1224,7 @@ function update() {
   }
   // harvest: game keeps running so player can collect fruits/giant fruit
   if(gs.state==='harvest'){
-    if(--gs.harvestDelay<=0){ gs.state='levelClear'; gs.clearDelay=90; }
+    if(--gs.harvestDelay<=0){ gs.state='levelClear'; gs.clearDelay=90; wordCompleteTimer=0; }
   }
 
   // update objects
@@ -1321,7 +1321,7 @@ function update() {
         addScore(50, lb.x, lb.y);
         SFX.fruit();
         if(collectedLetters.every(c=>c)){
-          wordCompleteTimer=180;
+          wordCompleteTimer=480;
           addScore(500, CW/2, CH/3);
           SFX.clear();
           gs.wordStreak++;
