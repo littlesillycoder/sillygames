@@ -1,4 +1,4 @@
-const CACHE = 'bubble-bobble-v2';
+const CACHE = 'bubble-bobble-v3';
 const ASSETS = [
   './',
   './index.html',

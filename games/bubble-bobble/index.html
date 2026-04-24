@@ -51,10 +51,16 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
   #hud-bar{border-radius:0}
   #lives-bar{border-radius:0}
   #touch-controls{
-    display:flex;justify-content:center;align-items:center;
-    width:100%;padding:10px 16px;background:#0d0d1a;
+    display:flex;align-items:stretch;
+    width:100%;height:72px;background:#0d0d1a;
     border-top:1px solid #2a2a50;
   }
+  #tc-gesture{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    border-right:1px solid #2a2a50;
+    -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
+  }
+  .tc-hint{color:#2a2a50;font-size:10px;pointer-events:none;letter-spacing:.5px}
   .tc-btn{
     width:64px;height:56px;background:#1c1c38;border:2px solid #3a3a60;
     border-radius:10px;color:#fff;font-family:monospace;font-size:13px;
@@ -115,7 +121,10 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div id="lives-bar"></div>
     </div>
     <div id="touch-controls">
-      <button class="tc-btn" id="tc-shoot" style="width:80px;height:60px;font-size:15px">●<br>Shoot</button>
+      <div id="tc-gesture">
+        <div class="tc-hint">◀ ·· touch ·· ▶&nbsp;&nbsp;swipe ↑ jump</div>
+      </div>
+      <button class="tc-btn" id="tc-shoot">●<br>Shoot</button>
     </div>
   </div>
 
@@ -426,43 +435,55 @@ if (tcShoot) {
 }
 
 // Canvas touch: drag Bob around during gameplay
-// Finger direction relative to Bob → movement + jump
-const gameCanvas = document.getElementById('game');
-let mobileAbove = false; // tracks when finger enters upper zone (for one-shot jump)
+// ─── Gesture bar (movement + jump) ───────────────────────────
+const gameCanvas  = document.getElementById('game');
+const tcGesture   = document.getElementById('tc-gesture');
+let gestureStartY = 0;
+let gestureJumped = false;
 
-function canvasToGame(touch) {
-  const rect = gameCanvas.getBoundingClientRect();
-  return {
-    x: (touch.clientX - rect.left) * (CW / rect.width),
-    y: (touch.clientY - rect.top)  * (CH / rect.height)
-  };
+function gestureDirection(clientX) {
+  const rect = tcGesture.getBoundingClientRect();
+  const mid  = rect.left + rect.width / 2;
+  return clientX < mid ? 'left' : 'right';
 }
 
-function applyDragMovement(touch) {
-  const f  = canvasToGame(touch);
-  const dx = f.x - player.x;
-  const dy = f.y - player.y;
-
-  // Horizontal: dead-zone of ±20px so straight-up jumps don't drift
-  if      (dx >  20) { keys.right = true;  keys.left  = false; }
-  else if (dx < -20) { keys.left  = true;  keys.right = false; }
-  else               { keys.left  = false; keys.right = false; }
-
-  // Jump: fire once when finger crosses above Bob (threshold 30px up)
-  const above = dy < -30;
-  if (above && !mobileAbove) pressed.add('jump');
-  mobileAbove = above;
+function gestureStart(touch) {
+  gestureStartY = touch.clientY;
+  gestureJumped = false;
+  const dir = gestureDirection(touch.clientX);
+  keys.left  = dir === 'left';
+  keys.right = dir === 'right';
 }
 
+function gestureMove(touch) {
+  // Allow sliding finger left/right to change direction
+  const dir = gestureDirection(touch.clientX);
+  keys.left  = dir === 'left';
+  keys.right = dir === 'right';
+  // Swipe up ≥ 40px from start → jump once
+  if (!gestureJumped && (gestureStartY - touch.clientY) >= 40) {
+    pressed.add('jump');
+    gestureJumped = true;
+  }
+}
+
+function gestureEnd() {
+  keys.left = false;
+  keys.right = false;
+  gestureJumped = false;
+}
+
+if (tcGesture) {
+  tcGesture.addEventListener('touchstart',  e => { e.preventDefault(); gestureStart(e.touches[0]); }, { passive: false });
+  tcGesture.addEventListener('touchmove',   e => { e.preventDefault(); gestureMove(e.touches[0]);  }, { passive: false });
+  tcGesture.addEventListener('touchend',    e => { e.preventDefault(); gestureEnd(); }, { passive: false });
+  tcGesture.addEventListener('touchcancel', e => { e.preventDefault(); gestureEnd(); }, { passive: false });
+}
+
+// ─── Canvas tap: title / game-over screens ───────────────────
 gameCanvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  if (gs.state === 'playing' || gs.state === 'harvest') {
-    if (paused) return;
-    mobileAbove = false;
-    applyDragMovement(e.touches[0]);
-    return;
-  }
-  // Title / game-over / win: tap = Enter
+  if (gs.state === 'playing' || gs.state === 'harvest') return; // gesture bar handles gameplay
   if (gs.state === 'title') {
     const sv = loadSave();
     if (sv) {
@@ -474,24 +495,7 @@ gameCanvas.addEventListener('touchstart', e => {
   pressed.add('enter');
 }, { passive: false });
 
-gameCanvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  if ((gs.state === 'playing' || gs.state === 'harvest') && !paused) {
-    applyDragMovement(e.touches[0]);
-  }
-}, { passive: false });
-
-gameCanvas.addEventListener('touchend', e => {
-  keys.left = false;
-  keys.right = false;
-  mobileAbove = false;
-});
-
-gameCanvas.addEventListener('touchcancel', e => {
-  keys.left = false;
-  keys.right = false;
-  mobileAbove = false;
-});
+gameCanvas.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
