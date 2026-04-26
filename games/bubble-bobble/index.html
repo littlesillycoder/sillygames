@@ -98,10 +98,8 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <h2>Extra Lives</h2>
     <div>Max 6 lives</div>
     <div>Spell 3 words</div>
-    <div>→ +1 life</div>
-    <div>Catch 1UP bubble</div>
-    <div>every 5th level</div>
-    <div>→ +1 life</div>
+    <div>→ 1UP bubble</div>
+    <div>next level!</div>
   </div>
 </div>
 
@@ -1123,7 +1121,7 @@ function nextWord() {
 // ─── Game objects ────────────────────────────────────────────
 let player, bubbles, enemies, fruits, popups, letterBubbles, map, brickColor, frame=0;
 let currentWord='', collectedLetters=[], wordCompleteTimer=0;
-let giantFruit = null, lifeBubble = null;
+let giantFruit = null, lifeBubble = null, pendingLifeBubble = false;
 let levelStartScore = 0;
 const BONUS_THRESHOLD = 300; // points earned this level to trigger bonus fruit
 
@@ -1156,7 +1154,8 @@ function initLevel() {
   fruits=spawnLevelFruits(map);
   popups=[];
   giantFruit=null;
-  lifeBubble = (gs.level % 5 === 0) ? new LifeBubble() : null;
+  lifeBubble = pendingLifeBubble ? new LifeBubble() : null;
+  pendingLifeBubble = false;
   currentWord = nextWord();
   collectedLetters = new Array(currentWord.length).fill(false);
   wordCompleteTimer = 0;
@@ -1325,7 +1324,7 @@ function update() {
           addScore(500, CW/2, CH/3);
           SFX.clear();
           gs.wordStreak++;
-          if(gs.wordStreak>=3){ gs.lives=Math.min(gs.lives+1,6); gs.wordStreak=0; popups.push({x:CW/2,y:CH/3-30,text:'♥ +1 LIFE!',life:120,maxLife:120,color:'#ff6b9d'}); SFX.clear(); }
+          if(gs.wordStreak>=3){ gs.wordStreak=0; pendingLifeBubble=true; popups.push({x:CW/2,y:CH/3-30,text:'1UP next level!',life:120,maxLife:120,color:'#2ecc71'}); SFX.clear(); }
           saveProgress();
         }
         updateWordSidebar();
