@@ -102,56 +102,95 @@ const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
 
 // ═══════════════════════════════════════════════════════════
-// DRAW MAZE
+// DRAW MAZE  — Google Pac-Man style: thin neon-line walls
 // ═══════════════════════════════════════════════════════════
 function drawMaze() {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, CW, CH);
 
+  // ── dots & power pellets ──────────────────────────────────
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell = MAP[r][c];
-      const x = c * CS, y = r * CS;
-
-      switch (cell) {
-        case W: // wall — classic blue with depth
-          ctx.fillStyle = '#1a1aff';
-          ctx.fillRect(x, y, CS, CS);
-          ctx.fillStyle = '#3333cc';
-          ctx.fillRect(x + 2, y + 2, CS - 4, CS - 4);
-          break;
-
-        case G: // ghost house interior
-          ctx.fillStyle = '#111';
-          ctx.fillRect(x, y, CS, CS);
-          ctx.strokeStyle = '#ff69b4';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x + 0.5, y + 0.5, CS - 1, CS - 1);
-          break;
-
-        case D: // dot
-          ctx.fillStyle = '#000';
-          ctx.fillRect(x, y, CS, CS);
-          ctx.fillStyle = '#ffb8ae';
-          ctx.beginPath();
-          ctx.arc(x + CS / 2, y + CS / 2, 2, 0, Math.PI * 2);
-          ctx.fill();
-          break;
-
-        case P: // power pellet — larger, pulsing handled in game loop later
-          ctx.fillStyle = '#000';
-          ctx.fillRect(x, y, CS, CS);
-          ctx.fillStyle = '#ffb8ae';
-          ctx.beginPath();
-          ctx.arc(x + CS / 2, y + CS / 2, 5, 0, Math.PI * 2);
-          ctx.fill();
-          break;
-
-        default: // E — empty (tunnels, open space around ghost house)
-          ctx.fillStyle = '#000';
-          ctx.fillRect(x, y, CS, CS);
-          break;
+      const cx = c * CS + CS / 2, cy = r * CS + CS / 2;
+      if (cell === D) {
+        ctx.fillStyle = '#ffb897';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (cell === P) {
+        ctx.fillStyle = '#ffb897';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.fill();
       }
+    }
+  }
+
+  // ── walls — thin neon lines along cell boundaries ─────────
+  // Only draw a line where a walkable cell meets a wall cell.
+  // Merge collinear segments so round caps form natural corners.
+  function isWall(r, c) {
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+    return MAP[r][c] === W;
+  }
+
+  ctx.strokeStyle = '#1a1aff';
+  ctx.lineWidth   = 3;
+  ctx.lineCap     = 'round';
+  ctx.shadowColor = '#4466ff';
+  ctx.shadowBlur  = 6;
+
+  // Horizontal edges: scan each row boundary r→r+1
+  for (let r = 0; r <= ROWS; r++) {
+    let start = -1;
+    for (let c = 0; c <= COLS; c++) {
+      const edge = c < COLS && (isWall(r - 1, c) !== isWall(r, c));
+      if (edge && start === -1) { start = c; }
+      else if (!edge && start !== -1) {
+        ctx.beginPath();
+        ctx.moveTo(start * CS, r * CS);
+        ctx.lineTo(c     * CS, r * CS);
+        ctx.stroke();
+        start = -1;
+      }
+    }
+  }
+
+  // Vertical edges: scan each column boundary c→c+1
+  for (let c = 0; c <= COLS; c++) {
+    let start = -1;
+    for (let r = 0; r <= ROWS; r++) {
+      const edge = r < ROWS && (isWall(r, c - 1) !== isWall(r, c));
+      if (edge && start === -1) { start = r; }
+      else if (!edge && start !== -1) {
+        ctx.beginPath();
+        ctx.moveTo(c * CS, start * CS);
+        ctx.lineTo(c * CS, r     * CS);
+        ctx.stroke();
+        start = -1;
+      }
+    }
+  }
+
+  ctx.shadowBlur = 0;
+
+  // ── ghost house pink border ───────────────────────────────
+  ctx.strokeStyle = '#ff69b4';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'butt';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (MAP[r][c] !== G) continue;
+      const x = c * CS, y = r * CS;
+      const top    = MAP[r - 1]?.[c] !== G;
+      const bottom = MAP[r + 1]?.[c] !== G;
+      const left   = MAP[r]?.[c - 1] !== G;
+      const right  = MAP[r]?.[c + 1] !== G;
+      if (top)    { ctx.beginPath(); ctx.moveTo(x,      y);      ctx.lineTo(x + CS, y);      ctx.stroke(); }
+      if (bottom) { ctx.beginPath(); ctx.moveTo(x,      y + CS); ctx.lineTo(x + CS, y + CS); ctx.stroke(); }
+      if (left)   { ctx.beginPath(); ctx.moveTo(x,      y);      ctx.lineTo(x,      y + CS); ctx.stroke(); }
+      if (right)  { ctx.beginPath(); ctx.moveTo(x + CS, y);      ctx.lineTo(x + CS, y + CS); ctx.stroke(); }
     }
   }
 }
