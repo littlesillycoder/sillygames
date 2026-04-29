@@ -44,45 +44,45 @@ const MAP = [
 // r0 — top border
 [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
 // r1 — top corridor  (P at col 1 and col 34)
-[W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
-// r2 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r3 — corridor with two wall dividers
-[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r4 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r5 — full open corridor
+[W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+// r2 — open
 [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r6 — approach to ghost house area (upper)
-[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
+// r3 — two wall islands (left & right), open center
+[W,D,D,D,W,W,W,W,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,W,W,W,W,D,D,D,D,W],
+// r4 — same islands (2 cells tall)
+[W,D,D,D,W,W,W,W,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,W,W,W,W,D,D,D,D,W],
+// r5 — open
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r6 — narrow wall pair flanking ghost house zone
+[W,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,W],
 // r7 — open gallery above ghost house
-[W,D,W,W,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,W,W,D,W],
+[W,D,D,D,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,D,D,D,D,W],
 // r8 — TUNNEL row  (E at cols 0-2 and 33-35 = tunnel exits)
 [E,E,E,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,E,E,E],
 // r9 — ghost house row 2
-[W,W,W,D,W,W,W,W,W,W,W,D,E,G,G,G,G,G,G,G,G,G,G,E,D,W,W,W,W,W,W,D,W,W,W,W],
+[W,W,W,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,W,W,W],
 // r10 — open gallery below ghost house
-[W,D,W,W,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,W,W,D,W],
+[W,D,D,D,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,D,D,D,D,W],
 // r11 — TUNNEL row  (mirror of r8)
 [E,E,E,D,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,D,D,E,E,E],
-// r12 — approach to ghost house area (lower)
-[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
-// r13 — full open corridor
+// r12 — narrow wall pair flanking ghost house zone
+[W,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,W],
+// r13 — open
 [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r14 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r15 — corridor with two wall dividers
-[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r16 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r17 — corridor
-[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r18 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r19 — corridor with two wall dividers
-[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r14 — two wall islands (left & right), open center
+[W,D,D,D,W,W,W,W,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,W,W,W,W,D,D,D,D,W],
+// r15 — same islands (2 cells tall)
+[W,D,D,D,W,W,W,W,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,W,W,W,W,D,D,D,D,W],
+// r16 — open
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r17 — open
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r18 — open
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r19 — open
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
 // r20 — bottom corridor  (P at col 1 and col 34)
-[W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+[W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
 // r21 — bottom border
 [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
 ];
@@ -134,7 +134,7 @@ function drawMaze() {
           ctx.fillRect(x, y, CS, CS);
           ctx.fillStyle = '#ffb8ae';
           ctx.beginPath();
-          ctx.arc(x + CS / 2, y + CS / 2, 2, 0, Math.PI * 2);
+          ctx.arc(x + CS / 2, y + CS / 2, 3, 0, Math.PI * 2);
           ctx.fill();
           break;
 
@@ -143,7 +143,7 @@ function drawMaze() {
           ctx.fillRect(x, y, CS, CS);
           ctx.fillStyle = '#ffb8ae';
           ctx.beginPath();
-          ctx.arc(x + CS / 2, y + CS / 2, 5, 0, Math.PI * 2);
+          ctx.arc(x + CS / 2, y + CS / 2, 6, 0, Math.PI * 2);
           ctx.fill();
           break;
 
