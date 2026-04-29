@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pac-Man Word Hunt</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Courier New', monospace;
+}
+canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+</style>
+</head>
+<body>
+<canvas id="c" width="576" height="352"></canvas>
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const COLS = 36, ROWS = 22, CS = 16; // 576 × 352 px
+const CW = COLS * CS, CH = ROWS * CS;
+
+// Cell types
+const W = 1; // wall
+const D = 0; // dot
+const P = 3; // power pellet
+const G = 4; // ghost house interior
+const E = 5; // empty — walkable, no dot (tunnels, ghost house surrounds)
+
+// ═══════════════════════════════════════════════════════════
+// MAZE  36 × 22  (each row must have exactly 36 elements)
+// ═══════════════════════════════════════════════════════════
+const MAP = [
+// r0 — top border
+[W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+// r1 — top corridor  (P at col 1 and col 34)
+[W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+// r2 — inner wall blocks
+[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
+// r3 — corridor with two wall dividers
+[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r4 — inner wall blocks
+[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
+// r5 — full open corridor
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r6 — approach to ghost house area (upper)
+[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
+// r7 — open gallery above ghost house
+[W,D,W,W,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,W,W,D,W],
+// r8 — TUNNEL row  (E at cols 0-2 and 33-35 = tunnel exits)
+[E,E,E,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,E,E,E],
+// r9 — ghost house row 2
+[W,W,W,D,W,W,W,W,W,W,W,D,E,G,G,G,G,G,G,G,G,G,G,E,D,W,W,W,W,W,W,D,W,W,W,W],
+// r10 — open gallery below ghost house
+[W,D,W,W,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,W,W,D,W],
+// r11 — TUNNEL row  (mirror of r8)
+[E,E,E,D,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,D,D,E,E,E],
+// r12 — approach to ghost house area (lower)
+[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
+// r13 — full open corridor
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r14 — inner wall blocks
+[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
+// r15 — corridor with two wall dividers
+[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r16 — inner wall blocks
+[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
+// r17 — corridor
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r18 — inner wall blocks
+[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
+// r19 — corridor with two wall dividers
+[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r20 — bottom corridor  (P at col 1 and col 34)
+[W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+// r21 — bottom border
+[W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+];
+
+// Validate maze dimensions
+MAP.forEach((row, r) => {
+  if (row.length !== COLS)
+    console.error(`Maze row ${r}: expected ${COLS} cells, got ${row.length}`);
+});
+if (MAP.length !== ROWS)
+  console.error(`Maze: expected ${ROWS} rows, got ${MAP.length}`);
+
+// ═══════════════════════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+// ═══════════════════════════════════════════════════════════
+// DRAW MAZE
+// ═══════════════════════════════════════════════════════════
+function drawMaze() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, CW, CH);
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = MAP[r][c];
+      const x = c * CS, y = r * CS;
+
+      switch (cell) {
+        case W: // wall — classic blue with depth
+          ctx.fillStyle = '#1a1aff';
+          ctx.fillRect(x, y, CS, CS);
+          ctx.fillStyle = '#3333cc';
+          ctx.fillRect(x + 2, y + 2, CS - 4, CS - 4);
+          break;
+
+        case G: // ghost house interior
+          ctx.fillStyle = '#111';
+          ctx.fillRect(x, y, CS, CS);
+          ctx.strokeStyle = '#ff69b4';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 0.5, y + 0.5, CS - 1, CS - 1);
+          break;
+
+        case D: // dot
+          ctx.fillStyle = '#000';
+          ctx.fillRect(x, y, CS, CS);
+          ctx.fillStyle = '#ffb8ae';
+          ctx.beginPath();
+          ctx.arc(x + CS / 2, y + CS / 2, 2, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+
+        case P: // power pellet — larger, pulsing handled in game loop later
+          ctx.fillStyle = '#000';
+          ctx.fillRect(x, y, CS, CS);
+          ctx.fillStyle = '#ffb8ae';
+          ctx.beginPath();
+          ctx.arc(x + CS / 2, y + CS / 2, 5, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+
+        default: // E — empty (tunnels, open space around ghost house)
+          ctx.fillStyle = '#000';
+          ctx.fillRect(x, y, CS, CS);
+          break;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════
+drawMaze();
+</script>
+</body>
+</html>
