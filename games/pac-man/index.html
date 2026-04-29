@@ -44,12 +44,12 @@ const E = 5; // empty — walkable, no dot (tunnels, ghost house border)
 const MAP = [
 // r0 — top border
 [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-// r1 — top corridor  (P at col 1 and col 34)
-[W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+// r1 — top corridor  (P at col 1 and col 34, fully open)
+[W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
 // r2 — wall + vertical connectors
 [W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r3 — corridor with two wall dividers
-[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r3 — corridor (fully open — removing W,W dividers that enclosed cols 15-19)
+[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
 // r4 — wall + vertical connectors (above tunnel)
 [W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
 // r5 — TUNNEL row  (E tunnels at cols 0-2 and 33-35; ghost house G at cols 13-22)
