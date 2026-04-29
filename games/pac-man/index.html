@@ -26,64 +26,43 @@ canvas {
 <script>
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS
+// Non-square cells: CS = cell width, CSH = cell height (2×)
 // ═══════════════════════════════════════════════════════════
-const COLS = 36, ROWS = 22, CS = 16; // 576 × 352 px
-const CW = COLS * CS, CH = ROWS * CS;
+const COLS = 36, ROWS = 11, CS = 16, CSH = 32; // 576 × 352 px
+const CW = COLS * CS, CH = ROWS * CSH;
 
 // Cell types
 const W = 1; // wall
 const D = 0; // dot
 const P = 3; // power pellet
 const G = 4; // ghost house interior
-const E = 5; // empty — walkable, no dot (tunnels, ghost house surrounds)
+const E = 5; // empty — walkable, no dot (tunnels, ghost house border)
 
 // ═══════════════════════════════════════════════════════════
-// MAZE  36 × 22  (each row must have exactly 36 elements)
+// MAZE  36 × 11  — corridors are 32 px tall, walls 32 px tall
 // ═══════════════════════════════════════════════════════════
 const MAP = [
 // r0 — top border
 [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
 // r1 — top corridor  (P at col 1 and col 34)
 [W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
-// r2 — inner wall blocks
+// r2 — wall + vertical connectors
 [W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
 // r3 — corridor with two wall dividers
 [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r4 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r5 — full open corridor
-[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r6 — approach to ghost house area (upper)
+// r4 — wall + vertical connectors (above tunnel)
 [W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
-// r7 — wall+connectors (single-D links between r6 and r8 tunnel)
-[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
-// r8 — TUNNEL row  (E at cols 0-2 and 33-35 = tunnel exits)
+// r5 — TUNNEL row  (E tunnels at cols 0-2 and 33-35; ghost house G at cols 13-22)
 [E,E,E,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,E,E,E],
-// r9 — ghost house row 2
-[W,W,W,D,W,W,W,W,W,W,W,D,E,G,G,G,G,G,G,G,G,G,G,E,D,W,W,W,W,W,W,D,W,W,W,W],
-// r10 — wall+connectors (single-D links between r9 and r11 tunnel)
-[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
-// r11 — TUNNEL row  (mirror of r8)
-[E,E,E,D,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,D,D,E,E,E],
-// r12 — approach to ghost house area (lower)
-[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
-// r13 — full open corridor
-[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r14 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r15 — corridor with two wall dividers
-[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r16 — inner wall blocks
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r17 — corridor
+// r6 — wall + vertical connectors (below tunnel)
+[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,D,W,W,D,W],
+// r7 — corridor with center wall divider
 [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r18 — inner wall blocks
+// r8 — wall + vertical connectors
 [W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r19 — wall+connectors (separates r17/r18 corridor from r20 bottom corridor)
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r20 — bottom corridor  (P at col 1 and col 34)
+// r9 — bottom corridor  (P at col 1 and col 34)
 [W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
-// r21 — bottom border
+// r10 — bottom border
 [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
 ];
 
@@ -103,6 +82,7 @@ const ctx    = canvas.getContext('2d');
 
 // ═══════════════════════════════════════════════════════════
 // DRAW MAZE  — Google Pac-Man style: thin neon-line walls
+// Non-square cells: x uses CS (16px), y uses CSH (32px)
 // ═══════════════════════════════════════════════════════════
 function drawMaze() {
   ctx.fillStyle = '#000';
@@ -112,24 +92,22 @@ function drawMaze() {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell = MAP[r][c];
-      const cx = c * CS + CS / 2, cy = r * CS + CS / 2;
+      const cx = c * CS + CS / 2, cy = r * CSH + CSH / 2;
       if (cell === D) {
         ctx.fillStyle = '#ffb897';
         ctx.beginPath();
-        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
         ctx.fill();
       } else if (cell === P) {
         ctx.fillStyle = '#ffb897';
         ctx.beginPath();
-        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 7, 0, Math.PI * 2);
         ctx.fill();
       }
     }
   }
 
   // ── walls — thin neon lines along cell boundaries ─────────
-  // Only draw a line where a walkable cell meets a wall cell.
-  // Merge collinear segments so round caps form natural corners.
   function isWall(r, c) {
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
     return MAP[r][c] === W;
@@ -141,7 +119,7 @@ function drawMaze() {
   ctx.shadowColor = '#4466ff';
   ctx.shadowBlur  = 6;
 
-  // Horizontal edges: scan each row boundary r→r+1
+  // Horizontal edges (between rows) — y positions use CSH
   for (let r = 0; r <= ROWS; r++) {
     let start = -1;
     for (let c = 0; c <= COLS; c++) {
@@ -149,15 +127,15 @@ function drawMaze() {
       if (edge && start === -1) { start = c; }
       else if (!edge && start !== -1) {
         ctx.beginPath();
-        ctx.moveTo(start * CS, r * CS);
-        ctx.lineTo(c     * CS, r * CS);
+        ctx.moveTo(start * CS, r * CSH);
+        ctx.lineTo(c     * CS, r * CSH);
         ctx.stroke();
         start = -1;
       }
     }
   }
 
-  // Vertical edges: scan each column boundary c→c+1
+  // Vertical edges (between cols) — heights use CSH
   for (let c = 0; c <= COLS; c++) {
     let start = -1;
     for (let r = 0; r <= ROWS; r++) {
@@ -165,8 +143,8 @@ function drawMaze() {
       if (edge && start === -1) { start = r; }
       else if (!edge && start !== -1) {
         ctx.beginPath();
-        ctx.moveTo(c * CS, start * CS);
-        ctx.lineTo(c * CS, r     * CS);
+        ctx.moveTo(c * CS, start * CSH);
+        ctx.lineTo(c * CS, r     * CSH);
         ctx.stroke();
         start = -1;
       }
@@ -182,15 +160,15 @@ function drawMaze() {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       if (MAP[r][c] !== G) continue;
-      const x = c * CS, y = r * CS;
+      const x = c * CS, y = r * CSH;
       const top    = MAP[r - 1]?.[c] !== G;
       const bottom = MAP[r + 1]?.[c] !== G;
       const left   = MAP[r]?.[c - 1] !== G;
       const right  = MAP[r]?.[c + 1] !== G;
-      if (top)    { ctx.beginPath(); ctx.moveTo(x,      y);      ctx.lineTo(x + CS, y);      ctx.stroke(); }
-      if (bottom) { ctx.beginPath(); ctx.moveTo(x,      y + CS); ctx.lineTo(x + CS, y + CS); ctx.stroke(); }
-      if (left)   { ctx.beginPath(); ctx.moveTo(x,      y);      ctx.lineTo(x,      y + CS); ctx.stroke(); }
-      if (right)  { ctx.beginPath(); ctx.moveTo(x + CS, y);      ctx.lineTo(x + CS, y + CS); ctx.stroke(); }
+      if (top)    { ctx.beginPath(); ctx.moveTo(x,      y);        ctx.lineTo(x + CS, y);        ctx.stroke(); }
+      if (bottom) { ctx.beginPath(); ctx.moveTo(x,      y + CSH);  ctx.lineTo(x + CS, y + CSH);  ctx.stroke(); }
+      if (left)   { ctx.beginPath(); ctx.moveTo(x,      y);        ctx.lineTo(x,      y + CSH);   ctx.stroke(); }
+      if (right)  { ctx.beginPath(); ctx.moveTo(x + CS, y);        ctx.lineTo(x + CS, y + CSH);   ctx.stroke(); }
     }
   }
 }
