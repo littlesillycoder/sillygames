@@ -55,14 +55,14 @@ const MAP = [
 [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
 // r6 — approach to ghost house area (upper)
 [W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
-// r7 — open gallery above ghost house
-[W,D,W,W,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,W,W,D,W],
+// r7 — wall+connectors (single-D links between r6 and r8 tunnel)
+[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
 // r8 — TUNNEL row  (E at cols 0-2 and 33-35 = tunnel exits)
 [E,E,E,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,E,E,E],
 // r9 — ghost house row 2
 [W,W,W,D,W,W,W,W,W,W,W,D,E,G,G,G,G,G,G,G,G,G,G,E,D,W,W,W,W,W,W,D,W,W,W,W],
-// r10 — open gallery below ghost house
-[W,D,W,W,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,W,W,D,W],
+// r10 — wall+connectors (single-D links between r9 and r11 tunnel)
+[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
 // r11 — TUNNEL row  (mirror of r8)
 [E,E,E,D,D,D,D,D,D,D,D,D,E,E,E,E,E,E,E,E,E,E,E,E,D,D,D,D,D,D,D,D,D,E,E,E],
 // r12 — approach to ghost house area (lower)
@@ -79,8 +79,8 @@ const MAP = [
 [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
 // r18 — inner wall blocks
 [W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r19 — corridor with two wall dividers
-[W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+// r19 — wall+connectors (separates r17/r18 corridor from r20 bottom corridor)
+[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
 // r20 — bottom corridor  (P at col 1 and col 34)
 [W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
 // r21 — bottom border
