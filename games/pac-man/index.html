@@ -283,6 +283,10 @@ document.addEventListener('keydown', e => {
   const map = { ArrowRight:'r', ArrowLeft:'l', ArrowUp:'u', ArrowDown:'d' };
   if (map[e.key]) { e.preventDefault(); pac.next = map[e.key]; }
   if (e.key === 'Enter' && (!gameRunning || gameOver)) startGame();
+  if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') &&
+      gameRunning && !gameOver && !dying) {
+    paused = !paused;
+  }
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -374,6 +378,7 @@ function startGame() {
   lives    = 3;
   score    = 0;
   gameOver = false;
+  paused   = false;
   startLevel();
   gameRunning = true;
   lastTime = performance.now();
@@ -535,7 +540,36 @@ function drawGameOver() {
 }
 
 // ── Game loop ─────────────────────────────────────────────
+let paused = false;
+
+function drawPaused() {
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, CH / 2 - 40, CW, 80);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 30px "Courier New", monospace';
+  ctx.fillText('PAUSED', CW / 2, CH / 2 - 4);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '14px "Courier New", monospace';
+  ctx.fillText('Press P to resume', CW / 2, CH / 2 + 24);
+}
+
 function loop(now) {
+  if (paused) {
+    // Freeze time so dt doesn't accumulate
+    lastTime = now;
+    drawMaze();
+    drawLetterTiles();
+    for (const g of ghosts) drawGhost(g);
+    drawPac();
+    drawScore();
+    drawLives();
+    drawTray();
+    drawPaused();
+    requestAnimationFrame(loop);
+    return;
+  }
+
   const dt = Math.min((now - lastTime) / 1000, 0.05); // cap at 50ms
   lastTime = now;
 
