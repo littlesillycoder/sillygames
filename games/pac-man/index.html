@@ -282,7 +282,10 @@ const DIR_VEC = { r:[1,0], l:[-1,0], u:[0,-1], d:[0,1] };
 document.addEventListener('keydown', e => {
   const map = { ArrowRight:'r', ArrowLeft:'l', ArrowUp:'u', ArrowDown:'d' };
   if (map[e.key]) { e.preventDefault(); pac.next = map[e.key]; }
-  if (e.key === 'Enter' && (!gameRunning || gameOver)) startGame();
+  if (e.key === 'Enter') {
+    if (paused) { paused = false; }
+    else if (!gameRunning || gameOver) startGame();
+  }
   if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') &&
       gameRunning && !gameOver && !dying) {
     paused = !paused;
@@ -551,7 +554,7 @@ function drawPaused() {
   ctx.fillText('PAUSED', CW / 2, CH / 2 - 4);
   ctx.fillStyle = '#aaa';
   ctx.font = '14px "Courier New", monospace';
-  ctx.fillText('Press P to resume', CW / 2, CH / 2 + 24);
+  ctx.fillText('Press ENTER or P to resume', CW / 2, CH / 2 + 24);
 }
 
 function loop(now) {
