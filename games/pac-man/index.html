@@ -23,6 +23,7 @@ canvas {
 </head>
 <body>
 <canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
+<script src="../shared/words.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 // STAGE 1 — MAZE RENDERING (verified 2026-04-29)
@@ -322,9 +323,17 @@ function tryEat() {
   if (cell === D) { dots[r][cc] = null; score += 10; dotsLeft--; }
   if (cell === P) { dots[r][cc] = null; score += 50; dotsLeft--; triggerFrightened(); }
   if (cell === L) {
+    const idx = letterIdxMap[r][cc];
     dots[r][cc] = null; score += 15; dotsLeft--;
-    const letter = letterMap[r][cc];
-    if (letter) { tray.push(letter); if (tray.length > TRAY_MAX) tray.shift(); checkWords(); }
+    if (idx >= 0) {
+      collected[idx] = true;
+      if (collected.every(Boolean)) {
+        const bonus = 100 * currentWord.length;
+        score += bonus;
+        wordFlash = { text: `${currentWord}! +${bonus}`, timer: 2.5 };
+        initWord();
+      }
+    }
   }
   if (dotsLeft <= 0) levelClear = true;
 }
@@ -335,9 +344,10 @@ let lastTime    = 0;
 
 function startGame() {
   initDots();
-  initLetters();
-  tray = [];
+  shuffledWords = [...WORD_LIST].sort(() => Math.random() - 0.5);
+  wordIndex = 0;
   wordFlash = null;
+  initWord();
   initGhosts();
   lives = 3;
   dying = false;
@@ -841,217 +851,74 @@ function drawLives() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// STAGE 5 — WORD HUNT (letter tiles, tray, word detection)
+// STAGE 5 — WORD HUNT (one word at a time, shared WORD_LIST)
 // ═══════════════════════════════════════════════════════════
-// ~30% of D cells replaced with L (letter tile) at game start.
-// letterMap[r][c] stores the A–Z letter for each L cell.
-// Collected letters go into tray[]. After each pickup, all
-// contiguous substrings of tray are checked against WORD_SET.
-// Match → bonus score + "WORD FOUND!" flash, letters cleared.
+// One target word chosen from shared WORD_LIST at a time.
+// Only those specific letters placed as L tiles in the maze.
+// Collect all letters → word bonus → next word appears.
 // ═══════════════════════════════════════════════════════════
 
-// ── CEFR B1 word list (3–7 letters, common English words) ─
-const WORD_SET = new Set([
-  // 3-letter
-  'act','add','age','ago','aim','air','arm','art','ask','bad','bag','ban','bar',
-  'bat','bed','big','bit','box','boy','bug','bus','but','buy','can','cap','car',
-  'cat','cop','cow','cry','cup','cut','day','die','dig','dim','dip','dog','dot',
-  'dry','due','ear','eat','egg','end','era','eye','fan','far','fat','fit','fix',
-  'fly','fun','gas','get','god','got','gun','gut','guy','had','has','hat','her',
-  'him','his','hit','hot','how','hub','hug','hut','ice','ill','its','jar','jet',
-  'job','joy','key','kid','law','lay','led','leg','let','lid','lip','log','lot',
-  'low','mad','man','map','may','mix','mob','mom','mud','mug','net','new','nor',
-  'not','now','odd','off','oil','old','one','our','out','own','pad','pan','pay',
-  'pen','pet','pin','pit','pop','pot','put','raw','red','rid','row','run','sad',
-  'sat','saw','say','sea','set','sew','shy','sin','sit','six','sky','sob','son',
-  'spa','spy','sun','tab','tap','tar','tax','tea','ten','tip','toe','too','top',
-  'toy','try','tub','tug','two','use','van','war','was','way','web','win','wit',
-  'won','yes','yet','you','zip',
-  // 4-letter
-  'able','also','area','army','away','baby','back','bail','bake','ball','band',
-  'bank','base','bath','bear','beat','been','beer','bell','belt','best','bird',
-  'bite','blow','blue','boat','body','bold','bond','bone','book','born','boss',
-  'both','bulk','burn','call','calm','came','camp','card','care','case','cash',
-  'cast','cave','cell','chat','chip','city','clap','clay','clip','club','clue',
-  'coal','coat','code','coin','cold','come','cook','cool','copy','core','cost',
-  'coup','crop','cure','dark','data','date','dawn','days','dead','deal','dean',
-  'dear','debt','deck','deed','deep','deny','desk','diet','dirt','disk','dive',
-  'dock','does','done','door','dose','down','draw','drew','drop','drug','drum',
-  'dual','dump','dusk','dust','duty','each','earn','ease','east','easy','edge',
-  'else','even','ever','evil','exam','exit','face','fact','fail','fair','fake',
-  'fall','fame','farm','fast','fate','fear','feed','feel','feet','fell','felt',
-  'file','fill','film','find','fine','fire','firm','fish','fist','flag','flat',
-  'flew','flip','flow','foam','fold','folk','fond','food','foot','ford','fore',
-  'fork','form','fort','foul','four','free','from','fuel','full','fund','fuse',
-  'gain','game','gang','gate','gave','gear','gene','gift','girl','give','glad',
-  'glow','glue','goal','goes','gold','golf','gone','good','grab','grey','grid',
-  'grip','grow','gulf','guru','gust','half','hall','halt','hand','hang','hard',
-  'harm','hate','have','hawk','head','heal','heap','heat','heel','held','help',
-  'hero','hide','high','hill','hint','hire','hold','hole','home','hope','horn',
-  'host','hour','huge','hung','hunt','hurt','idea','idle','into','iron','item',
-  'jack','jazz','join','joke','jump','just','keen','keep','kick','kill','kind',
-  'king','knee','knew','know','lack','lady','laid','lake','land','lane','last',
-  'late','lean','leap','left','lend','lens','less','lied','life','lift','like',
-  'lime','line','link','lion','list','live','load','loan','lock','loft','long',
-  'look','loop','lord','lore','lose','loss','lost','love','luck','lung','made',
-  'mail','main','make','male','mall','many','mark','mass','mate','meal','mean',
-  'meat','meet','melt','menu','mere','mild','milk','mill','mind','mine','mint',
-  'miss','mode','mood','moon','more','most','move','much','must','myth','nail',
-  'name','navy','near','neck','need','nest','news','next','nice','nine','node',
-  'none','noon','norm','nose','note','noun','null','numb','oath','once','open',
-  'oral','over','pace','pack','page','paid','pain','pair','pale','palm','park',
-  'part','pass','past','path','peak','peel','peer','pick','pile','pink','pipe',
-  'plan','play','plea','plot','plow','plug','plus','poem','poet','pole','poll',
-  'pond','pool','poor','port','pose','post','pour','pray','prep','prey','pull',
-  'pump','pure','push','rack','rage','rail','rain','rake','rang','rank','rare',
-  'rate','read','real','reap','rear','rely','rent','rest','rice','rich','ride',
-  'ring','rise','risk','road','roam','roar','rock','rode','role','roll','roof',
-  'room','root','rope','rose','ruin','rule','rush','rust','safe','sail','sake',
-  'sale','salt','same','sand','sang','sank','save','scan','seal','seam','seat',
-  'seed','seek','seem','seen','self','sell','sent','ship','shoe','shop','shot',
-  'show','shut','sick','side','sigh','sign','silk','sing','sink','size','skin',
-  'slip','slow','snap','snow','soak','sock','soft','soil','sold','sole','some',
-  'song','soon','sore','sort','soul','soup','sour','spin','spot','star','stay',
-  'stem','step','stir','stop','stub','such','suit','sung','sunk','sure','swan',
-  'swap','swim','tail','take','tale','talk','tall','tank','task','tell','tend',
-  'tent','term','test','text','than','that','them','then','they','thin','this',
-  'thorn','thus','tide','till','time','tiny','tire','told','toll','tomb','tone',
-  'tool','tore','torn','tour','town','tray','tree','trim','trio','trip','true',
-  'tube','tune','turn','twin','type','unit','upon','used','user','vary','vast',
-  'vein','very','view','vile','vine','void','vote','wade','wage','wait','wake',
-  'walk','wall','want','warm','warn','wary','wash','wave','weak','wear','weed',
-  'week','well','went','were','what','when','whip','whom','wide','wife','wild',
-  'will','wind','wine','wing','wire','wise','wish','with','wood','word','wore',
-  'work','worm','worn','wrap','wren','writ','yard','year','your','zero','zone',
-  // 5-letter
-  'above','abuse','adult','after','again','agent','agree','ahead','alarm','album',
-  'alert','alien','align','alive','alley','allow','alone','along','alter','angel',
-  'anger','angle','angry','anime','annex','apart','apple','apply','arena','argue',
-  'arise','array','arrow','aside','asset','atlas','audio','audit','avoid','awake',
-  'award','aware','awful','basic','basis','batch','beach','began','begin','being',
-  'below','bench','bible','black','blade','blame','bland','blank','blast','blaze',
-  'bleed','blend','bless','blind','block','blood','bloom','blown','blues','blunt',
-  'board','bonus','boost','bound','brain','brand','brave','bread','break','breed',
-  'brick','bride','brief','bring','broad','broke','brook','brown','brush','build',
-  'built','bunch','burst','buyer','cabin','candy','carry','catch','cause','chain',
-  'chair','chaos','charm','chart','chase','cheap','check','cheek','cheer','chess',
-  'chest','chief','child','china','choir','chord','chunk','civil','claim','clash',
-  'class','clean','clear','clerk','click','climb','clock','clone','close','cloth',
-  'cloud','coach','coast','color','comes','comic','comma','coral','couch','could',
-  'count','court','cover','crack','craft','crash','crazy','cream','creek','crime',
-  'cross','crowd','crown','cruel','crush','curve','cycle','daily','dance','death',
-  'debut','delay','delta','dense','depot','depth','derby','devil','digit','disco',
-  'ditch','ditty','dodge','doing','donor','doubt','dough','draft','drain','drama',
-  'drank','dream','dress','drink','drive','drove','drown','dying','eagle','early',
-  'earth','eight','elect','elite','email','empty','enemy','enjoy','enter','entry',
-  'equal','error','essay','event','every','exact','exist','extra','fable','faith',
-  'false','fancy','fatal','fault','feast','fence','fetch','fever','field','fifth',
-  'fight','final','first','fixed','flame','flesh','float','flood','floor','focus',
-  'force','forge','forth','forum','found','frank','fraud','fresh','front','frost',
-  'frown','fruit','fully','funny','ghost','giant','given','glass','globe','gloom',
-  'glory','glove','going','grace','grade','grain','grand','grant','graph','grasp',
-  'grass','grave','great','green','greet','grief','grind','groan','gross','group',
-  'grove','guard','guess','guest','guide','guilt','guise','habit','happy','harsh',
-  'heart','heavy','hence','herbs','human','humor','hurry','ideal','image','imply',
-  'inbox','index','indie','infer','inner','input','inter','intro','issue','ivory',
-  'judge','juice','juicy','label','large','laser','later','laugh','layer','learn',
-  'lease','least','leave','legal','level','light','limit','linen','liner','liver',
-  'local','lodge','logic','loose','lower','loyal','lucky','lunar','lunch','lying',
-  'magic','major','maker','maple','match','mayor','media','mercy','merge','metal',
-  'might','minor','minus','model','money','month','moral','motor','motto','mount',
-  'mouse','mouth','movie','music','naval','nerve','never','night','noble','noise',
-  'north','noted','novel','nurse','nylon','ocean','offer','often','olive','onset',
-  'orbit','order','organ','other','outer','oxide','ozone','paint','panel','panic',
-  'paper','patch','peace','penny','phase','phone','photo','piano','piece','pilot',
-  'pitch','pixel','pizza','place','plain','plane','plant','plate','plaza','plead',
-  'pluck','point','polar','power','press','price','pride','prime','print','prior',
-  'prize','probe','prone','proof','prose','proud','prove','proxy','psalm','pubic',
-  'pulse','punch','purse','queen','query','queue','quick','quiet','quota','quote',
-  'radar','radio','raise','rally','ranch','range','rapid','reach','rebel','refer',
-  'reign','relax','repay','reply','rider','rifle','right','rigid','risky','rival',
-  'river','robot','rocky','rouge','rough','round','route','royal','rugby','ruler',
-  'rural','saint','scale','scene','scope','score','scout','seize','sense','serve',
-  'setup','seven','shade','shake','shall','shame','shape','share','shark','sharp',
-  'sheer','sheet','shelf','shell','shift','shirt','shock','shore','short','shout',
-  'sight','since','sixth','sixty','skill','skull','slate','slave','sleep','slice',
-  'slide','slope','small','smart','smell','smile','smoke','snake','solid','solve',
-  'sorry','sound','south','space','spare','spark','speak','speed','spend','spill',
-  'spine','spite','split','spoke','spoon','sport','spray','squad','stack','staff',
-  'stage','stain','stake','stale','stall','stamp','stand','stark','start','state',
-  'steak','steal','steam','steel','steep','steer','stick','stiff','still','stone',
-  'store','storm','story','stove','strap','straw','strip','stuck','study','stuff',
-  'style','sugar','suite','super','surge','swamp','swear','sweep','sweet','swept',
-  'swift','sword','table','taste','teach','teeth','thank','thick','thing','think',
-  'third','those','three','throw','tiger','tight','timer','tired','title','today',
-  'token','total','touch','tough','towel','tower','toxic','track','trade','trail',
-  'train','trait','trash','treat','trend','trial','tribe','trick','tried','truck',
-  'truly','trump','trunk','trust','truth','tumor','tutor','twice','twist','tying',
-  'ultra','uncle','under','unify','union','until','upper','upset','urban','usage',
-  'usual','utter','valid','value','video','vigor','viral','virus','visit','vital',
-  'vivid','vocal','voice','voter','wagon','waste','watch','water','weary','weave',
-  'wedge','weigh','weird','whale','wheat','wheel','where','which','while','white',
-  'whole','whose','wider','witch','woman','women','world','worry','worse','worst',
-  'worth','would','wound','write','wrote','yacht','young','youth',
-]);
+// ── Word state ─────────────────────────────────────────────
+// WORD_LIST provided by games/shared/words.js
+let shuffledWords = [];
+let wordIndex     = 0;
+let currentWord   = '';      // e.g. 'GHOST'
+let collected     = [];      // bool[i] — true when letter i eaten
+let letterMap     = [];      // letterMap[r][c] = 'A'..'Z' or null
+let letterIdxMap  = [];      // letterIdxMap[r][c] = index into currentWord
+let wordFlash     = null;    // { text, timer }
 
-// ── Letter tile state ──────────────────────────────────────
-const LETTER_CHANCE = 0.30; // 30% of dots become letter tiles
-let letterMap = []; // letterMap[r][c] = 'A'..'Z' or null
+function initWord() {
+  // Clear any remaining un-eaten L tiles from the previous word
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (dots[r][c] === L) { dots[r][c] = null; dotsLeft--; }
 
-function initLetters() {
-  letterMap = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (dots[r][c] === D && Math.random() < LETTER_CHANCE) {
-        dots[r][c] = L;
-        letterMap[r][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-        dotsLeft++; // L counts as a collectible (already counted D above, swap type)
-        dotsLeft--; // net zero — L replaces D, same count
-      }
-    }
+  // Reshuffle when exhausted
+  if (wordIndex >= shuffledWords.length) {
+    shuffledWords = [...WORD_LIST].sort(() => Math.random() - 0.5);
+    wordIndex = 0;
   }
-}
+  currentWord = shuffledWords[wordIndex++];
+  collected   = new Array(currentWord.length).fill(false);
 
-// ── Letter tray ────────────────────────────────────────────
-let tray = [];          // collected letters in order
-let wordFlash = null;   // { text, timer } for "WORD FOUND!" overlay
+  letterMap    = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+  letterIdxMap = Array.from({ length: ROWS }, () => Array(COLS).fill(-1));
 
-function checkWords() {
-  // Check every contiguous substring of tray (length 3–7)
-  for (let len = 7; len >= 3; len--) {
-    for (let start = 0; start <= tray.length - len; start++) {
-      const word = tray.slice(start, start + len).join('').toLowerCase();
-      if (WORD_SET.has(word)) {
-        const bonus = 100 * len;
-        score += bonus;
-        wordFlash = { text: `${word.toUpperCase()}! +${bonus}`, timer: 2.5 };
-        tray.splice(start, len); // remove matched letters
-        return; // one word per pickup
-      }
-    }
+  // Pick random D cells — one per letter of the word
+  const candidates = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (dots[r][c] === D) candidates.push([r, c]);
+  candidates.sort(() => Math.random() - 0.5);
+
+  for (let i = 0; i < currentWord.length && i < candidates.length; i++) {
+    const [r, c] = candidates[i];
+    dots[r][c]        = L;
+    letterMap[r][c]   = currentWord[i];  // uppercase
+    letterIdxMap[r][c] = i;
   }
 }
 
 // ── Draw letter tiles ──────────────────────────────────────
 function drawLetterTiles() {
-  const dotGrid = dots.length ? dots : MAP;
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      if (dotGrid[r][c] !== L) continue;
+      if (dots[r][c] !== L) continue;
       const letter = letterMap[r][c];
       if (!letter) continue;
       const cx = c * CS + CS / 2, cy = r * CSH + CSH / 2;
-      // Glowing green-yellow circle
+      // Glowing green-yellow circle — radius 12 (was 7)
       ctx.fillStyle = '#aaff00';
       ctx.shadowColor = '#aaff00';
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
-      // Letter
+      // Letter — 14px bold (was 9px)
       ctx.fillStyle = '#000';
-      ctx.font = 'bold 9px "Courier New", monospace';
+      ctx.font = 'bold 14px "Courier New", monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(letter, cx, cy + 1);
@@ -1060,37 +927,43 @@ function drawLetterTiles() {
   }
 }
 
-// ── Draw tray ──────────────────────────────────────────────
-const TRAY_Y    = CH + 8;   // top of tray area (below maze)
-const TRAY_BOX  = 32;       // box size per letter
-const TRAY_MAX  = 17;       // max letters shown
+// ── Draw tray — shows word progress ───────────────────────
+const TRAY_Y   = CH + 8;
+const TRAY_BOX = 32;
 
 function drawTray() {
-  // Background strip
   ctx.fillStyle = '#111';
   ctx.fillRect(0, CH, CW, 60);
 
-  ctx.strokeStyle = '#444';
-  ctx.lineWidth = 1;
-  const total = Math.min(tray.length, TRAY_MAX);
+  if (!currentWord) return;
+
+  const total  = currentWord.length;
   const startX = (CW - total * TRAY_BOX) / 2;
 
   for (let i = 0; i < total; i++) {
-    const x = startX + i * TRAY_BOX;
+    const x    = startX + i * TRAY_BOX;
+    const done = collected[i];
+    ctx.strokeStyle = done ? '#aaff00' : '#444';
+    ctx.lineWidth = 1;
     ctx.strokeRect(x + 2, TRAY_Y, TRAY_BOX - 4, TRAY_BOX - 4);
-    ctx.fillStyle = '#aaff00';
     ctx.font = 'bold 16px "Courier New", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(tray[i], x + TRAY_BOX / 2, TRAY_Y + 22);
+    if (done) {
+      ctx.fillStyle = '#aaff00';
+      ctx.fillText(currentWord[i], x + TRAY_BOX / 2, TRAY_Y + 22);
+    } else {
+      ctx.fillStyle = '#444';
+      ctx.fillText('_', x + TRAY_BOX / 2, TRAY_Y + 22);
+    }
   }
 
-  // Label
   ctx.fillStyle = '#555';
   ctx.font = '11px "Courier New", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('WORD TRAY', CW / 2, CH + 54);
+  ctx.fillText('SPELL THE WORD', CW / 2, CH + 54);
 }
 
+// ── Word flash overlay ─────────────────────────────────────
 function drawWordFlash(dt) {
   if (!wordFlash) return;
   wordFlash.timer -= dt;
@@ -1101,7 +974,7 @@ function drawWordFlash(dt) {
   ctx.fillStyle = `rgba(170,255,0,${alpha})`;
   ctx.font = 'bold 26px "Courier New", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('WORD FOUND: ' + wordFlash.text, CW / 2, CH / 2 + 10);
+  ctx.fillText('WORD: ' + wordFlash.text, CW / 2, CH / 2 + 10);
 }
 
 // ═══════════════════════════════════════════════════════════
