@@ -22,7 +22,7 @@ canvas {
 </style>
 </head>
 <body>
-<canvas id="c" width="576" height="352"></canvas>
+<canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
 <script>
 // ═══════════════════════════════════════════════════════════
 // STAGE 1 — MAZE RENDERING (verified 2026-04-29)
@@ -70,6 +70,7 @@ const D = 0; // dot
 const P = 3; // power pellet
 const G = 4; // ghost house interior
 const E = 5; // empty — walkable, no dot (tunnels, ghost house border)
+const L = 6; // letter tile — walkable, replaced from D at game start
 
 // ═══════════════════════════════════════════════════════════
 // MAZE  36 × 11  — corridors are 32 px tall, walls 32 px tall
@@ -79,20 +80,20 @@ const MAP = [
 [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
 // r1 — top corridor  (P at col 1 and col 34, fully open)
 [W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
-// r2 — wall + vertical connectors
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
-// r3 — corridor (fully open — removing W,W dividers that enclosed cols 15-19)
+// r2 — wall + 2-wide vertical connectors at cols 1-2, 6-7, 11-12, 23-24, 28-29, 33-34
+[W,D,D,W,W,W,D,D,W,W,W,D,D,W,W,W,W,W,W,W,W,W,W,D,D,W,W,W,D,D,W,W,W,D,D,W],
+// r3 — fully open corridor
 [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r4 — wall + vertical connectors (above tunnel)
-[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,D,W,W,D,W],
+// r4 — wall + 2-wide vertical connectors at cols 1-2, 4-5, 11-12, 23-24, 30-31, 33-34
+[W,D,D,W,D,D,W,W,W,W,W,D,D,W,W,W,W,W,W,W,W,W,W,D,D,W,W,W,W,W,D,D,W,D,D,W],
 // r5 — TUNNEL row  (E tunnels at cols 0-2 and 33-35; ghost house G at cols 13-22)
 [E,E,E,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,E,E,E],
-// r6 — wall + vertical connectors (below tunnel)
-[W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,D,W,W,D,W],
-// r7 — corridor with center wall divider
+// r6 — wall + 2-wide vertical connectors at cols 1-2, 4-5, 11-12, 24-25, 30-31, 33-34
+[W,D,D,W,D,D,W,W,W,W,W,D,D,W,W,W,W,W,W,W,W,W,W,W,D,D,W,W,W,W,D,D,W,D,D,W],
+// r7 — corridor with center wall divider at cols 17-18
 [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r8 — wall + vertical connectors
-[W,D,W,W,W,W,D,W,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,D,W,W,W,W,D,W,W,W,W,D,D,W],
+// r8 — wall + 2-wide vertical connectors at cols 1-2, 6-7, 11-12, 15-16, 19, 23-24, 28-29, 33-34
+[W,D,D,W,W,W,D,D,W,W,W,D,D,W,W,D,D,W,W,D,W,W,W,D,D,W,W,W,D,D,W,W,W,D,D,W],
 // r9 — bottom corridor  (P at col 1 and col 34)
 [W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
 // r10 — bottom border
@@ -121,10 +122,11 @@ function drawMaze() {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, CW, CH);
 
-  // ── dots & power pellets ──────────────────────────────────
+  // ── dots & power pellets (from mutable dots[][] — null = eaten) ──
+  const dotGrid = dots.length ? dots : MAP;
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      const cell = MAP[r][c];
+      const cell = dotGrid[r][c];
       const cx = c * CS + CS / 2, cy = r * CSH + CSH / 2;
       if (cell === D) {
         ctx.fillStyle = '#ffb897';
@@ -207,9 +209,908 @@ function drawMaze() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// BOOT
+// STAGE 2 — PAC-MAN MOVEMENT & TUNNELS
+// ═══════════════════════════════════════════════════════════
+// Pac-Man moves in pixel space at PAC_SPEED px/s.
+// Direction input is queued so the next turn can be pre-pressed.
+// Collision: before each move, the leading-edge cells are checked.
+// Tunnel: exiting past col 0 wraps to col 35, and vice versa.
+// Press Enter to start; arrow keys to move.
+// ═══════════════════════════════════════════════════════════
+
+// ── Pac-Man state ─────────────────────────────────────────
+const PAC_SPEED  = 80;  // px per second
+const PAC_R      = 11;  // radius in px (visual; collision uses smaller box)
+const MOUTH_MAX  = 0.28 * Math.PI;
+const MOUTH_RATE = 6;
+
+// Collision box margins — must fit through the narrowest passage (CS=16px wide)
+const MX = CS / 2 - 2;    // 6px: fits in 16px wide column (2px each side)
+const MY = CSH / 2 - 4;   // 12px: fits in 32px tall corridor
+
+// Spawn: pixel centre of r5, col 6
+const SPAWN_X = 6 * CS + CS / 2;
+const SPAWN_Y = 5 * CSH + CSH / 2;
+
+const pac = {
+  x:    SPAWN_X,
+  y:    SPAWN_Y,
+  dir:  null,
+  next: null,
+  mouthAngle: 0,
+  mouthDir:   1,
+};
+
+// ── Helpers ───────────────────────────────────────────────
+function cellAt(px, py) {
+  const c = Math.floor(px / CS);
+  const r = Math.floor(py / CSH);
+  if (r < 0 || r >= ROWS) return W;
+  const cc = ((c % COLS) + COLS) % COLS;
+  return MAP[r][cc];
+}
+
+// Ghost house (G) is not walkable for Pac-Man
+function isWalkable(cell) {
+  return cell !== W && cell !== G;
+}
+
+// Direction-aware collision: only check the 2 leading-edge points.
+// This prevents false wall hits on the non-moving axis (e.g. top/bottom
+// points triggering when moving left through a narrow vertical passage).
+function canMove(nx, ny, dir) {
+  let pts;
+  switch (dir) {
+    case 'r': pts = [[nx+MX, ny-MY], [nx+MX, ny+MY]]; break;
+    case 'l': pts = [[nx-MX, ny-MY], [nx-MX, ny+MY]]; break;
+    case 'u': pts = [[nx-MX, ny-MY], [nx+MX, ny-MY]]; break;
+    case 'd': pts = [[nx-MX, ny+MY], [nx+MX, ny+MY]]; break;
+    default: return false;
+  }
+  return pts.every(([px, py]) => isWalkable(cellAt(px, py)));
+}
+
+// Nearest cell-centre on a given axis
+function nearestCenter(val, cellSize) {
+  return Math.round((val - cellSize / 2) / cellSize) * cellSize + cellSize / 2;
+}
+
+// ── Input ─────────────────────────────────────────────────
+const DIR_VEC = { r:[1,0], l:[-1,0], u:[0,-1], d:[0,1] };
+
+document.addEventListener('keydown', e => {
+  const map = { ArrowRight:'r', ArrowLeft:'l', ArrowUp:'u', ArrowDown:'d' };
+  if (map[e.key]) { e.preventDefault(); pac.next = map[e.key]; }
+  if (e.key === 'Enter' && !gameRunning) startGame();
+});
+
+// ═══════════════════════════════════════════════════════════
+// STAGE 3 — DOTS, POWER PELLETS & EATING
+// ═══════════════════════════════════════════════════════════
+// dots[][] mirrors MAP at game start; cells set to null when eaten.
+// Pac-Man eats the dot in the cell his centre occupies.
+// Score: D=10pts, P=50pts. Shown as canvas text overlay.
+// Level clears when all dots eaten → "Level Clear!" message.
+// ═══════════════════════════════════════════════════════════
+
+// ── Dot state ─────────────────────────────────────────────
+let dots   = [];   // mutable mirror of MAP (null = eaten)
+let score  = 0;
+let dotsLeft = 0;
+let levelClear = false;
+
+function initDots() {
+  dots = MAP.map(row => row.slice());
+  score = 0;
+  levelClear = false;
+  dotsLeft = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (MAP[r][c] === D || MAP[r][c] === P) dotsLeft++;
+}
+
+// Try to eat the dot at Pac-Man's current cell centre
+let lastEatCol = -1, lastEatRow = -1; // prevent double-eating same cell
+function tryEat() {
+  const c = Math.floor(pac.x / CS);
+  const r = Math.floor(pac.y / CSH);
+  const cc = ((c % COLS) + COLS) % COLS;
+  if (cc === lastEatCol && r === lastEatRow) return;
+  lastEatCol = cc; lastEatRow = r;
+  if (r < 0 || r >= ROWS) return;
+  const cell = dots[r][cc];
+  if (cell === D) { dots[r][cc] = null; score += 10; dotsLeft--; }
+  if (cell === P) { dots[r][cc] = null; score += 50; dotsLeft--; triggerFrightened(); }
+  if (cell === L) {
+    dots[r][cc] = null; score += 15; dotsLeft--;
+    const letter = letterMap[r][cc];
+    if (letter) { tray.push(letter); if (tray.length > TRAY_MAX) tray.shift(); checkWords(); }
+  }
+  if (dotsLeft <= 0) levelClear = true;
+}
+
+// ── Game state ────────────────────────────────────────────
+let gameRunning = false;
+let lastTime    = 0;
+
+function startGame() {
+  initDots();
+  initLetters();
+  tray = [];
+  wordFlash = null;
+  initGhosts();
+  lives = 3;
+  dying = false;
+  modeTimer = 0; modeIndex = 0; spawnTimer = 0;
+  gameRunning = true;
+  pac.dir  = null;
+  pac.next = 'r';
+  lastTime = performance.now();
+  requestAnimationFrame(loop);
+}
+
+// ── Update ────────────────────────────────────────────────
+function updatePac(dt) {
+  const step = PAC_SPEED * dt;
+
+  // Try queued direction
+  if (pac.next && pac.next !== pac.dir) {
+    const [dx, dy] = DIR_VEC[pac.next];
+    let tx = pac.x, ty = pac.y;
+    if (dx !== 0) {
+      // Turning horizontal: snap Y to nearest row centre (within reach)
+      const targetY = nearestCenter(pac.y, CSH);
+      if (Math.abs(pac.y - targetY) <= step + 2) ty = targetY;
+    }
+    if (dy !== 0) {
+      // Turning vertical: snap X to nearest col centre (within reach)
+      const targetX = nearestCenter(pac.x, CS);
+      if (Math.abs(pac.x - targetX) <= step + 2) tx = targetX;
+    }
+    const nx = tx + dx * step, ny = ty + dy * step;
+    if (canMove(nx, ny, pac.next)) {
+      pac.x = nx; pac.y = ny;
+      pac.dir = pac.next; pac.next = null;
+      applyTunnel(); return;
+    }
+  }
+
+  // Continue current direction
+  if (pac.dir) {
+    const [dx, dy] = DIR_VEC[pac.dir];
+    const nx = pac.x + dx * step;
+    const ny = pac.y + dy * step;
+    if (canMove(nx, ny, pac.dir)) {
+      pac.x = nx; pac.y = ny;
+      // Continuously nudge perpendicular axis toward cell centre to stay aligned
+      if (dx !== 0) {
+        const tY = nearestCenter(pac.y, CSH);
+        pac.y += Math.sign(tY - pac.y) * Math.min(Math.abs(tY - pac.y), step * 0.5);
+      } else {
+        const tX = nearestCenter(pac.x, CS);
+        pac.x += Math.sign(tX - pac.x) * Math.min(Math.abs(tX - pac.x), step * 0.5);
+      }
+      applyTunnel();
+    }
+  }
+}
+
+function applyTunnel() {
+  if (pac.x < 0)   pac.x += CW;
+  if (pac.x >= CW) pac.x -= CW;
+}
+
+function updateMouth(dt) {
+  if (!pac.dir) return; // no animation when stopped
+  pac.mouthAngle += pac.mouthDir * MOUTH_RATE * dt * MOUTH_MAX * 2;
+  if (pac.mouthAngle >= MOUTH_MAX) { pac.mouthAngle = MOUTH_MAX; pac.mouthDir = -1; }
+  if (pac.mouthAngle <= 0)         { pac.mouthAngle = 0;         pac.mouthDir =  1; }
+}
+
+// ── Draw ──────────────────────────────────────────────────
+function drawPac() {
+  const angle = pac.mouthAngle;
+  // Rotation offset so mouth faces the direction of travel
+  const faceAngle = { r: 0, l: Math.PI, u: -Math.PI/2, d: Math.PI/2 };
+  const rot = faceAngle[pac.dir ?? 'r'];
+
+  ctx.save();
+  ctx.translate(pac.x, pac.y);
+  ctx.rotate(rot);
+
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.arc(0, 0, PAC_R, angle, Math.PI * 2 - angle);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawStartPrompt() {
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, CH / 2 - 24, CW, 48);
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 20px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Press ENTER to Start', CW / 2, CH / 2 + 7);
+}
+
+function drawScore() {
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('SCORE: ' + score, 8, 20);
+}
+
+function drawLevelClear() {
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, CH / 2 - 28, CW, 56);
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 24px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  const msg = lives <= 0 ? 'Game Over!  Score: ' + score : 'Level Clear!  Score: ' + score;
+  ctx.fillText(msg, CW / 2, CH / 2 + 8);
+}
+
+// ── Game loop ─────────────────────────────────────────────
+function loop(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05); // cap at 50ms
+  lastTime = now;
+
+  if (!levelClear && !dying) {
+    updatePac(dt);
+    updateMouth(dt);
+    tryEat();
+    updateGhostModes(dt);
+    updateGhosts(dt);
+    checkGhostCollision();
+  } else if (!levelClear && dying) {
+    updateGhostModes(dt);
+    updateGhosts(dt);
+  }
+
+  drawMaze();
+  drawLetterTiles();
+  for (const g of ghosts) drawGhost(g);
+  drawPac();
+  drawScore();
+  drawLives();
+  if (wordFlash) drawWordFlash(dt);
+  drawTray();
+  if (levelClear) drawLevelClear();
+
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════════
+// STAGE 4 — GHOST AI
+// ═══════════════════════════════════════════════════════════
+// 4 ghosts use tile-based decision making at junctions.
+// Global mode cycle: Scatter(7s)→Chase(20s)→Scatter(7s)→Chase(∞)
+// Frightened: 8s after power pellet, ghosts move randomly.
+// Eyes: eaten ghost ignores walls, returns to ghost house, respawns.
+// ═══════════════════════════════════════════════════════════
+
+const GHOST_SPEED       = 70;  // px/s normal
+const GHOST_SPEED_FRIGHT = 45; // px/s frightened
+const GHOST_SPEED_EYES  = 120; // px/s returning
+const FRIGHT_DURATION   = 8;   // seconds
+const SPAWN_INTERVAL    = 5;   // seconds between ghost releases
+const HOUSE_ENTRY_COL   = 17;  // col ghost targets to re-enter house
+const HOUSE_ENTRY_ROW   = 5;   // tunnel row (ghost house level)
+
+// Mode cycle: [duration_s, mode] — last entry repeats forever
+const MODE_CYCLE = [
+  [7, 'scatter'], [20, 'chase'],
+  [7, 'scatter'], [Infinity, 'chase'],
+];
+
+// Ghost scatter-corner targets (tile col, row)
+const SCATTER_TARGET = {
+  blinky: [34, 0],
+  pinky:  [1,  0],
+  inky:   [34, 10],
+  clyde:  [1,  10],
+};
+
+// Spawn position: just left of ghost house entrance on tunnel row
+const GHOST_SPAWN_COL = 11;
+const GHOST_SPAWN_ROW = 5;
+
+// Ghost house re-entry target
+const HOUSE_TARGET_COL = 17;
+const HOUSE_TARGET_ROW = 5;
+
+function makeGhost(name, color, spawnDelay) {
+  return {
+    name, color,
+    col: GHOST_SPAWN_COL,
+    row: GHOST_SPAWN_ROW,
+    x: GHOST_SPAWN_COL * CS + CS / 2,
+    y: GHOST_SPAWN_ROW * CSH + CSH / 2,
+    dir: 'r',
+    targetCol: GHOST_SPAWN_COL + 1,
+    targetRow: GHOST_SPAWN_ROW,
+    mode: 'scatter',
+    spawnDelay,
+    active: false,
+    spawned: false,   // true once initial activation has fired — prevents re-trigger on deactivation
+    frightTimer: 0,
+  };
+}
+
+let ghosts = [];
+
+function initGhosts() {
+  ghosts = [
+    makeGhost('blinky', '#FF0000', 0),
+    makeGhost('pinky',  '#FFB8FF', SPAWN_INTERVAL),
+    makeGhost('inky',   '#00FFFF', SPAWN_INTERVAL * 2),
+    makeGhost('clyde',  '#FFB852', SPAWN_INTERVAL * 3),
+  ];
+}
+
+// ── Ghost pathfinding helpers ──────────────────────────────
+function ghostCellWalkable(r, c, mode) {
+  if (r < 0 || r >= ROWS) return false;
+  const cc = ((c % COLS) + COLS) % COLS;
+  const cell = MAP[r][cc];
+  if (mode === 'eyes' || mode === 'exiting') return cell !== W; // can pass through G
+  return cell !== W && cell !== G;
+}
+
+function dist2(ax, ay, bx, by) {
+  return (ax - bx) ** 2 + (ay - by) ** 2;
+}
+
+const DIRS = [
+  { d: 'u', dc:  0, dr: -1 },
+  { d: 'd', dc:  0, dr:  1 },
+  { d: 'l', dc: -1, dr:  0 },
+  { d: 'r', dc:  1, dr:  0 },
+];
+const OPPOSITE = { u:'d', d:'u', l:'r', r:'l' };
+
+function getGhostTarget(g) {
+  const blinky = ghosts[0];
+  const pacCol = Math.floor(pac.x / CS);
+  const pacRow = Math.floor(pac.y / CSH);
+
+  if (g.mode === 'eyes')       return [HOUSE_TARGET_COL, HOUSE_TARGET_ROW];
+  if (g.mode === 'exiting')    return [12, HOUSE_TARGET_ROW]; // navigate to left exit (E cell)
+  if (g.mode === 'scatter')    return SCATTER_TARGET[g.name];
+  if (g.mode === 'frightened') return null;
+
+  switch (g.name) {
+    case 'blinky': return [pacCol, pacRow];
+    case 'pinky': {
+      const [dx, dy] = { r:[4,0], l:[-4,0], u:[0,-4], d:[0,4] }[pac.dir ?? 'r'];
+      return [pacCol + dx, pacRow + dy];
+    }
+    case 'inky': {
+      const [dx, dy] = { r:[2,0], l:[-2,0], u:[0,-2], d:[0,2] }[pac.dir ?? 'r'];
+      const pivotC = pacCol + dx, pivotR = pacRow + dy;
+      return [2 * pivotC - blinky.col, 2 * pivotR - blinky.row];
+    }
+    case 'clyde': {
+      const d2 = dist2(g.col, g.row, pacCol, pacRow);
+      return d2 > 64 ? [pacCol, pacRow] : SCATTER_TARGET.clyde;
+    }
+  }
+}
+
+// Choose next cell for ghost g, currently at (col, row) moving in dir
+function chooseNextCell(g, col, row, dir) {
+  const target = getGhostTarget(g);
+  let bestDir = null, bestScore = Infinity;
+  for (const { d, dc, dr } of DIRS) {
+    if (d === OPPOSITE[dir]) continue; // no U-turns
+    const nc = ((col + dc) % COLS + COLS) % COLS;
+    const nr = row + dr;
+    if (!ghostCellWalkable(nr, nc, g.mode)) continue;
+    const score = (g.mode === 'frightened' || !target)
+      ? Math.random()
+      : dist2(nc, nr, target[0], target[1]);
+    if (score < bestScore) { bestScore = score; bestDir = d; }
+  }
+  // If completely stuck (dead end), allow U-turn
+  if (!bestDir) bestDir = OPPOSITE[dir];
+  const chosen = DIRS.find(x => x.d === bestDir);
+  const nc = ((col + chosen.dc) % COLS + COLS) % COLS;
+  const nr = row + chosen.dr;
+  return { dir: bestDir, col: nc, row: nr };
+}
+
+// ── Ghost update ───────────────────────────────────────────
+let modeTimer  = 0;
+let modeIndex  = 0;
+let spawnTimer = 0;
+
+function updateGhostModes(dt) {
+  modeTimer += dt;
+  const [duration] = MODE_CYCLE[modeIndex];
+  if (modeTimer >= duration && modeIndex < MODE_CYCLE.length - 1) {
+    modeTimer = 0; modeIndex++;
+    const [, newMode] = MODE_CYCLE[modeIndex];
+    for (const g of ghosts) {
+      if (g.active && g.mode !== 'frightened' && g.mode !== 'eyes' && g.mode !== 'exiting') {
+        g.mode = newMode;
+        // Reverse direction on mode switch
+        const rev = OPPOSITE[g.dir];
+        const revCell = DIRS.find(x => x.d === rev);
+        if (revCell && ghostCellWalkable(g.row + revCell.dr, g.col + revCell.dc, g.mode)) {
+          g.dir = rev;
+          g.targetCol = ((g.col + revCell.dc) % COLS + COLS) % COLS;
+          g.targetRow = g.row + revCell.dr;
+        }
+      }
+    }
+  }
+}
+
+function triggerFrightened() {
+  for (const g of ghosts) {
+    if (g.active && g.mode !== 'eyes' && g.mode !== 'exiting') {
+      g.mode = 'frightened';
+      g.frightTimer = FRIGHT_DURATION;
+      // Reverse direction
+      const rev = OPPOSITE[g.dir];
+      const revCell = DIRS.find(x => x.d === rev);
+      if (revCell && ghostCellWalkable(g.row + revCell.dr, g.col + revCell.dc, g.mode)) {
+        g.dir = rev;
+        g.targetCol = ((g.col + revCell.dc) % COLS + COLS) % COLS;
+        g.targetRow = g.row + revCell.dr;
+      }
+    }
+  }
+}
+
+function respawnGhost(g) {
+  // Respawn inside the ghost house, then exit left
+  g.col = HOUSE_TARGET_COL; g.row = HOUSE_TARGET_ROW;
+  g.x   = HOUSE_TARGET_COL * CS + CS / 2;
+  g.y   = HOUSE_TARGET_ROW * CSH + CSH / 2;
+  g.dir = 'l';
+  g.targetCol = HOUSE_TARGET_COL - 1; g.targetRow = HOUSE_TARGET_ROW;
+  g.mode = 'exiting';
+  g.active = true;
+}
+
+function updateGhost(g, dt) {
+  if (!g.active) return;
+
+  if (g.mode === 'frightened') {
+    g.frightTimer -= dt;
+    if (g.frightTimer <= 0) {
+      const [, currentMode] = MODE_CYCLE[modeIndex];
+      g.mode = currentMode;
+    }
+  }
+
+  const speed = g.mode === 'eyes'      ? GHOST_SPEED_EYES
+              : g.mode === 'frightened' ? GHOST_SPEED_FRIGHT
+              : GHOST_SPEED;
+
+  // Pixel target: centre of targetCell
+  const tx = g.targetCol * CS + CS / 2;
+  const ty = g.targetRow * CSH + CSH / 2;
+
+  const ddx = tx - g.x, ddy = ty - g.y;
+  const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+  const step = speed * dt;
+
+  if (dist <= step) {
+    // Arrived at target cell centre — snap and pick next cell
+    g.x = tx; g.y = ty;
+    g.col = g.targetCol; g.row = g.targetRow;
+
+    // Eyes reached house → respawn after delay
+    if (g.mode === 'eyes' && g.col === HOUSE_TARGET_COL && g.row === HOUSE_TARGET_ROW) {
+      g.active = false;
+      setTimeout(() => respawnGhost(g), 3000);
+      return;
+    }
+
+    // Exiting ghost reached the E cell exit → switch to normal mode
+    if (g.mode === 'exiting') {
+      const cc = ((g.col % COLS) + COLS) % COLS;
+      if (MAP[g.row][cc] === E) {
+        const [, currentMode] = MODE_CYCLE[modeIndex];
+        g.mode = currentMode;
+      }
+    }
+
+    // Tunnel wrap
+    if (g.col <= 0 && g.dir === 'l')  { g.col = COLS - 1; g.x = g.col * CS + CS / 2; }
+    if (g.col >= COLS - 1 && g.dir === 'r') { g.col = 0; g.x = g.col * CS + CS / 2; }
+
+    // Choose next cell
+    const next = chooseNextCell(g, g.col, g.row, g.dir);
+    g.dir = next.dir;
+    g.targetCol = next.col;
+    g.targetRow = next.row;
+  } else {
+    // Move toward target cell centre
+    g.x += (ddx / dist) * step;
+    g.y += (ddy / dist) * step;
+  }
+}
+
+function updateGhosts(dt) {
+  spawnTimer += dt;
+  for (const g of ghosts) {
+    if (!g.active && !g.spawned && spawnTimer >= g.spawnDelay) {
+      g.active = true;
+      g.spawned = true;
+      // Pick initial target cell on activation
+      const next = chooseNextCell(g, g.col, g.row, g.dir);
+      g.dir = next.dir; g.targetCol = next.col; g.targetRow = next.row;
+    }
+    if (g.active) updateGhost(g, dt);
+  }
+}
+
+// ── Ghost–Pac collision ────────────────────────────────────
+let lives = 3;
+let dying = false;
+
+function checkGhostCollision() {
+  for (const g of ghosts) {
+    if (!g.active) continue;
+    const dx = g.x - pac.x, dy = g.y - pac.y;
+    if (Math.sqrt(dx*dx + dy*dy) > PAC_R + 8) continue; // ~collision radius
+
+    if (g.mode === 'frightened') {
+      g.mode = 'eyes';
+      score += 200;
+    } else if (g.mode !== 'eyes' && !dying) {
+      dying = true;
+      lives--;
+      setTimeout(() => {
+        pac.x = SPAWN_X; pac.y = SPAWN_Y;
+        pac.dir = null; pac.next = 'r';
+        dying = false;
+        if (lives <= 0) levelClear = true; // reuse levelClear for game over
+      }, 1500);
+    }
+  }
+}
+
+// ── Draw ghosts ────────────────────────────────────────────
+function drawGhost(g) {
+  if (!g.active) return;
+  const x = g.x, y = g.y;
+  const r = 10;
+
+  let bodyColor = g.color;
+  if (g.mode === 'frightened') {
+    bodyColor = g.frightTimer < 2 && Math.floor(g.frightTimer * 4) % 2 === 0
+      ? '#ffffff' : '#2121de'; // flash white near end
+  }
+  if (g.mode === 'eyes') bodyColor = 'transparent';
+
+  if (g.mode !== 'eyes') {
+    // Body: dome + skirt
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(x, y - 2, r, Math.PI, 0);
+    // Wavy skirt bottom
+    ctx.lineTo(x + r, y + r - 2);
+    const waves = 3;
+    const ww = (r * 2) / waves;
+    for (let i = 0; i < waves; i++) {
+      const wx = x + r - i * ww;
+      ctx.quadraticCurveTo(wx - ww * 0.25, y + r + 4, wx - ww * 0.5, y + r - 2);
+      ctx.quadraticCurveTo(wx - ww * 0.75, y + r - 8, wx - ww, y + r - 2);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    if (g.mode !== 'frightened') {
+      // Eyes
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(x - 3, y - 4, 3, 4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + 3, y - 4, 3, 4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#00f';
+      ctx.beginPath(); ctx.arc(x - 3, y - 3, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 3, y - 3, 2, 0, Math.PI*2); ctx.fill();
+    } else {
+      // Frightened face
+      ctx.fillStyle = '#ffb8ff';
+      ctx.beginPath(); ctx.arc(x - 3, y - 2, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 3, y - 2, 2, 0, Math.PI*2); ctx.fill();
+    }
+  } else {
+    // Eyes only (returning to house)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(x - 3, y - 2, 3, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + 3, y - 2, 3, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#00f';
+    ctx.beginPath(); ctx.arc(x - 3, y - 1, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 3, y - 1, 2, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+function drawLives() {
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('LIVES: ' + lives, CW - 8, 20);
+}
+
+// ═══════════════════════════════════════════════════════════
+// STAGE 5 — WORD HUNT (letter tiles, tray, word detection)
+// ═══════════════════════════════════════════════════════════
+// ~30% of D cells replaced with L (letter tile) at game start.
+// letterMap[r][c] stores the A–Z letter for each L cell.
+// Collected letters go into tray[]. After each pickup, all
+// contiguous substrings of tray are checked against WORD_SET.
+// Match → bonus score + "WORD FOUND!" flash, letters cleared.
+// ═══════════════════════════════════════════════════════════
+
+// ── CEFR B1 word list (3–7 letters, common English words) ─
+const WORD_SET = new Set([
+  // 3-letter
+  'act','add','age','ago','aim','air','arm','art','ask','bad','bag','ban','bar',
+  'bat','bed','big','bit','box','boy','bug','bus','but','buy','can','cap','car',
+  'cat','cop','cow','cry','cup','cut','day','die','dig','dim','dip','dog','dot',
+  'dry','due','ear','eat','egg','end','era','eye','fan','far','fat','fit','fix',
+  'fly','fun','gas','get','god','got','gun','gut','guy','had','has','hat','her',
+  'him','his','hit','hot','how','hub','hug','hut','ice','ill','its','jar','jet',
+  'job','joy','key','kid','law','lay','led','leg','let','lid','lip','log','lot',
+  'low','mad','man','map','may','mix','mob','mom','mud','mug','net','new','nor',
+  'not','now','odd','off','oil','old','one','our','out','own','pad','pan','pay',
+  'pen','pet','pin','pit','pop','pot','put','raw','red','rid','row','run','sad',
+  'sat','saw','say','sea','set','sew','shy','sin','sit','six','sky','sob','son',
+  'spa','spy','sun','tab','tap','tar','tax','tea','ten','tip','toe','too','top',
+  'toy','try','tub','tug','two','use','van','war','was','way','web','win','wit',
+  'won','yes','yet','you','zip',
+  // 4-letter
+  'able','also','area','army','away','baby','back','bail','bake','ball','band',
+  'bank','base','bath','bear','beat','been','beer','bell','belt','best','bird',
+  'bite','blow','blue','boat','body','bold','bond','bone','book','born','boss',
+  'both','bulk','burn','call','calm','came','camp','card','care','case','cash',
+  'cast','cave','cell','chat','chip','city','clap','clay','clip','club','clue',
+  'coal','coat','code','coin','cold','come','cook','cool','copy','core','cost',
+  'coup','crop','cure','dark','data','date','dawn','days','dead','deal','dean',
+  'dear','debt','deck','deed','deep','deny','desk','diet','dirt','disk','dive',
+  'dock','does','done','door','dose','down','draw','drew','drop','drug','drum',
+  'dual','dump','dusk','dust','duty','each','earn','ease','east','easy','edge',
+  'else','even','ever','evil','exam','exit','face','fact','fail','fair','fake',
+  'fall','fame','farm','fast','fate','fear','feed','feel','feet','fell','felt',
+  'file','fill','film','find','fine','fire','firm','fish','fist','flag','flat',
+  'flew','flip','flow','foam','fold','folk','fond','food','foot','ford','fore',
+  'fork','form','fort','foul','four','free','from','fuel','full','fund','fuse',
+  'gain','game','gang','gate','gave','gear','gene','gift','girl','give','glad',
+  'glow','glue','goal','goes','gold','golf','gone','good','grab','grey','grid',
+  'grip','grow','gulf','guru','gust','half','hall','halt','hand','hang','hard',
+  'harm','hate','have','hawk','head','heal','heap','heat','heel','held','help',
+  'hero','hide','high','hill','hint','hire','hold','hole','home','hope','horn',
+  'host','hour','huge','hung','hunt','hurt','idea','idle','into','iron','item',
+  'jack','jazz','join','joke','jump','just','keen','keep','kick','kill','kind',
+  'king','knee','knew','know','lack','lady','laid','lake','land','lane','last',
+  'late','lean','leap','left','lend','lens','less','lied','life','lift','like',
+  'lime','line','link','lion','list','live','load','loan','lock','loft','long',
+  'look','loop','lord','lore','lose','loss','lost','love','luck','lung','made',
+  'mail','main','make','male','mall','many','mark','mass','mate','meal','mean',
+  'meat','meet','melt','menu','mere','mild','milk','mill','mind','mine','mint',
+  'miss','mode','mood','moon','more','most','move','much','must','myth','nail',
+  'name','navy','near','neck','need','nest','news','next','nice','nine','node',
+  'none','noon','norm','nose','note','noun','null','numb','oath','once','open',
+  'oral','over','pace','pack','page','paid','pain','pair','pale','palm','park',
+  'part','pass','past','path','peak','peel','peer','pick','pile','pink','pipe',
+  'plan','play','plea','plot','plow','plug','plus','poem','poet','pole','poll',
+  'pond','pool','poor','port','pose','post','pour','pray','prep','prey','pull',
+  'pump','pure','push','rack','rage','rail','rain','rake','rang','rank','rare',
+  'rate','read','real','reap','rear','rely','rent','rest','rice','rich','ride',
+  'ring','rise','risk','road','roam','roar','rock','rode','role','roll','roof',
+  'room','root','rope','rose','ruin','rule','rush','rust','safe','sail','sake',
+  'sale','salt','same','sand','sang','sank','save','scan','seal','seam','seat',
+  'seed','seek','seem','seen','self','sell','sent','ship','shoe','shop','shot',
+  'show','shut','sick','side','sigh','sign','silk','sing','sink','size','skin',
+  'slip','slow','snap','snow','soak','sock','soft','soil','sold','sole','some',
+  'song','soon','sore','sort','soul','soup','sour','spin','spot','star','stay',
+  'stem','step','stir','stop','stub','such','suit','sung','sunk','sure','swan',
+  'swap','swim','tail','take','tale','talk','tall','tank','task','tell','tend',
+  'tent','term','test','text','than','that','them','then','they','thin','this',
+  'thorn','thus','tide','till','time','tiny','tire','told','toll','tomb','tone',
+  'tool','tore','torn','tour','town','tray','tree','trim','trio','trip','true',
+  'tube','tune','turn','twin','type','unit','upon','used','user','vary','vast',
+  'vein','very','view','vile','vine','void','vote','wade','wage','wait','wake',
+  'walk','wall','want','warm','warn','wary','wash','wave','weak','wear','weed',
+  'week','well','went','were','what','when','whip','whom','wide','wife','wild',
+  'will','wind','wine','wing','wire','wise','wish','with','wood','word','wore',
+  'work','worm','worn','wrap','wren','writ','yard','year','your','zero','zone',
+  // 5-letter
+  'above','abuse','adult','after','again','agent','agree','ahead','alarm','album',
+  'alert','alien','align','alive','alley','allow','alone','along','alter','angel',
+  'anger','angle','angry','anime','annex','apart','apple','apply','arena','argue',
+  'arise','array','arrow','aside','asset','atlas','audio','audit','avoid','awake',
+  'award','aware','awful','basic','basis','batch','beach','began','begin','being',
+  'below','bench','bible','black','blade','blame','bland','blank','blast','blaze',
+  'bleed','blend','bless','blind','block','blood','bloom','blown','blues','blunt',
+  'board','bonus','boost','bound','brain','brand','brave','bread','break','breed',
+  'brick','bride','brief','bring','broad','broke','brook','brown','brush','build',
+  'built','bunch','burst','buyer','cabin','candy','carry','catch','cause','chain',
+  'chair','chaos','charm','chart','chase','cheap','check','cheek','cheer','chess',
+  'chest','chief','child','china','choir','chord','chunk','civil','claim','clash',
+  'class','clean','clear','clerk','click','climb','clock','clone','close','cloth',
+  'cloud','coach','coast','color','comes','comic','comma','coral','couch','could',
+  'count','court','cover','crack','craft','crash','crazy','cream','creek','crime',
+  'cross','crowd','crown','cruel','crush','curve','cycle','daily','dance','death',
+  'debut','delay','delta','dense','depot','depth','derby','devil','digit','disco',
+  'ditch','ditty','dodge','doing','donor','doubt','dough','draft','drain','drama',
+  'drank','dream','dress','drink','drive','drove','drown','dying','eagle','early',
+  'earth','eight','elect','elite','email','empty','enemy','enjoy','enter','entry',
+  'equal','error','essay','event','every','exact','exist','extra','fable','faith',
+  'false','fancy','fatal','fault','feast','fence','fetch','fever','field','fifth',
+  'fight','final','first','fixed','flame','flesh','float','flood','floor','focus',
+  'force','forge','forth','forum','found','frank','fraud','fresh','front','frost',
+  'frown','fruit','fully','funny','ghost','giant','given','glass','globe','gloom',
+  'glory','glove','going','grace','grade','grain','grand','grant','graph','grasp',
+  'grass','grave','great','green','greet','grief','grind','groan','gross','group',
+  'grove','guard','guess','guest','guide','guilt','guise','habit','happy','harsh',
+  'heart','heavy','hence','herbs','human','humor','hurry','ideal','image','imply',
+  'inbox','index','indie','infer','inner','input','inter','intro','issue','ivory',
+  'judge','juice','juicy','label','large','laser','later','laugh','layer','learn',
+  'lease','least','leave','legal','level','light','limit','linen','liner','liver',
+  'local','lodge','logic','loose','lower','loyal','lucky','lunar','lunch','lying',
+  'magic','major','maker','maple','match','mayor','media','mercy','merge','metal',
+  'might','minor','minus','model','money','month','moral','motor','motto','mount',
+  'mouse','mouth','movie','music','naval','nerve','never','night','noble','noise',
+  'north','noted','novel','nurse','nylon','ocean','offer','often','olive','onset',
+  'orbit','order','organ','other','outer','oxide','ozone','paint','panel','panic',
+  'paper','patch','peace','penny','phase','phone','photo','piano','piece','pilot',
+  'pitch','pixel','pizza','place','plain','plane','plant','plate','plaza','plead',
+  'pluck','point','polar','power','press','price','pride','prime','print','prior',
+  'prize','probe','prone','proof','prose','proud','prove','proxy','psalm','pubic',
+  'pulse','punch','purse','queen','query','queue','quick','quiet','quota','quote',
+  'radar','radio','raise','rally','ranch','range','rapid','reach','rebel','refer',
+  'reign','relax','repay','reply','rider','rifle','right','rigid','risky','rival',
+  'river','robot','rocky','rouge','rough','round','route','royal','rugby','ruler',
+  'rural','saint','scale','scene','scope','score','scout','seize','sense','serve',
+  'setup','seven','shade','shake','shall','shame','shape','share','shark','sharp',
+  'sheer','sheet','shelf','shell','shift','shirt','shock','shore','short','shout',
+  'sight','since','sixth','sixty','skill','skull','slate','slave','sleep','slice',
+  'slide','slope','small','smart','smell','smile','smoke','snake','solid','solve',
+  'sorry','sound','south','space','spare','spark','speak','speed','spend','spill',
+  'spine','spite','split','spoke','spoon','sport','spray','squad','stack','staff',
+  'stage','stain','stake','stale','stall','stamp','stand','stark','start','state',
+  'steak','steal','steam','steel','steep','steer','stick','stiff','still','stone',
+  'store','storm','story','stove','strap','straw','strip','stuck','study','stuff',
+  'style','sugar','suite','super','surge','swamp','swear','sweep','sweet','swept',
+  'swift','sword','table','taste','teach','teeth','thank','thick','thing','think',
+  'third','those','three','throw','tiger','tight','timer','tired','title','today',
+  'token','total','touch','tough','towel','tower','toxic','track','trade','trail',
+  'train','trait','trash','treat','trend','trial','tribe','trick','tried','truck',
+  'truly','trump','trunk','trust','truth','tumor','tutor','twice','twist','tying',
+  'ultra','uncle','under','unify','union','until','upper','upset','urban','usage',
+  'usual','utter','valid','value','video','vigor','viral','virus','visit','vital',
+  'vivid','vocal','voice','voter','wagon','waste','watch','water','weary','weave',
+  'wedge','weigh','weird','whale','wheat','wheel','where','which','while','white',
+  'whole','whose','wider','witch','woman','women','world','worry','worse','worst',
+  'worth','would','wound','write','wrote','yacht','young','youth',
+]);
+
+// ── Letter tile state ──────────────────────────────────────
+const LETTER_CHANCE = 0.30; // 30% of dots become letter tiles
+let letterMap = []; // letterMap[r][c] = 'A'..'Z' or null
+
+function initLetters() {
+  letterMap = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (dots[r][c] === D && Math.random() < LETTER_CHANCE) {
+        dots[r][c] = L;
+        letterMap[r][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+        dotsLeft++; // L counts as a collectible (already counted D above, swap type)
+        dotsLeft--; // net zero — L replaces D, same count
+      }
+    }
+  }
+}
+
+// ── Letter tray ────────────────────────────────────────────
+let tray = [];          // collected letters in order
+let wordFlash = null;   // { text, timer } for "WORD FOUND!" overlay
+
+function checkWords() {
+  // Check every contiguous substring of tray (length 3–7)
+  for (let len = 7; len >= 3; len--) {
+    for (let start = 0; start <= tray.length - len; start++) {
+      const word = tray.slice(start, start + len).join('').toLowerCase();
+      if (WORD_SET.has(word)) {
+        const bonus = 100 * len;
+        score += bonus;
+        wordFlash = { text: `${word.toUpperCase()}! +${bonus}`, timer: 2.5 };
+        tray.splice(start, len); // remove matched letters
+        return; // one word per pickup
+      }
+    }
+  }
+}
+
+// ── Draw letter tiles ──────────────────────────────────────
+function drawLetterTiles() {
+  const dotGrid = dots.length ? dots : MAP;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (dotGrid[r][c] !== L) continue;
+      const letter = letterMap[r][c];
+      if (!letter) continue;
+      const cx = c * CS + CS / 2, cy = r * CSH + CSH / 2;
+      // Glowing green-yellow circle
+      ctx.fillStyle = '#aaff00';
+      ctx.shadowColor = '#aaff00';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // Letter
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 9px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter, cx, cy + 1);
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+}
+
+// ── Draw tray ──────────────────────────────────────────────
+const TRAY_Y    = CH + 8;   // top of tray area (below maze)
+const TRAY_BOX  = 32;       // box size per letter
+const TRAY_MAX  = 17;       // max letters shown
+
+function drawTray() {
+  // Background strip
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, CH, CW, 60);
+
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1;
+  const total = Math.min(tray.length, TRAY_MAX);
+  const startX = (CW - total * TRAY_BOX) / 2;
+
+  for (let i = 0; i < total; i++) {
+    const x = startX + i * TRAY_BOX;
+    ctx.strokeRect(x + 2, TRAY_Y, TRAY_BOX - 4, TRAY_BOX - 4);
+    ctx.fillStyle = '#aaff00';
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(tray[i], x + TRAY_BOX / 2, TRAY_Y + 22);
+  }
+
+  // Label
+  ctx.fillStyle = '#555';
+  ctx.font = '11px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('WORD TRAY', CW / 2, CH + 54);
+}
+
+function drawWordFlash(dt) {
+  if (!wordFlash) return;
+  wordFlash.timer -= dt;
+  if (wordFlash.timer <= 0) { wordFlash = null; return; }
+  const alpha = Math.min(1, wordFlash.timer);
+  ctx.fillStyle = `rgba(0,0,0,${alpha * 0.6})`;
+  ctx.fillRect(0, CH / 2 - 30, CW, 60);
+  ctx.fillStyle = `rgba(170,255,0,${alpha})`;
+  ctx.font = 'bold 26px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('WORD FOUND: ' + wordFlash.text, CW / 2, CH / 2 + 10);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOOT — initial render before game starts
 // ═══════════════════════════════════════════════════════════
 drawMaze();
+drawPac();
+drawTray();
+drawStartPrompt();
 </script>
 </body>
 </html>
