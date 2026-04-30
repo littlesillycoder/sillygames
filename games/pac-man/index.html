@@ -25,6 +25,39 @@ canvas {
 <canvas id="c" width="576" height="352"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════
+// STAGE 1 — MAZE RENDERING (verified 2026-04-29)
+// ═══════════════════════════════════════════════════════════
+// Layout: 36×11 non-square cell grid → 576×352 px canvas.
+//   Cell width CS=16px, cell height CSH=32px (double height).
+//   This gives wide corridors that feel spacious for Pac-Man.
+//
+// Cell types:
+//   W=1  wall (blue neon border)
+//   D=0  dot (small peach circle, fully walkable)
+//   P=3  power pellet (large peach circle, corners of maze)
+//   G=4  ghost house interior (pink border, no dot)
+//   E=5  empty walkable — tunnels (cols 0-2, 33-35 of r5) and
+//        ghost-house border (cols 12, 23 of r5)
+//
+// Rendering:
+//   - Walls drawn as thin neon-blue lines (strokeStyle #1a1aff,
+//     shadowColor #4466ff) along walkable↔wall boundaries only.
+//     Collinear segments merged so round lineCaps don't produce
+//     bumps at intermediate grid intersections.
+//   - Ghost house outlined in hot-pink (#ff69b4).
+//   - Dots and power pellets drawn after the black background,
+//     before wall lines, so lines render on top cleanly.
+//
+// Maze structure:
+//   r0, r10  — solid wall border (top/bottom)
+//   r1, r9   — full-width corridors with power pellets at ends
+//   r2, r4, r6, r8 — wall+connector rows (vertical passages)
+//   r3, r7   — open corridors; r7 has a centre-wall divider
+//   r5       — tunnel row: E tunnels at left/right edges,
+//              ghost house (G) at cols 13-22
+// ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
 // CONSTANTS
 // Non-square cells: CS = cell width, CSH = cell height (2×)
 // ═══════════════════════════════════════════════════════════
