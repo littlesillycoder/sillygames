@@ -282,7 +282,7 @@ const DIR_VEC = { r:[1,0], l:[-1,0], u:[0,-1], d:[0,1] };
 document.addEventListener('keydown', e => {
   const map = { ArrowRight:'r', ArrowLeft:'l', ArrowUp:'u', ArrowDown:'d' };
   if (map[e.key]) { e.preventDefault(); pac.next = map[e.key]; }
-  if (e.key === 'Enter' && !gameRunning) startGame();
+  if (e.key === 'Enter' && (!gameRunning || gameOver)) startGame();
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -339,22 +339,43 @@ function tryEat() {
 }
 
 // ── Game state ────────────────────────────────────────────
-let gameRunning = false;
-let lastTime    = 0;
+let gameRunning     = false;
+let lastTime        = 0;
+let level           = 1;
+let gameOver        = false;
+let levelClearTimer = 0;
+let highScore       = parseInt(localStorage.getItem('pacman_hs') || '0', 10);
 
-function startGame() {
+function saveHighScore() {
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem('pacman_hs', highScore);
+  }
+}
+
+function startLevel() {
   initDots();
   shuffledWords = [...WORD_LIST].sort(() => Math.random() - 0.5);
   wordIndex = 0;
   wordFlash = null;
   initWord();
   initGhosts();
-  lives = 3;
   dying = false;
+  levelClear = false;
+  levelClearTimer = 0;
   modeTimer = 0; modeIndex = 0; spawnTimer = 0;
-  gameRunning = true;
   pac.dir  = null;
   pac.next = 'r';
+  pac.x = SPAWN_X; pac.y = SPAWN_Y;
+}
+
+function startGame() {
+  level    = 1;
+  lives    = 3;
+  score    = 0;
+  gameOver = false;
+  startLevel();
+  gameRunning = true;
   lastTime = performance.now();
   requestAnimationFrame(loop);
 }
@@ -439,29 +460,78 @@ function drawPac() {
 }
 
 function drawStartPrompt() {
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(0, CH / 2 - 24, CW, 48);
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 20px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(0, CH / 2 - 70, CW, 140);
   ctx.textAlign = 'center';
-  ctx.fillText('Press ENTER to Start', CW / 2, CH / 2 + 7);
+  // Title
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 28px "Courier New", monospace';
+  ctx.fillText('PAC-MAN WORD HUNT', CW / 2, CH / 2 - 28);
+  // High score
+  ctx.fillStyle = '#aaa';
+  ctx.font = '14px "Courier New", monospace';
+  ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2);
+  // Prompt
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 18px "Courier New", monospace';
+  ctx.fillText('Press ENTER to Start', CW / 2, CH / 2 + 34);
 }
 
 function drawScore() {
+  ctx.font = 'bold 14px "Courier New", monospace';
   ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 16px "Courier New", monospace';
   ctx.textAlign = 'left';
   ctx.fillText('SCORE: ' + score, 8, 20);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#aaa';
+  ctx.fillText('HI: ' + highScore, CW / 2, 20);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('LEVEL: ' + level, CW - 8, 20);
+}
+
+function drawLives() {
+  // Pac-Man icon per life, bottom-left
+  const r = 8, margin = 10, y = CH - margin - r;
+  for (let i = 0; i < lives; i++) {
+    const x = margin + r + i * (r * 2 + 6);
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, r, 0.25 * Math.PI, 1.75 * Math.PI);
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 function drawLevelClear() {
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(0, CH / 2 - 28, CW, 56);
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 24px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(0, CH / 2 - 40, CW, 80);
   ctx.textAlign = 'center';
-  const msg = lives <= 0 ? 'Game Over!  Score: ' + score : 'Level Clear!  Score: ' + score;
-  ctx.fillText(msg, CW / 2, CH / 2 + 8);
+  ctx.fillStyle = '#aaff00';
+  ctx.font = 'bold 26px "Courier New", monospace';
+  ctx.fillText('LEVEL CLEAR!', CW / 2, CH / 2 - 6);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '14px "Courier New", monospace';
+  ctx.fillText('Get ready for level ' + (level + 1) + '…', CW / 2, CH / 2 + 20);
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(0, CH / 2 - 70, CW, 140);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ff4444';
+  ctx.font = 'bold 30px "Courier New", monospace';
+  ctx.fillText('GAME OVER', CW / 2, CH / 2 - 26);
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.fillText('SCORE: ' + score, CW / 2, CH / 2 + 4);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '13px "Courier New", monospace';
+  ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2 + 24);
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 15px "Courier New", monospace';
+  ctx.fillText('Press ENTER to play again', CW / 2, CH / 2 + 52);
 }
 
 // ── Game loop ─────────────────────────────────────────────
@@ -469,7 +539,7 @@ function loop(now) {
   const dt = Math.min((now - lastTime) / 1000, 0.05); // cap at 50ms
   lastTime = now;
 
-  if (!levelClear && !dying) {
+  if (!levelClear && !dying && !gameOver) {
     updatePac(dt);
     updateMouth(dt);
     tryEat();
@@ -479,6 +549,12 @@ function loop(now) {
   } else if (!levelClear && dying) {
     updateGhostModes(dt);
     updateGhosts(dt);
+  } else if (levelClear) {
+    levelClearTimer += dt;
+    if (levelClearTimer >= 2.5) {
+      level++;
+      startLevel();
+    }
   }
 
   drawMaze();
@@ -490,6 +566,7 @@ function loop(now) {
   if (wordFlash) drawWordFlash(dt);
   drawTray();
   if (levelClear) drawLevelClear();
+  if (gameOver) drawGameOver();
 
   requestAnimationFrame(loop);
 }
@@ -779,10 +856,15 @@ function checkGhostCollision() {
       dying = true;
       lives--;
       setTimeout(() => {
-        pac.x = SPAWN_X; pac.y = SPAWN_Y;
-        pac.dir = null; pac.next = 'r';
-        dying = false;
-        if (lives <= 0) levelClear = true; // reuse levelClear for game over
+        if (lives <= 0) {
+          gameOver = true;
+          dying = false;
+          saveHighScore();
+        } else {
+          pac.x = SPAWN_X; pac.y = SPAWN_Y;
+          pac.dir = null; pac.next = 'r';
+          dying = false;
+        }
       }, 1500);
     }
   }
@@ -843,12 +925,6 @@ function drawGhost(g) {
   }
 }
 
-function drawLives() {
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 16px "Courier New", monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText('LIVES: ' + lives, CW - 8, 20);
-}
 
 // ═══════════════════════════════════════════════════════════
 // STAGE 5 — WORD HUNT (one word at a time, shared WORD_LIST)
