@@ -290,6 +290,7 @@ document.addEventListener('keydown', e => {
       gameRunning && !gameOver && !dying) {
     paused = !paused;
   }
+  if (e.key === 'm' || e.key === 'M') toggleSound();
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -327,17 +328,18 @@ function tryEat() {
   lastEatCol = cc; lastEatRow = r;
   if (r < 0 || r >= ROWS) return;
   const cell = dots[r][cc];
-  if (cell === D) { dots[r][cc] = null; score += 10; dotsLeft--; }
-  if (cell === P) { dots[r][cc] = null; score += 50; dotsLeft--; triggerFrightened(); }
+  if (cell === D) { dots[r][cc] = null; score += 10; dotsLeft--; playChomp(); }
+  if (cell === P) { dots[r][cc] = null; score += 50; dotsLeft--; triggerFrightened(); playPellet(); }
   if (cell === L) {
     const idx = letterIdxMap[r][cc];
-    dots[r][cc] = null; score += 15; dotsLeft--;
+    dots[r][cc] = null; score += 15; dotsLeft--; playChomp();
     if (idx >= 0) {
       collected[idx] = true;
       if (collected.every(Boolean)) {
         const bonus = 100 * currentWord.length;
         score += bonus;
         wordFlash = { text: `${currentWord}! +${bonus}`, timer: 2.5 };
+        playWordFound();
         initWord();
       }
     }
@@ -568,6 +570,7 @@ function loop(now) {
     drawScore();
     drawLives();
     drawTray();
+    drawSoundIcon();
     drawPaused();
     requestAnimationFrame(loop);
     return;
@@ -587,6 +590,7 @@ function loop(now) {
     updateGhostModes(dt);
     updateGhosts(dt);
   } else if (levelClear) {
+    if (levelClearTimer === 0) playLevelClear();
     levelClearTimer += dt;
     if (levelClearTimer >= 2.5) {
       level++;
@@ -604,6 +608,7 @@ function loop(now) {
   drawTray();
   if (levelClear) drawLevelClear();
   if (gameOver) drawGameOver();
+  drawSoundIcon();
 
   requestAnimationFrame(loop);
 }
@@ -889,9 +894,11 @@ function checkGhostCollision() {
     if (g.mode === 'frightened') {
       g.mode = 'eyes';
       score += 200;
+      playGhostEaten();
     } else if (g.mode !== 'eyes' && !dying) {
       dying = true;
       lives--;
+      playDeath();
       setTimeout(() => {
         if (lives <= 0) {
           gameOver = true;
@@ -1091,11 +1098,113 @@ function drawWordFlash(dt) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// STAGE 7 — SOUND EFFECTS (Web Audio API, synthesised)
+// ═══════════════════════════════════════════════════════════
+
+let audioCtx  = null;
+let soundOn   = localStorage.getItem('pacman_sound') !== 'off';
+let chompFlip = false; // alternates chomp pitch each call
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, dur, type = 'square', gain = 0.18, startTime = 0) {
+  if (!soundOn) return;
+  const ctx = getAudioCtx();
+  const t   = ctx.currentTime + startTime;
+  const osc = ctx.createOscillator();
+  const g   = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t); osc.stop(t + dur);
+}
+
+function playSeq(notes, type = 'square', gain = 0.18) {
+  if (!soundOn) return;
+  let offset = 0;
+  for (const { freq, dur } of notes) {
+    playTone(freq, dur, type, gain, offset);
+    offset += dur;
+  }
+}
+
+function playChomp() {
+  const freq = chompFlip ? 220 : 180;
+  chompFlip = !chompFlip;
+  playTone(freq, 0.08, 'square', 0.14);
+}
+
+function playPellet() {
+  playSeq([{ freq: 300, dur: 0.07 }, { freq: 450, dur: 0.07 }, { freq: 600, dur: 0.12 }], 'sine', 0.22);
+}
+
+function playGhostEaten() {
+  if (!soundOn) return;
+  const ac = getAudioCtx();
+  const t  = ac.currentTime;
+  const osc = ac.createOscillator();
+  const g   = ac.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(600, t);
+  osc.frequency.exponentialRampToValueAtTime(100, t + 0.3);
+  g.gain.setValueAtTime(0.2, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+  osc.connect(g); g.connect(ac.destination);
+  osc.start(t); osc.stop(t + 0.3);
+}
+
+function playWordFound() {
+  playSeq([
+    { freq: 523, dur: 0.09 }, { freq: 659, dur: 0.09 },
+    { freq: 784, dur: 0.09 }, { freq: 1047, dur: 0.2 },
+  ], 'sine', 0.22);
+}
+
+function playDeath() {
+  if (!soundOn) return;
+  const ac = getAudioCtx();
+  const t  = ac.currentTime;
+  const osc = ac.createOscillator();
+  const g   = ac.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(400, t);
+  osc.frequency.exponentialRampToValueAtTime(50, t + 0.8);
+  g.gain.setValueAtTime(0.25, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+  osc.connect(g); g.connect(ac.destination);
+  osc.start(t); osc.stop(t + 0.8);
+}
+
+function playLevelClear() {
+  playSeq([
+    { freq: 523, dur: 0.1 }, { freq: 659, dur: 0.1 },
+    { freq: 784, dur: 0.1 }, { freq: 1047, dur: 0.35 },
+  ], 'sine', 0.25);
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  localStorage.setItem('pacman_sound', soundOn ? 'on' : 'off');
+}
+
+function drawSoundIcon() {
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(soundOn ? '🔊' : '🔇', CW - 8, CH - 8);
+}
+
+// ═══════════════════════════════════════════════════════════
 // BOOT — initial render before game starts
 // ═══════════════════════════════════════════════════════════
 drawMaze();
 drawPac();
 drawTray();
+drawSoundIcon();
 drawStartPrompt();
 </script>
 </body>
