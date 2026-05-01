@@ -19,10 +19,18 @@ canvas {
   display: block;
   image-rendering: pixelated;
 }
+.gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;transition:background 0.15s,color 0.15s}
+.gbtn:hover{background:#2a2a55;color:#fff}
+.gbtn.google-btn{color:#fff;border-color:#4285f4;background:#1c1c38}
+.gbtn.google-btn:hover{background:#4285f4}
+.gbtn.signout-btn{color:#aaa;border-color:#555;font-size:9px;padding:2px 7px}
+#auth-bar{margin-top:8px;text-align:center;width:576px}
+#auth-status{font-size:10px;color:#4ecdc4;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
 </style>
 </head>
 <body>
 <canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
+<div id="auth-bar"><button class="gbtn google-btn" onclick="pacSignIn()">Google Sign In</button></div>
 <script src="../shared/words.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -355,11 +363,16 @@ let gameOver        = false;
 let levelClearTimer = 0;
 let highScore       = parseInt(localStorage.getItem('pacman_hs') || '0', 10);
 
+const PAC_SAVE_KEY = 'pacman_save';
+
 function saveHighScore() {
   if (score > highScore) {
     highScore = score;
     localStorage.setItem('pacman_hs', highScore);
   }
+  const data = { highScore, savedAt: Date.now() };
+  localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(data));
+  if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('pacMan', data);
 }
 
 function startLevel() {
@@ -1273,6 +1286,40 @@ drawPac();
 drawTray();
 drawSoundIcon();
 drawStartPrompt();
+</script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+// ─── Pac-Man Firebase wiring ──────────────────────────────
+function pacSignIn() {
+  if (gameRunning && !gameOver && !paused) paused = true;
+  SillyFirebase.signIn();
+}
+
+SillyFirebase.onAuthChanged(async user => {
+  if (user) {
+    const cloud = await SillyFirebase.loadProgress('pacMan');
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(PAC_SAVE_KEY)); } catch(e) {}
+
+    if (cloud || local) {
+      const cloudHS = cloud ? (cloud.highScore || 0) : 0;
+      const localHS = local ? (local.highScore || 0) : 0;
+      if (cloudHS > localHS) {
+        highScore = cloudHS;
+        localStorage.setItem('pacman_hs', highScore);
+        localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(cloud));
+      } else if (localHS > cloudHS) {
+        await SillyFirebase.saveProgress('pacMan', local);
+      }
+    }
+  }
+  SillyFirebase.renderAuthBar('auth-bar', 'pacSignIn()');
+});
 </script>
 </body>
 </html>
