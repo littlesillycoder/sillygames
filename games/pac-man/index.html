@@ -1192,11 +1192,78 @@ function toggleSound() {
   localStorage.setItem('pacman_sound', soundOn ? 'on' : 'off');
 }
 
+// ── Sound button — clickable circular icon ─────────────────
+const SND_X = CW - 34, SND_Y = CH + 30, SND_R = 20;
+
 function drawSoundIcon() {
-  ctx.font = '16px sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(soundOn ? '🔊' : '🔇', CW - 8, CH - 8);
+  const bx = SND_X, by = SND_Y, br = SND_R;
+
+  // Circle background
+  ctx.beginPath();
+  ctx.arc(bx, by, br, 0, Math.PI * 2);
+  ctx.fillStyle = soundOn ? '#2ecc40' : '#e74c3c';
+  ctx.shadowColor = soundOn ? '#27ae60' : '#c0392b';
+  ctx.shadowBlur = 6;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Speaker body (white rectangle)
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(bx - 11, by - 5, 7, 10);
+
+  // Speaker cone (triangle)
+  ctx.beginPath();
+  ctx.moveTo(bx - 4, by - 5);
+  ctx.lineTo(bx + 7,  by - 12);
+  ctx.lineTo(bx + 7,  by + 12);
+  ctx.lineTo(bx - 4, by + 5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+
+  if (soundOn) {
+    // Two sound-wave arcs
+    ctx.beginPath();
+    ctx.arc(bx + 2, by, 9,  -0.65, 0.65);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(bx + 2, by, 14, -0.65, 0.65);
+    ctx.stroke();
+  } else {
+    // X mark
+    ctx.beginPath();
+    ctx.moveTo(bx + 8,  by - 8);
+    ctx.lineTo(bx + 15, by + 2);
+    ctx.moveTo(bx + 15, by - 8);
+    ctx.lineTo(bx + 8,  by + 2);
+    ctx.stroke();
+  }
 }
+
+// Click to toggle sound
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width  / rect.width;
+  const sy = canvas.height / rect.height;
+  const cx = (e.clientX - rect.left) * sx;
+  const cy = (e.clientY - rect.top)  * sy;
+  const dx = cx - SND_X, dy = cy - SND_Y;
+  if (Math.sqrt(dx * dx + dy * dy) <= SND_R) toggleSound();
+});
+
+// Pointer cursor when hovering over sound button
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width  / rect.width;
+  const sy = canvas.height / rect.height;
+  const cx = (e.clientX - rect.left) * sx;
+  const cy = (e.clientY - rect.top)  * sy;
+  const dx = cx - SND_X, dy = cy - SND_Y;
+  canvas.style.cursor = Math.sqrt(dx * dx + dy * dy) <= SND_R ? 'pointer' : 'default';
+});
 
 // ═══════════════════════════════════════════════════════════
 // BOOT — initial render before game starts
