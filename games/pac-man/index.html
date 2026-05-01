@@ -232,7 +232,8 @@ const MAZES = [
  _R10],
 ];
 
-function currentMap() { return MAZES[(level - 1) % 10]; }
+let currentMazeIndex = 0;
+function currentMap() { return MAZES[currentMazeIndex]; }
 
 // Validate all maze dimensions on load
 MAZES.forEach((maze, mi) => {
@@ -511,6 +512,10 @@ function saveHighScore() {
 }
 
 function startLevel() {
+  // Pick a random maze different from the current one
+  let next = Math.floor(Math.random() * MAZES.length);
+  if (MAZES.length > 1 && next === currentMazeIndex) next = (next + 1) % MAZES.length;
+  currentMazeIndex = next;
   initDots();
   shuffledWords = [...WORD_LIST].sort(() => Math.random() - 0.5);
   wordIndex = 0;
