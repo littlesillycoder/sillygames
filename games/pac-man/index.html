@@ -260,7 +260,7 @@ function drawMaze() {
   ctx.fillRect(0, 0, CW, CH);
 
   // ── dots & power pellets (from mutable dots[][] — null = eaten) ──
-  const dotGrid = dots.length ? dots : MAP;
+  const dotGrid = dots.length ? dots : currentMap();
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell = dotGrid[r][c];
