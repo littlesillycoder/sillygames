@@ -82,40 +82,167 @@ const E = 5; // empty — walkable, no dot (tunnels, ghost house border)
 const L = 6; // letter tile — walkable, replaced from D at game start
 
 // ═══════════════════════════════════════════════════════════
-// MAZE  36 × 11  — corridors are 32 px tall, walls 32 px tall
+// MAZES — 10 hand-crafted 36×11 layouts
+// All share identical r0 (border), r5 (tunnel+ghost house), r10 (border).
+// Level N uses MAZES[(N-1) % 10].  currentMap() returns the active maze.
 // ═══════════════════════════════════════════════════════════
-const MAP = [
-// r0 — top border
-[W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-// r1 — top corridor  (P at col 1 and col 34, fully open)
-[W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
-// r2 — wall + 2-wide vertical connectors at cols 1-2, 6-7, 11-12, 23-24, 28-29, 33-34
-[W,D,D,W,W,W,D,D,W,W,W,D,D,W,W,W,W,W,W,W,W,W,W,D,D,W,W,W,D,D,W,W,W,D,D,W],
-// r3 — fully open corridor
-[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r4 — wall + 2-wide vertical connectors at cols 1-2, 4-5, 11-12, 23-24, 30-31, 33-34
-[W,D,D,W,D,D,W,W,W,W,W,D,D,W,W,W,W,W,W,W,W,W,W,D,D,W,W,W,W,W,D,D,W,D,D,W],
-// r5 — TUNNEL row  (E tunnels at cols 0-2 and 33-35; ghost house G at cols 13-22)
-[E,E,E,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,E,E,E],
-// r6 — wall + 2-wide vertical connectors at cols 1-2, 4-5, 11-12, 24-25, 30-31, 33-34
-[W,D,D,W,D,D,W,W,W,W,W,D,D,W,W,W,W,W,W,W,W,W,W,W,D,D,W,W,W,W,D,D,W,D,D,W],
-// r7 — corridor with center wall divider at cols 17-18
-[W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-// r8 — wall + 2-wide vertical connectors at cols 1-2, 6-7, 11-12, 15-16, 19, 23-24, 28-29, 33-34
-[W,D,D,W,W,W,D,D,W,W,W,D,D,W,W,D,D,W,W,D,W,W,W,D,D,W,W,W,D,D,W,W,W,D,D,W],
-// r9 — bottom corridor  (P at col 1 and col 34)
-[W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
-// r10 — bottom border
-[W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+
+// ── Shared fixed rows ─────────────────────────────────────
+const _R0  = [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W];
+const _R5  = [E,E,E,D,D,D,D,D,D,D,D,D,E,G,G,G,G,G,G,G,G,G,G,E,D,D,D,D,D,D,D,D,D,E,E,E];
+const _R10 = [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W];
+// Open corridor with power pellets at ends (r1, r9 defaults)
+const _PEL = [W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W];
+// Fully open corridor (r3, r7 defaults)
+const _OPN = [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W];
+
+// Build a wall row — D at listed columns, W everywhere else
+function _wr(...dCols) {
+  const row = new Array(36).fill(W);
+  for (const c of dCols) row[c] = D;
+  return row;
+}
+// Build a corridor row with W dividers at listed columns
+function _div(...wCols) {
+  const row = _OPN.slice();
+  for (const c of wCols) row[c] = W;
+  return row;
+}
+
+const MAZES = [
+// ── Maze 1 — original layout ─────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,6,7,11,12,23,24,28,29,33,34),
+ _OPN,
+ _wr(1,2,4,5,11,12,23,24,30,31,33,34),
+ _R5,
+ _wr(1,2,4,5,11,12,24,25,30,31,33,34),
+ _div(17,18),
+ _wr(1,2,6,7,11,12,15,16,19,23,24,28,29,33,34),
+ [W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+ _R10],
+// ── Maze 2 — wide halls ──────────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,10,11,23,24,33,34),
+ _OPN,
+ _wr(1,2,8,9,24,25,29,30,33,34),
+ _R5,
+ _wr(1,2,8,9,24,25,29,30,33,34),
+ _OPN,
+ _wr(1,2,10,11,23,24,33,34),
+ _PEL,
+ _R10],
+// ── Maze 3 — open centre ─────────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,9,10,25,26,33,34),
+ _OPN,
+ _wr(1,2,4,5,30,31,33,34),
+ _R5,
+ _wr(1,2,4,5,30,31,33,34),
+ _OPN,
+ _wr(1,2,9,10,25,26,33,34),
+ _PEL,
+ _R10],
+// ── Maze 4 — dense connectors ────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,5,6,9,10,25,26,29,30,33,34),
+ _OPN,
+ _wr(1,2,3,4,9,10,11,12,23,24,25,26,31,32,33,34),
+ _R5,
+ _wr(1,2,3,4,9,10,11,12,23,24,25,26,31,32,33,34),
+ _OPN,
+ _wr(1,2,5,6,9,10,25,26,29,30,33,34),
+ _PEL,
+ _R10],
+// ── Maze 5 — zigzag walls ────────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,7,8,15,16,21,22,27,28,33,34),
+ _OPN,
+ _wr(1,2,5,6,11,12,23,24,29,30,33,34),
+ _R5,
+ _wr(1,2,6,7,12,13,22,23,28,29,33,34),
+ _div(14,15,20,21),
+ _wr(1,2,7,8,15,16,19,20,27,28,33,34),
+ _PEL,
+ _R10],
+// ── Maze 6 — T-walls ─────────────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,11,12,23,24,33,34),
+ _OPN,
+ _wr(1,2,5,6,7,8,11,12,23,24,27,28,29,30,33,34),
+ _R5,
+ _wr(1,2,5,6,7,8,11,12,23,24,27,28,29,30,33,34),
+ _div(17,18),
+ _wr(1,2,11,12,23,24,33,34),
+ _PEL,
+ _R10],
+// ── Maze 7 — sparse (long wall stretches) ────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,17,18,33,34),
+ _OPN,
+ _wr(1,2,11,12,23,24,33,34),
+ _R5,
+ _wr(1,2,11,12,23,24,33,34),
+ _div(7,8,27,28),
+ _wr(1,2,17,18,33,34),
+ _PEL,
+ _R10],
+// ── Maze 8 — side chambers ───────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,3,4,5,6,11,12,23,24,29,30,31,32,33,34),
+ _OPN,
+ _wr(1,2,3,4,9,10,11,12,23,24,25,26,31,32,33,34),
+ _R5,
+ _wr(1,2,3,4,9,10,11,12,23,24,25,26,31,32,33,34),
+ _OPN,
+ _wr(1,2,3,4,5,6,11,12,23,24,29,30,31,32,33,34),
+ _PEL,
+ _R10],
+// ── Maze 9 — divided corridors ───────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,11,12,23,24,33,34),
+ _div(9,10,25,26),
+ _wr(1,2,7,8,11,12,23,24,27,28,33,34),
+ _R5,
+ _wr(1,2,7,8,11,12,23,24,27,28,33,34),
+ _div(14,15,20,21),
+ _wr(1,2,11,12,23,24,33,34),
+ _PEL,
+ _R10],
+// ── Maze 10 — arch pattern ───────────────────────────────
+[_R0,
+ _PEL,
+ _wr(1,2,8,9,13,14,21,22,26,27,33,34),
+ _OPN,
+ _wr(1,2,6,7,11,12,23,24,28,29,33,34),
+ _R5,
+ _wr(1,2,6,7,11,12,23,24,28,29,33,34),
+ _div(17,18,19),
+ _wr(1,2,8,9,13,14,21,22,26,27,33,34),
+ _PEL,
+ _R10],
 ];
 
-// Validate maze dimensions
-MAP.forEach((row, r) => {
-  if (row.length !== COLS)
-    console.error(`Maze row ${r}: expected ${COLS} cells, got ${row.length}`);
+function currentMap() { return MAZES[(level - 1) % 10]; }
+
+// Validate all maze dimensions on load
+MAZES.forEach((maze, mi) => {
+  if (maze.length !== ROWS)
+    console.error(`MAZES[${mi}]: expected ${ROWS} rows, got ${maze.length}`);
+  maze.forEach((row, r) => {
+    if (row.length !== COLS)
+      console.error(`MAZES[${mi}] row ${r}: expected ${COLS} cells, got ${row.length}`);
+  });
 });
-if (MAP.length !== ROWS)
-  console.error(`Maze: expected ${ROWS} rows, got ${MAP.length}`);
 
 // ═══════════════════════════════════════════════════════════
 // CANVAS
@@ -154,7 +281,7 @@ function drawMaze() {
   // ── walls — thin neon lines along cell boundaries ─────────
   function isWall(r, c) {
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
-    return MAP[r][c] === W;
+    return currentMap()[r][c] === W;
   }
 
   ctx.strokeStyle = '#1a1aff';
@@ -203,12 +330,12 @@ function drawMaze() {
   ctx.lineCap     = 'butt';
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      if (MAP[r][c] !== G) continue;
+      if (currentMap()[r][c] !== G) continue;
       const x = c * CS, y = r * CSH;
-      const top    = MAP[r - 1]?.[c] !== G;
-      const bottom = MAP[r + 1]?.[c] !== G;
-      const left   = MAP[r]?.[c - 1] !== G;
-      const right  = MAP[r]?.[c + 1] !== G;
+      const top    = currentMap()[r - 1]?.[c] !== G;
+      const bottom = currentMap()[r + 1]?.[c] !== G;
+      const left   = currentMap()[r]?.[c - 1] !== G;
+      const right  = currentMap()[r]?.[c + 1] !== G;
       if (top)    { ctx.beginPath(); ctx.moveTo(x,      y);        ctx.lineTo(x + CS, y);        ctx.stroke(); }
       if (bottom) { ctx.beginPath(); ctx.moveTo(x,      y + CSH);  ctx.lineTo(x + CS, y + CSH);  ctx.stroke(); }
       if (left)   { ctx.beginPath(); ctx.moveTo(x,      y);        ctx.lineTo(x,      y + CSH);   ctx.stroke(); }
@@ -256,7 +383,7 @@ function cellAt(px, py) {
   const r = Math.floor(py / CSH);
   if (r < 0 || r >= ROWS) return W;
   const cc = ((c % COLS) + COLS) % COLS;
-  return MAP[r][cc];
+  return currentMap()[r][cc];
 }
 
 // Ghost house (G) is not walkable for Pac-Man
@@ -292,7 +419,7 @@ document.addEventListener('keydown', e => {
   if (map[e.key]) { e.preventDefault(); pac.next = map[e.key]; }
   if (e.key === 'Enter') {
     if (paused) { paused = false; }
-    else if (!gameRunning || gameOver) startGame();
+    else if (!gameRunning || gameOver || youWin) startGame();
   }
   if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') &&
       gameRunning && !gameOver && !dying) {
@@ -317,13 +444,14 @@ let dotsLeft = 0;
 let levelClear = false;
 
 function initDots() {
-  dots = MAP.map(row => row.slice());
+  const map = currentMap();
+  dots = map.map(row => row.slice());
   score = 0;
   levelClear = false;
   dotsLeft = 0;
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
-      if (MAP[r][c] === D || MAP[r][c] === P) dotsLeft++;
+      if (map[r][c] === D || map[r][c] === P) dotsLeft++;
 }
 
 // Try to eat the dot at Pac-Man's current cell centre
@@ -346,13 +474,18 @@ function tryEat() {
       if (collected.every(Boolean)) {
         const bonus = 100 * currentWord.length;
         score += bonus;
+        wordsThisLevel++;
         wordFlash = { text: `${currentWord}! +${bonus}`, timer: 2.5 };
         playWordFound();
-        initWord();
+        if (wordsThisLevel < 3) {
+          initWord();
+        } else {
+          levelClear = true;
+        }
       }
     }
   }
-  if (dotsLeft <= 0) levelClear = true;
+  // Level clears when 3 words are collected (handled in word-complete branch)
 }
 
 // ── Game state ────────────────────────────────────────────
@@ -360,7 +493,9 @@ let gameRunning     = false;
 let lastTime        = 0;
 let level           = 1;
 let gameOver        = false;
+let youWin          = false;
 let levelClearTimer = 0;
+let wordsThisLevel  = 0;
 let highScore       = parseInt(localStorage.getItem('pacman_hs') || '0', 10);
 
 const PAC_SAVE_KEY = 'pacman_save';
@@ -380,6 +515,7 @@ function startLevel() {
   shuffledWords = [...WORD_LIST].sort(() => Math.random() - 0.5);
   wordIndex = 0;
   wordFlash = null;
+  wordsThisLevel = 0;
   initWord();
   initGhosts();
   dying = false;
@@ -396,6 +532,7 @@ function startGame() {
   lives    = 3;
   score    = 0;
   gameOver = false;
+  youWin   = false;
   paused   = false;
   startLevel();
   gameRunning = true;
@@ -533,10 +670,10 @@ function drawLevelClear() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#aaff00';
   ctx.font = 'bold 26px "Courier New", monospace';
-  ctx.fillText('LEVEL CLEAR!', CW / 2, CH / 2 - 6);
+  ctx.fillText(level >= 50 ? 'FINAL LEVEL CLEAR!' : 'LEVEL CLEAR!', CW / 2, CH / 2 - 6);
   ctx.fillStyle = '#aaa';
   ctx.font = '14px "Courier New", monospace';
-  ctx.fillText('Get ready for level ' + (level + 1) + '…', CW / 2, CH / 2 + 20);
+  ctx.fillText(level >= 50 ? 'You completed all 50 levels!' : 'Get ready for level ' + (level + 1) + '…', CW / 2, CH / 2 + 20);
 }
 
 function drawGameOver() {
@@ -549,6 +686,24 @@ function drawGameOver() {
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 16px "Courier New", monospace';
   ctx.fillText('SCORE: ' + score, CW / 2, CH / 2 + 4);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '13px "Courier New", monospace';
+  ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2 + 24);
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 15px "Courier New", monospace';
+  ctx.fillText('Press ENTER to play again', CW / 2, CH / 2 + 52);
+}
+
+function drawYouWin() {
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(0, CH / 2 - 70, CW, 140);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 32px "Courier New", monospace';
+  ctx.fillText('YOU WIN!', CW / 2, CH / 2 - 26);
+  ctx.fillStyle = '#aaff00';
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.fillText('All 50 levels complete!', CW / 2, CH / 2 + 2);
   ctx.fillStyle = '#aaa';
   ctx.font = '13px "Courier New", monospace';
   ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2 + 24);
@@ -592,7 +747,7 @@ function loop(now) {
   const dt = Math.min((now - lastTime) / 1000, 0.05); // cap at 50ms
   lastTime = now;
 
-  if (!levelClear && !dying && !gameOver) {
+  if (!levelClear && !dying && !gameOver && !youWin) {
     updatePac(dt);
     updateMouth(dt);
     tryEat();
@@ -606,8 +761,14 @@ function loop(now) {
     if (levelClearTimer === 0) playLevelClear();
     levelClearTimer += dt;
     if (levelClearTimer >= 2.5) {
-      level++;
-      startLevel();
+      if (level >= 50) {
+        youWin = true;
+        levelClear = false;
+        saveHighScore();
+      } else {
+        level++;
+        startLevel();
+      }
     }
   }
 
@@ -621,6 +782,7 @@ function loop(now) {
   drawTray();
   if (levelClear) drawLevelClear();
   if (gameOver) drawGameOver();
+  if (youWin) drawYouWin();
   drawSoundIcon();
 
   requestAnimationFrame(loop);
@@ -698,7 +860,7 @@ function initGhosts() {
 function ghostCellWalkable(r, c, mode) {
   if (r < 0 || r >= ROWS) return false;
   const cc = ((c % COLS) + COLS) % COLS;
-  const cell = MAP[r][cc];
+  const cell = currentMap()[r][cc];
   if (mode === 'eyes' || mode === 'exiting') return cell !== W; // can pass through G
   return cell !== W && cell !== G;
 }
@@ -831,9 +993,10 @@ function updateGhost(g, dt) {
     }
   }
 
+  const normalSpeed = GHOST_SPEED * Math.min(2, 1 + (level - 1) * 0.03);
   const speed = g.mode === 'eyes'      ? GHOST_SPEED_EYES
               : g.mode === 'frightened' ? GHOST_SPEED_FRIGHT
-              : GHOST_SPEED;
+              : normalSpeed;
 
   // Pixel target: centre of targetCell
   const tx = g.targetCol * CS + CS / 2;
@@ -858,7 +1021,7 @@ function updateGhost(g, dt) {
     // Exiting ghost reached the E cell exit → switch to normal mode
     if (g.mode === 'exiting') {
       const cc = ((g.col % COLS) + COLS) % COLS;
-      if (MAP[g.row][cc] === E) {
+      if (currentMap()[g.row][cc] === E) {
         const [, currentMode] = MODE_CYCLE[modeIndex];
         g.mode = currentMode;
       }
@@ -1093,7 +1256,7 @@ function drawTray() {
   ctx.fillStyle = '#555';
   ctx.font = '11px "Courier New", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('SPELL THE WORD', CW / 2, CH + 54);
+  ctx.fillText(`WORD ${wordsThisLevel + 1} / 3 — COLLECT THE LETTERS`, CW / 2, CH + 54);
 }
 
 // ── Word flash overlay ─────────────────────────────────────
