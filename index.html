@@ -217,6 +217,77 @@
     }
     .game-card:hover .play-btn { opacity: 0.9; transform: scale(1.03); }
 
+    /* ── AUTH BAR ── */
+    #lobby-auth-bar {
+      flex-shrink: 0;
+      width: 160px;
+      display: flex;
+      align-items: center;
+    }
+    #lobby-auth-bar { position: relative; }
+    #lobby-auth-bar .lobby-sign-in-btn {
+      background: linear-gradient(135deg, var(--accent), #5b21b6);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.45rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    #lobby-auth-bar .lobby-sign-in-btn:hover { opacity: 0.85; }
+    .lobby-avatar-btn {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .lobby-avatar-btn:hover { opacity: 0.85; }
+    .lobby-avatar-popup {
+      position: absolute;
+      top: 48px; right: 0;
+      background: #1e1e3a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem 0.85rem;
+      min-width: 220px;
+      z-index: 200;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    }
+    .lobby-avatar-popup .popup-name {
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 0.2rem;
+      color: var(--text);
+    }
+    .lobby-avatar-popup .popup-email {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.9rem;
+    }
+    .lobby-avatar-popup .lobby-sign-out-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .lobby-avatar-popup .lobby-sign-out-btn:hover { border-color: var(--accent); color: var(--text); }
+
     /* ── FOOTER ── */
     footer {
       border-top: 1px solid var(--border);
@@ -244,6 +315,8 @@
       <a href="#">Top</a>
       <a href="#">Categories</a>
     </nav>
+    <div id="visit-counter" style="font-size:0.78rem;color:var(--muted);white-space:nowrap;"></div>
+    <div id="lobby-auth-bar"></div>
   </div>
 </header>
 
@@ -261,7 +334,7 @@
   <div class="games-grid">
 
     <!-- ── Blocks Classic ── -->
-    <a class="game-card" href="games/blocks-classic/index.html" target="_blank" rel="noopener">
+    <a class="game-card" href="games/blocks-classic/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -331,7 +404,7 @@
     </a>
 
     <!-- ── Bubble Shooter ── -->
-    <a class="game-card" href="games/bubble-shooter/index.html" target="_blank" rel="noopener">
+    <a class="game-card" href="games/bubble-shooter/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -432,7 +505,7 @@
     </a>
 
     <!-- ── Count Masters ── -->
-    <a class="game-card" href="games/count-masters/index.html" target="_blank" rel="noopener">
+    <a class="game-card" href="games/count-masters/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -540,7 +613,7 @@
     </a>
 
     <!-- ── Ping Pong ── -->
-    <a class="game-card" href="games/ping-pong/index.html" target="_blank" rel="noopener">
+    <a class="game-card" href="games/ping-pong/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -593,7 +666,7 @@
     </a>
 
     <!-- ── Bounce Rush ── -->
-    <a class="game-card" href="games/bounce-rush/index.html" target="_blank" rel="noopener">
+    <a class="game-card" href="games/bounce-rush/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -665,7 +738,7 @@
     </a>
 
     <!-- ── Bubble Bobble ── -->
-    <a class="game-card" href="games/bubble-bobble/index.html" target="_blank" rel="noopener">
+    <a class="game-card" href="games/bubble-bobble/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -727,7 +800,7 @@
       </div>
     </a>
 
-    <a class="game-card" href="games/pac-man/index.html" target="_blank" rel="noopener">
+    <a class="game-card" href="games/pac-man/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -823,5 +896,59 @@
   &copy; 2026 GameZone &mdash; Free browser games, no download required.
 </footer>
 
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="games/shared/firebase.js"></script>
+<script>
+  function lobbyRenderAuthBar(user) {
+    const bar = document.getElementById('lobby-auth-bar');
+    if (!bar) return;
+    if (user) {
+      const name = user.displayName || user.email || '?';
+      const initial = name.charAt(0).toUpperCase();
+      const color = SillyFirebase.avatarColor(name);
+      bar.innerHTML = `
+        <button class="lobby-avatar-btn" id="lobby-avatar-btn"
+                style="background:${color}" onclick="lobbyTogglePopup()">
+          ${initial}
+        </button>
+        <div class="lobby-avatar-popup" id="lobby-avatar-popup" style="display:none">
+          <div class="popup-name">Hi, ${name}!</div>
+          <div class="popup-email">${user.email}</div>
+          <button class="lobby-sign-out-btn" onclick="SillyFirebase.signOut()">Sign Out</button>
+        </div>`;
+    } else {
+      bar.innerHTML = `<button class="lobby-sign-in-btn" onclick="SillyFirebase.signIn()">Google Sign In</button>`;
+    }
+  }
+
+  function lobbyTogglePopup() {
+    const popup = document.getElementById('lobby-avatar-popup');
+    if (!popup) return;
+    popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
+  }
+
+  document.addEventListener('click', e => {
+    const btn = document.getElementById('lobby-avatar-btn');
+    const popup = document.getElementById('lobby-avatar-popup');
+    if (!popup || popup.style.display === 'none') return;
+    if (btn && btn.contains(e.target)) return;
+    if (!popup.contains(e.target)) popup.style.display = 'none';
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    SillyFirebase.onAuthChanged(user => {
+      lobbyRenderAuthBar(user);
+      if (user) {
+        SillyFirebase.trackVisit('lobby').then(total => {
+          const el = document.getElementById('visit-counter');
+          if (el && total !== null) el.textContent = total.toLocaleString() + ' total visits';
+        });
+      }
+    });
+  });
+</script>
 </body>
 </html>

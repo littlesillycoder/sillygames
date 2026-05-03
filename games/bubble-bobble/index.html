@@ -25,15 +25,12 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 .gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;transition:background 0.15s,color 0.15s}
 .gbtn:hover{background:#2a2a55;color:#fff}
 .gbtn.pause-btn{color:#4ecdc4;border-color:#4ecdc4}
-.gbtn.exit-btn{color:#ff6b6b;border-color:#ff6b6b}
-.gbtn.google-btn{color:#fff;border-color:#4285f4;background:#1c1c38}
-.gbtn.google-btn:hover{background:#4285f4}
-.gbtn.signout-btn{color:#aaa;border-color:#555;font-size:9px;padding:2px 7px}
-#auth-status{font-size:10px;color:#4ecdc4;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
-#auth-bar{margin-top:4px}
+.gbtn.exit-btn{background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;}
+#game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
 </style>
 </head>
 <body>
+<div id="game-avatar"></div>
 <div id="layout">
   <div id="sidebar-left">
     <h2>Controls</h2>
@@ -56,9 +53,6 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <br>
     <div id="word-progress" style="text-align:center"></div>
     <br>
-    <div id="auth-bar" style="text-align:center">
-      <button class="gbtn google-btn" onclick="bbSignIn()">Google Sign In</button>
-    </div>
   </div>
 
   <div id="game-col">
@@ -324,7 +318,8 @@ function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
 function saveProgress() {
-  const data = { level:gs.level, score:gs.score, lives:gs.lives, wordStreak:gs.wordStreak, savedAt:Date.now() };
+  const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser) ? SillyFirebase.currentUser.uid : null;
+  const data = { level:gs.level, score:gs.score, lives:gs.lives, wordStreak:gs.wordStreak, savedAt:Date.now(), uid };
   localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('bubbleBobble', data);
 }
@@ -352,14 +347,14 @@ function togglePause() {
   // Clear stale inputs when resuming so held keys don't fire
   if (!paused) { pressed.clear(); keys.left=false; keys.right=false; }
 }
-function exitToTitle() {
-  paused = false;
-  gs.state = 'title';
-  titleCursor = 0;
-  bubbles=[]; fruits=[]; enemies=[]; letterBubbles=[]; popups=[]; lifeBubble=null; giantFruit=null;
-  pressed.clear(); keys.left=false; keys.right=false;
-  const btn = document.getElementById('pauseBtn');
-  if (btn) btn.textContent = '⏸ PAUSE';
+async function exitToTitle() {
+  if (gs.state === 'playing' || gs.state === 'harvest') {
+    const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser) ? SillyFirebase.currentUser.uid : null;
+    const data = { level:gs.level, score:gs.score, lives:gs.lives, wordStreak:gs.wordStreak, savedAt:Date.now(), uid };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    if (typeof SillyFirebase !== 'undefined') await SillyFirebase.saveProgress('bubbleBobble', data);
+  }
+  window.location.href = '/';
 }
 
 // ─── Player ──────────────────────────────────────────────────
@@ -881,7 +876,8 @@ function drawTitle(ctx, frame) {
   ctx.fillStyle='#f5c518'; ctx.font='bold 36px monospace'; ctx.fillText('BUBBLE',CW/2,CH/2-50);
   ctx.fillStyle='#4ecdc4'; ctx.font='bold 36px monospace'; ctx.fillText('BOBBLE',CW/2,CH/2-10);
   const sv = loadSave();
-  if(sv){
+  const _currentUid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser) ? SillyFirebase.currentUser.uid : null;
+  if(sv && sv.uid === _currentUid){
     const opts = [
       { label:'Continue (Level '+String(sv.level).padStart(2,'0')+')', color:'#4ecdc4' },
       { label:'New Game',                                               color:'#ff6b6b' }
@@ -1164,7 +1160,9 @@ function update() {
   frame++;
   if(gs.state==='title'){
     const sv = loadSave();
-    if(sv){
+    const _uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser) ? SillyFirebase.currentUser.uid : null;
+    const svOwned = sv && sv.uid === _uid;
+    if(svOwned){
       if(consume('menuup'))   titleCursor = 0;
       if(consume('menudown')) titleCursor = 1;
       if(consume('newgame'))  titleCursor = 1;
@@ -1249,7 +1247,7 @@ function update() {
   // player vs enemy
   if(!player.dead && player.invincible===0){
     for(const e of enemies){
-      if(e.touches(player)){ if(player.die()){ gs.lives--; if(gs.lives<=0){ gs.state='gameOver'; const gd={level:Math.max(1,gs.level-3),score:0,lives:3,wordStreak:gs.wordStreak,savedAt:Date.now()}; localStorage.setItem(SAVE_KEY,JSON.stringify(gd)); if(typeof SillyFirebase!=='undefined') SillyFirebase.saveProgress('bubbleBobble',gd); } else { saveProgress(); } } break; }
+      if(e.touches(player)){ if(player.die()){ gs.lives--; if(gs.lives<=0){ gs.state='gameOver'; const _uid=(typeof SillyFirebase!=='undefined'&&SillyFirebase.currentUser)?SillyFirebase.currentUser.uid:null; const gd={level:Math.max(1,gs.level-3),score:0,lives:3,wordStreak:gs.wordStreak,savedAt:Date.now(),uid:_uid}; localStorage.setItem(SAVE_KEY,JSON.stringify(gd)); if(typeof SillyFirebase!=='undefined') SillyFirebase.saveProgress('bubbleBobble',gd); } else { saveProgress(); } } break; }
     }
   }
 
@@ -1362,16 +1360,17 @@ updateHUD();
 <script src="../shared/firebase.js"></script>
 <script>
 // ─── Bubble Bobble Firebase wiring ───────────────────────────
-function bbSignIn() {
-  if (gs.state === 'playing' || gs.state === 'harvest') {
-    if (!paused) togglePause();
-  }
-  SillyFirebase.signIn();
-}
-
+let _bbAuthReady = false;
 SillyFirebase.onAuthChanged(async user => {
-  if (user) await SillyFirebase.syncProgress('bubbleBobble', SAVE_KEY);
-  SillyFirebase.renderAuthBar('auth-bar', 'bbSignIn()');
+  if (user) {
+    _bbAuthReady = true;
+    await SillyFirebase.syncProgress('bubbleBobble', SAVE_KEY);
+  } else if (_bbAuthReady) {
+    // Real sign-out (not the initial null flash on page load)
+    clearSave();
+  }
+  _bbAuthReady = true;
+  SillyFirebase.renderAvatar('game-avatar', user);
 });
 </script>
 </body>

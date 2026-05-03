@@ -154,14 +154,16 @@
       font-size: 0.78rem; color: var(--muted);
     }
     .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    #game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
   </style>
 </head>
 <body>
+<div id="game-avatar"></div>
 
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="brand">
-    <a href="../../index.html">🎮 GameZone</a>
+    <a href="/">🎮 GameZone</a>
     <span class="sep">/</span>
     <span>Count Masters</span>
   </div>
@@ -169,7 +171,7 @@
     <button class="btn btn-ghost" id="howToPlayBtn">How to Play</button>
     <button class="btn btn-ghost" id="pauseBtn">⏸ Pause</button>
     <button class="btn btn-ghost" id="restartBtn">↺ Restart</button>
-    <button class="btn btn-danger" id="exitBtn">✕ Exit</button>
+    <button class="btn btn-danger" id="exitBtn">✕ EXIT</button>
   </div>
 </div>
 
@@ -267,7 +269,7 @@
     <div class="modal-buttons">
       <button class="btn btn-primary" id="resultContinueBtn" style="display:none">Next Level ▶</button>
       <button class="btn btn-primary" id="resultRestartBtn">↺ Play Again</button>
-      <button class="btn btn-ghost" id="resultExitBtn">🏠 Home</button>
+      <button class="btn btn-danger" id="resultExitBtn">✕ EXIT</button>
     </div>
   </div>
 </div>
@@ -1366,8 +1368,8 @@ document.getElementById('resultRestartBtn').addEventListener('click', () => {
   initGame();
 });
 
-document.getElementById('exitBtn').addEventListener('click',       () => { window.location.href = '../../index.html'; });
-document.getElementById('resultExitBtn').addEventListener('click', () => { window.location.href = '../../index.html'; });
+document.getElementById('exitBtn').addEventListener('click',       () => { window.location.href = '/'; });
+document.getElementById('resultExitBtn').addEventListener('click', () => { window.location.href = '/'; });
 
 // ═══════════════════════════════════════════════
 //  BOOT — draw preview while modal open
@@ -1378,6 +1380,13 @@ document.getElementById('resultExitBtn').addEventListener('click', () => { windo
   drawCrowd(VP_X, CROWD_Y, 10, af, '#e2e8f0');
   drawCountBadge(VP_X, CROWD_Y + 28, 10, '#06b6d4', 'rgba(5,20,40,0.85)');
 })();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatar('game-avatar', user));
 </script>
 </body>
 </html>

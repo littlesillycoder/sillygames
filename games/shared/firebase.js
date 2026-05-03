@@ -34,6 +34,7 @@ const SillyFirebase = {
     try {
       await this._ref(this.currentUser.uid, gameId).set({
         ...data,
+        uid: this.currentUser.uid,
         email: this.currentUser.email
       });
     } catch(e) { console.warn('[SillyFirebase] save failed', e); }
@@ -58,9 +59,16 @@ const SillyFirebase = {
 
     if (!cloud && !local) return;
     if (!cloud && local)  { await this.saveProgress(gameId, local); return; }
-    if (cloud && !local)  { localStorage.setItem(localKey, JSON.stringify(cloud)); return; }
+    // Cloud exists — stamp it with uid when writing to localStorage
+    if (cloud && !local)  { localStorage.setItem(localKey, JSON.stringify({...cloud, uid: this.currentUser.uid})); return; }
 
-    // Both exist — use whichever has the newer savedAt timestamp
+    // Both exist — if local has no uid or belongs to a different user, it's guest data; prefer cloud
+    if (!local.uid || local.uid !== this.currentUser.uid) {
+      localStorage.setItem(localKey, JSON.stringify({...cloud, uid: this.currentUser.uid}));
+      return;
+    }
+
+    // Both belong to the same authenticated user — use whichever has the newer savedAt timestamp
     if ((cloud.savedAt || 0) > (local.savedAt || 0)) {
       localStorage.setItem(localKey, JSON.stringify(cloud));
     } else {
@@ -108,5 +116,51 @@ const SillyFirebase = {
     } else {
       bar.innerHTML = `<button class="gbtn google-btn" onclick="${signInFnName}" style="width:100%">Google Sign In</button>`;
     }
+  },
+
+  // ─── Avatar indicator ────────────────────────────────────────
+
+  // Generate a consistent HSL color from a string (display name or email).
+  avatarColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return `hsl(${Math.abs(hash) % 360}, 65%, 48%)`;
+  },
+
+  // Render a read-only avatar circle (initial letter) into an element.
+  // Shows when signed in, clears when signed out.
+  renderAvatar(elementId, user) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (user) {
+      const name = user.displayName || user.email || '?';
+      const initial = name.charAt(0).toUpperCase();
+      const color = this.avatarColor(name);
+      el.innerHTML = `<div style="
+        width:36px;height:36px;border-radius:50%;
+        background:${color};color:#fff;
+        font-size:16px;font-weight:700;font-family:sans-serif;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 2px 6px rgba(0,0,0,0.3);
+        user-select:none;">${initial}</div>`;
+    } else {
+      el.innerHTML = '';
+    }
+  },
+
+  // ─── Visit tracking ──────────────────────────────────────────
+
+  // Increment visit counter for pageId and return the new total.
+  // Stored at analytics/{pageId} → { total: N }
+  async trackVisit(pageId) {
+    try {
+      const ref = _sfDb.collection('analytics').doc(pageId);
+      await ref.set(
+        { total: firebase.firestore.FieldValue.increment(1) },
+        { merge: true }
+      );
+      const snap = await ref.get();
+      return snap.exists ? (snap.data().total || 0) : 0;
+    } catch(e) { console.warn('[SillyFirebase] trackVisit failed', e); return null; }
   }
 };

@@ -253,14 +253,16 @@
       z-index: 150;
     }
     .pause-badge.visible { display: block; }
+    #game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
   </style>
 </head>
 <body>
+<div id="game-avatar"></div>
 
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="brand">
-    <a href="../../index.html">🎮 GameZone</a>
+    <a href="/">🎮 GameZone</a>
     <span class="sep">/</span>
     <span>Blocks Classic</span>
   </div>
@@ -268,7 +270,7 @@
     <button class="btn btn-ghost" id="howToPlayBtn">How to Play</button>
     <button class="btn btn-ghost" id="pauseBtn">⏸ Pause</button>
     <button class="btn btn-ghost" id="restartBtn">↺ Restart</button>
-    <button class="btn btn-danger" id="exitBtn">✕ Exit</button>
+    <button class="btn btn-danger" id="exitBtn">✕ EXIT</button>
   </div>
 </div>
 
@@ -347,7 +349,7 @@
     </p>
     <div class="modal-buttons">
       <button class="btn btn-primary" id="gameOverRestartBtn">↺ Play Again</button>
-      <button class="btn btn-ghost" id="gameOverExitBtn">🏠 Home</button>
+      <button class="btn btn-danger" id="gameOverExitBtn">✕ EXIT</button>
     </div>
   </div>
 </div>
@@ -776,7 +778,7 @@ document.getElementById('restartBtn').addEventListener('click', () => {
   initGame();
 });
 document.getElementById('exitBtn').addEventListener('click', () => {
-  window.location.href = '../../index.html';
+  window.location.href = '/';
 });
 document.getElementById('gameOverRestartBtn').addEventListener('click', () => {
   document.getElementById('gameOverOverlay').classList.remove('active');
@@ -785,7 +787,7 @@ document.getElementById('gameOverRestartBtn').addEventListener('click', () => {
   initGame();
 });
 document.getElementById('gameOverExitBtn').addEventListener('click', () => {
-  window.location.href = '../../index.html';
+  window.location.href = '/';
 });
 document.getElementById('howToPlayBtn').addEventListener('click', () => {
   if (gameRunning && !paused) togglePause();
@@ -808,6 +810,13 @@ currentPiece = randomPiece();
 currentX = 3; currentY = 0;
 score = 0; level = 1; lines = 0;
 draw();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatar('game-avatar', user));
 </script>
 </body>
 </html>
