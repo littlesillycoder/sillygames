@@ -33,6 +33,7 @@
     .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .btn-ghost:hover { border-color: var(--accent); }
     .btn-primary { background: linear-gradient(135deg, var(--accent), #5b21b6); color: #fff; }
+    .btn-danger { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; }
 
     .sound-toggle {
       background: transparent; border: 1px solid var(--border); color: var(--text);
@@ -114,13 +115,15 @@
     }
     .diff-pill:hover { border-color: var(--accent); color: var(--text); }
     .diff-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
   </style>
 </head>
 <body>
+<div id="game-avatar"></div>
 
 <div class="topbar">
   <div class="brand">
-    <a href="../../index.html">🏠</a>
+    <a href="/">🏠</a>
     <span class="sep">/</span>
     🏓 Ping Pong
   </div>
@@ -129,7 +132,7 @@
     <button class="btn btn-ghost" id="pauseBtn">⏸ Pause</button>
     <button class="btn btn-ghost" id="howToPlayBtn">❓ How to Play</button>
     <button class="btn btn-ghost" id="restartBtn">↺ Restart</button>
-    <button class="btn btn-ghost" id="exitBtn">🏠 Home</button>
+    <button class="btn btn-danger" id="exitBtn">✕ EXIT</button>
   </div>
 </div>
 
@@ -189,7 +192,7 @@
     <p id="resultSubtitle">Amazing performance!</p>
     <div class="modal-btns">
       <button class="btn btn-primary" id="playAgainBtn">▶ Play Again</button>
-      <button class="btn btn-ghost" id="resultExitBtn">🏠 Home</button>
+      <button class="btn btn-danger" id="resultExitBtn">✕ EXIT</button>
     </div>
   </div>
 </div>
@@ -758,8 +761,8 @@ document.getElementById('playAgainBtn').addEventListener('click', () => {
   initGame();
 });
 
-document.getElementById('exitBtn').addEventListener('click', () => window.location.href = '../../index.html');
-document.getElementById('resultExitBtn').addEventListener('click', () => window.location.href = '../../index.html');
+document.getElementById('exitBtn').addEventListener('click', () => window.location.href = '/');
+document.getElementById('resultExitBtn').addEventListener('click', () => window.location.href = '/');
 
 // ── Sound toggle
 document.getElementById('soundBtn').addEventListener('click', () => {
@@ -778,6 +781,13 @@ document.getElementById('soundBtn').addEventListener('click', () => {
   aiY     = CH / 2 - PADDLE_H / 2;
   draw();
 })();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatar('game-avatar', user));
 </script>
 </body>
 </html>

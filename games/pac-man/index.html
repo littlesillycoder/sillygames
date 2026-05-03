@@ -11,9 +11,16 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100vh;
   font-family: 'Courier New', monospace;
+}
+#pac-topbar {
+  width: 576px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 18px 4px 2px;
 }
 canvas {
   display: block;
@@ -21,16 +28,20 @@ canvas {
 }
 .gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;transition:background 0.15s,color 0.15s}
 .gbtn:hover{background:#2a2a55;color:#fff}
-.gbtn.google-btn{color:#fff;border-color:#4285f4;background:#1c1c38}
-.gbtn.google-btn:hover{background:#4285f4}
-.gbtn.signout-btn{color:#aaa;border-color:#555;font-size:9px;padding:2px 7px}
-#auth-bar{margin-top:8px;text-align:center;width:576px}
-#auth-status{font-size:10px;color:#4ecdc4;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
+#game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
+#pac-exit-btn{background:linear-gradient(135deg,#dc2626,#991b1b);border:1px solid #991b1b;color:#fff;font-family:monospace;font-size:0.85rem;padding:0.45rem 1rem;border-radius:8px;cursor:pointer;letter-spacing:.5px;transition:opacity 0.15s;}
+#pac-exit-btn:hover{opacity:0.85;}
+#pac-canvas-wrap{position:relative;display:inline-block;}
 </style>
 </head>
 <body>
-<canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
-<div id="auth-bar"><button class="gbtn google-btn" onclick="pacSignIn()">Google Sign In</button></div>
+<div id="game-avatar"></div>
+<div id="pac-topbar">
+  <button id="pac-exit-btn">✕ EXIT</button>
+</div>
+<div id="pac-canvas-wrap">
+  <canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
+</div>
 <script src="../shared/words.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -420,7 +431,22 @@ document.addEventListener('keydown', e => {
   if (map[e.key]) { e.preventDefault(); pac.next = map[e.key]; }
   if (e.key === 'Enter') {
     if (paused) { paused = false; }
-    else if (!gameRunning || gameOver || youWin) startGame();
+    else if (gameOver || youWin) { startGame(); }
+    else if (!gameRunning) {
+      if (savedLevel > 1) {
+        if (titleCursor === 1) { clearProgress(); }
+        startGame();
+      } else {
+        startGame();
+      }
+    }
+  }
+  if (!gameRunning && !gameOver && !youWin && savedLevel > 1) {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      titleCursor = e.key === 'ArrowUp' ? 0 : 1;
+      drawMaze(); drawPac(); drawTray(); drawSoundIcon(); drawStartPrompt();
+    }
   }
   if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') &&
       gameRunning && !gameOver && !dying) {
@@ -498,17 +524,27 @@ let youWin          = false;
 let levelClearTimer = 0;
 let wordsThisLevel  = 0;
 let highScore       = parseInt(localStorage.getItem('pacman_hs') || '0', 10);
-
 const PAC_SAVE_KEY = 'pacman_save';
+let savedLevel      = (() => {
+  try { return JSON.parse(localStorage.getItem(PAC_SAVE_KEY))?.currentLevel || 1; } catch(e) { return 1; }
+})();
+let titleCursor     = 0; // 0 = Continue, 1 = New Game
 
-function saveHighScore() {
+function saveProgress() {
   if (score > highScore) {
     highScore = score;
     localStorage.setItem('pacman_hs', highScore);
   }
-  const data = { highScore, savedAt: Date.now() };
+  const data = { highScore, currentLevel: level, savedAt: Date.now() };
   localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(data));
   if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('pacMan', data);
+}
+
+function clearProgress() {
+  savedLevel = 1;
+  localStorage.removeItem(PAC_SAVE_KEY);
+  if (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+    SillyFirebase.saveProgress('pacMan', { highScore, currentLevel: 1, savedAt: Date.now() });
 }
 
 function startLevel() {
@@ -533,7 +569,7 @@ function startLevel() {
 }
 
 function startGame() {
-  level    = 1;
+  level    = savedLevel;
   lives    = 3;
   score    = 0;
   gameOver = false;
@@ -626,7 +662,7 @@ function drawPac() {
 
 function drawStartPrompt() {
   ctx.fillStyle = 'rgba(0,0,0,0.72)';
-  ctx.fillRect(0, CH / 2 - 70, CW, 140);
+  ctx.fillRect(0, CH / 2 - 70, CW, 150);
   ctx.textAlign = 'center';
   // Title
   ctx.fillStyle = '#FFD700';
@@ -636,10 +672,28 @@ function drawStartPrompt() {
   ctx.fillStyle = '#aaa';
   ctx.font = '14px "Courier New", monospace';
   ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2);
-  // Prompt
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 18px "Courier New", monospace';
-  ctx.fillText('Press ENTER to Start', CW / 2, CH / 2 + 34);
+  if (savedLevel > 1) {
+    // Two-option menu
+    const opts = [
+      `Continue (Level ${String(savedLevel).padStart(2, '0')})`,
+      'New Game'
+    ];
+    const colors = ['#4ecdc4', '#ff6b6b'];
+    opts.forEach((label, i) => {
+      const y = CH / 2 + 30 + i * 26;
+      const selected = titleCursor === i;
+      ctx.font = (selected ? 'bold ' : '') + '14px "Courier New", monospace';
+      ctx.fillStyle = selected ? colors[i] : '#555';
+      ctx.fillText((selected ? '▶ ' : '  ') + label, CW / 2, y);
+    });
+    ctx.fillStyle = '#444';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillText('↑ ↓ to select   ENTER to confirm', CW / 2, CH / 2 + 90);
+  } else {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 18px "Courier New", monospace';
+    ctx.fillText('Press ENTER to Start', CW / 2, CH / 2 + 34);
+  }
 }
 
 function drawScore() {
@@ -769,7 +823,8 @@ function loop(now) {
       if (level >= 50) {
         youWin = true;
         levelClear = false;
-        saveHighScore();
+        saveProgress();
+        clearProgress();
       } else {
         level++;
         startLevel();
@@ -1084,7 +1139,8 @@ function checkGhostCollision() {
         if (lives <= 0) {
           gameOver = true;
           dying = false;
-          saveHighScore();
+          saveProgress();
+          clearProgress();
         } else {
           pac.x = SPAWN_X; pac.y = SPAWN_Y;
           pac.dir = null; pac.next = 'r';
@@ -1463,10 +1519,10 @@ drawStartPrompt();
 <script src="../shared/firebase.js"></script>
 <script>
 // ─── Pac-Man Firebase wiring ──────────────────────────────
-function pacSignIn() {
-  if (gameRunning && !gameOver && !paused) paused = true;
-  SillyFirebase.signIn();
-}
+document.getElementById('pac-exit-btn').addEventListener('click', () => {
+  if (gameRunning && !gameOver && !youWin) saveProgress();
+  window.location.href = '/';
+});
 
 SillyFirebase.onAuthChanged(async user => {
   if (user) {
@@ -1474,19 +1530,32 @@ SillyFirebase.onAuthChanged(async user => {
     let local = null;
     try { local = JSON.parse(localStorage.getItem(PAC_SAVE_KEY)); } catch(e) {}
 
-    if (cloud || local) {
-      const cloudHS = cloud ? (cloud.highScore || 0) : 0;
-      const localHS = local ? (local.highScore || 0) : 0;
-      if (cloudHS > localHS) {
-        highScore = cloudHS;
-        localStorage.setItem('pacman_hs', highScore);
-        localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(cloud));
-      } else if (localHS > cloudHS) {
+    let best = null;
+    if (cloud && local) {
+      best = (cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local;
+    } else {
+      best = cloud || local;
+    }
+    if (best) {
+      highScore = best.highScore || 0;
+      savedLevel = best.currentLevel || 1;
+      localStorage.setItem('pacman_hs', highScore);
+      localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(best));
+      if ((cloud && local) && (local.savedAt || 0) > (cloud.savedAt || 0)) {
         await SillyFirebase.saveProgress('pacMan', local);
       }
     }
+  } else {
+    // Guest — read from localStorage (may have guest save)
+    try {
+      const local = JSON.parse(localStorage.getItem(PAC_SAVE_KEY));
+      if (local) { savedLevel = local.currentLevel || 1; highScore = local.highScore || 0; }
+      else { savedLevel = 1; }
+    } catch(e) { savedLevel = 1; }
   }
-  SillyFirebase.renderAuthBar('auth-bar', 'pacSignIn()');
+  // Re-draw title screen if game hasn't started yet
+  if (!gameRunning) { drawMaze(); drawPac(); drawTray(); drawSoundIcon(); drawStartPrompt(); }
+  SillyFirebase.renderAvatar('game-avatar', user);
 });
 </script>
 </body>

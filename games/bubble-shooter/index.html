@@ -197,21 +197,23 @@
 
     /* Aim line glow */
     #gameCanvas { box-shadow: 0 0 30px rgba(6,182,212,0.1); }
+    #game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
   </style>
 </head>
 <body>
+<div id="game-avatar"></div>
 
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="brand">
-    <a href="../../index.html">🎮 GameZone</a>
+    <a href="/">🎮 GameZone</a>
     <span class="sep">/</span>
     <span>Bubble Shooter</span>
   </div>
   <div class="topbar-actions">
     <button class="btn btn-ghost" id="howToPlayBtn">How to Play</button>
     <button class="btn btn-ghost" id="restartBtn">↺ Restart</button>
-    <button class="btn btn-danger" id="exitBtn">✕ Exit</button>
+    <button class="btn btn-danger" id="exitBtn">✕ EXIT</button>
   </div>
 </div>
 
@@ -291,7 +293,7 @@
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.2rem" id="resultDetail"></p>
     <div class="modal-buttons">
       <button class="btn btn-primary" id="resultRestartBtn">↺ Play Again</button>
-      <button class="btn btn-ghost" id="resultExitBtn">🏠 Home</button>
+      <button class="btn btn-danger" id="resultExitBtn">✕ EXIT</button>
     </div>
   </div>
 </div>
@@ -980,7 +982,7 @@ document.getElementById('restartBtn').addEventListener('click', () => {
   initGame();
 });
 document.getElementById('exitBtn').addEventListener('click', () => {
-  window.location.href = '../../index.html';
+  window.location.href = '/';
 });
 document.getElementById('howToPlayBtn').addEventListener('click', () => {
   if (gameRunning) {
@@ -1003,7 +1005,7 @@ document.getElementById('resultRestartBtn').addEventListener('click', () => {
   initGame();
 });
 document.getElementById('resultExitBtn').addEventListener('click', () => {
-  window.location.href = '../../index.html';
+  window.location.href = '/';
 });
 
 // ─────────────────────────────────────────────
@@ -1014,6 +1016,13 @@ score = 0; shotsCount = 0;
 currentColor = 0; nextColor = 1;
 draw();
 drawNextBubble();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatar('game-avatar', user));
 </script>
 </body>
 </html>
