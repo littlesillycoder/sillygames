@@ -112,16 +112,15 @@
   .lvl-btn:hover  { background: #22224a; color: #e2e8f0; }
   .lvl-btn.active { background: #7c3aed; border-color: #a78bfa; color: #fff; }
   .lvl-btn.done   { border-color: #22c55e; color: #4ade80; }
-  #game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
+  #game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
 </style>
 </head>
 <body>
-<div id="game-avatar"></div>
-
 <div class="topbar">
   <div class="topbar-title">🟡 Bounce Rush</div>
   <button class="topbar-btn" id="soundBtn">🔊</button>
-  <button class="topbar-btn" id="exitBtn" onclick="window.location.href='/'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;">✕ EXIT</button>
+  <button class="topbar-btn" id="exitBtn" onclick="window.location.href='../../'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;">✕ EXIT</button>
+  <div id="game-avatar"></div>
 </div>
 
 <div class="game-area">

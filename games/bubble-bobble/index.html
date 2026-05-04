@@ -26,11 +26,10 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 .gbtn:hover{background:#2a2a55;color:#fff}
 .gbtn.pause-btn{color:#4ecdc4;border-color:#4ecdc4}
 .gbtn.exit-btn{background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;}
-#game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
+#game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
 </style>
 </head>
 <body>
-<div id="game-avatar"></div>
 <div id="layout">
   <div id="sidebar-left">
     <h2>Controls</h2>
@@ -65,6 +64,7 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
       <div id="hud-btns">
         <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
         <button class="gbtn exit-btn" onclick="exitToTitle()">✕ EXIT</button>
+        <div id="game-avatar"></div>
       </div>
     </div>
     <canvas id="game" width="312" height="624"></canvas>
@@ -354,7 +354,7 @@ async function exitToTitle() {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     if (typeof SillyFirebase !== 'undefined') await SillyFirebase.saveProgress('bubbleBobble', data);
   }
-  window.location.href = '/';
+  window.location.href = '../../';
 }
 
 // ─── Player ──────────────────────────────────────────────────
