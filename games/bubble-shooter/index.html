@@ -685,6 +685,11 @@ function checkMatches(row, col) {
 //  ROW PUSH
 // ─────────────────────────────────────────────
 function addRow() {
+  // If bottom row still has bubbles, pushing a new row would overflow — game over
+  if (grid[ROWS - 1].some(c => c !== null)) {
+    endGame(false);
+    return;
+  }
   // Shift all rows down by 1
   grid.pop();
   const newRow = new Array(COLS).fill(null);
@@ -699,16 +704,8 @@ function addRow() {
 //  WIN / LOSE
 // ─────────────────────────────────────────────
 function checkDanger() {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (grid[r][c] !== null) {
-        const { y } = cellToXY(r, c);
-        if (y + R >= DANGER_Y) {
-          endGame(false);
-          return;
-        }
-      }
-    }
+  if (grid[ROWS - 1].some(c => c !== null)) {
+    endGame(false);
   }
 }
 
