@@ -95,8 +95,16 @@ const SillyFirebase = {
   // callback(user) is called whenever the user signs in or out.
   // Also keeps SillyFirebase.currentUser in sync.
   onAuthChanged(callback) {
+    let firstCall = true;
     _sfAuth.onAuthStateChanged(user => {
       this.currentUser = user;
+      if (user) {
+        this._cacheAvatar(user);
+      } else if (!firstCall) {
+        // Real sign-out — clear cache. Skip on initial null flash at page load.
+        this._clearAvatarCache();
+      }
+      firstCall = false;
       callback(user);
     });
   },
@@ -120,11 +128,48 @@ const SillyFirebase = {
 
   // ─── Avatar indicator ────────────────────────────────────────
 
+  _AVATAR_CACHE_KEY: '_sfAvatarCache',
+
   // Generate a consistent HSL color from a string (display name or email).
   avatarColor(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
     return `hsl(${Math.abs(hash) % 360}, 65%, 48%)`;
+  },
+
+  _cacheAvatar(user) {
+    const name = user.displayName || user.email || '?';
+    try {
+      localStorage.setItem(this._AVATAR_CACHE_KEY, JSON.stringify({
+        initial: name.charAt(0).toUpperCase(),
+        color: this.avatarColor(name)
+      }));
+    } catch(e) {}
+  },
+
+  _clearAvatarCache() {
+    try { localStorage.removeItem(this._AVATAR_CACHE_KEY); } catch(e) {}
+  },
+
+  // Render avatar immediately from localStorage cache (no async).
+  // Call this before onAuthChanged to avoid pop-in delay for returning users.
+  renderAvatarFromCache(elementId) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(this._AVATAR_CACHE_KEY));
+      if (cached) this._renderAvatarCircle(elementId, cached.initial, cached.color);
+    } catch(e) {}
+  },
+
+  _renderAvatarCircle(elementId, initial, color) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.innerHTML = `<div style="
+      width:36px;height:36px;border-radius:50%;
+      background:${color};color:#fff;
+      font-size:16px;font-weight:700;font-family:sans-serif;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      user-select:none;">${initial}</div>`;
   },
 
   // Render a read-only avatar circle (initial letter) into an element.
@@ -136,13 +181,8 @@ const SillyFirebase = {
       const name = user.displayName || user.email || '?';
       const initial = name.charAt(0).toUpperCase();
       const color = this.avatarColor(name);
-      el.innerHTML = `<div style="
-        width:36px;height:36px;border-radius:50%;
-        background:${color};color:#fff;
-        font-size:16px;font-weight:700;font-family:sans-serif;
-        display:flex;align-items:center;justify-content:center;
-        box-shadow:0 2px 6px rgba(0,0,0,0.3);
-        user-select:none;">${initial}</div>`;
+      this._cacheAvatar(user);
+      this._renderAvatarCircle(elementId, initial, color);
     } else {
       el.innerHTML = '';
     }

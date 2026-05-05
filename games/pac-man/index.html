@@ -1524,6 +1524,7 @@ document.getElementById('pac-exit-btn').addEventListener('click', () => {
   window.location.href = '../../';
 });
 
+SillyFirebase.renderAvatarFromCache('game-avatar');
 SillyFirebase.onAuthChanged(async user => {
   if (user) {
     const cloud = await SillyFirebase.loadProgress('pacMan');

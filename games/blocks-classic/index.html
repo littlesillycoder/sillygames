@@ -815,6 +815,7 @@ draw();
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="../shared/firebase.js"></script>
 <script>
+SillyFirebase.renderAvatarFromCache('game-avatar');
 SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatar('game-avatar', user));
 </script>
 </body>

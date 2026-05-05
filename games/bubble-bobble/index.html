@@ -1360,6 +1360,7 @@ updateHUD();
 <script src="../shared/firebase.js"></script>
 <script>
 // ─── Bubble Bobble Firebase wiring ───────────────────────────
+SillyFirebase.renderAvatarFromCache('game-avatar');
 let _bbAuthReady = false;
 SillyFirebase.onAuthChanged(async user => {
   if (user) {
