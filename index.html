@@ -87,12 +87,55 @@
       color: var(--muted); font-size: 0.9rem;
     }
 
-    nav { margin-left: auto; display: flex; gap: 1.5rem; }
+    nav { margin-left: auto; display: flex; gap: 1.5rem; align-items: center; }
     nav a {
       color: var(--muted); text-decoration: none; font-size: 0.9rem;
-      font-weight: 500; transition: color 0.2s;
+      font-weight: 500; transition: color 0.2s; position: relative;
     }
     nav a:hover { color: var(--text); }
+    nav a.active { color: var(--accent2); }
+    nav a.active::after {
+      content: ''; display: block; height: 2px;
+      background: var(--accent2); border-radius: 2px; margin-top: 2px;
+    }
+
+    .nav-categories-wrap { position: relative; }
+    .cat-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.4rem;
+      min-width: 130px;
+      z-index: 300;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .cat-dropdown.open { display: block; }
+    .cat-dropdown button {
+      display: block; width: 100%; background: none; border: none;
+      color: var(--muted); font-size: 0.85rem; font-weight: 500;
+      padding: 0.45rem 0.8rem; text-align: left; cursor: pointer;
+      border-radius: 6px; transition: background 0.15s, color 0.15s;
+    }
+    .cat-dropdown button:hover { background: var(--card-hover); color: var(--text); }
+    .cat-dropdown button.active { background: var(--card-hover); color: var(--accent2); }
+
+    .new-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #f97316, #dc2626);
+      color: #fff; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.5px; padding: 0.15rem 0.45rem;
+      border-radius: 4px; margin-bottom: 0.4rem;
+    }
+
+    #no-results {
+      display: none; text-align: center;
+      color: var(--muted); padding: 3rem 1rem; font-size: 1rem;
+    }
 
     /* ── HERO ── */
     .hero {
@@ -184,12 +227,13 @@
       padding: 0.2rem 0.55rem;
       border-radius: 4px;
     }
-    .tag-puzzle { background: rgba(124,58,237,0.2); color: #a78bfa; }
-    .tag-arcade { background: rgba(6,182,212,0.2); color: #67e8f9; }
-    .tag-classic { background: rgba(245,158,11,0.2); color: #fcd34d; }
-    .tag-casual { background: rgba(16,185,129,0.2); color: #6ee7b7; }
-    .tag-action { background: rgba(239,68,68,0.2); color: #fca5a5; }
-    .tag-runner { background: rgba(249,115,22,0.2); color: #fdba74; }
+    .tag-puzzle   { background: rgba(124,58,237,0.2); color: #a78bfa; }
+    .tag-wordhunt { background: rgba(124,58,237,0.2); color: #a78bfa; }
+    .tag-arcade   { background: rgba(6,182,212,0.2); color: #67e8f9; }
+    .tag-classic  { background: rgba(245,158,11,0.2); color: #fcd34d; }
+    .tag-casual   { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .tag-action   { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .tag-runner   { background: rgba(249,115,22,0.2); color: #fdba74; }
 
     .card-title {
       font-size: 1.05rem;
@@ -308,12 +352,20 @@
     </a>
     <div class="search-bar">
       <span class="search-icon">🔍</span>
-      <input type="text" placeholder="Search games…" />
+      <input type="text" id="search-input" placeholder="Search games…" />
     </div>
     <nav>
-      <a href="#">New</a>
-      <a href="#">Top</a>
-      <a href="#">Categories</a>
+      <a href="#" data-filter="new">New</a>
+      <a href="#" data-filter="top">Top</a>
+      <div class="nav-categories-wrap">
+        <a href="#" data-filter="categories" id="nav-categories">Categories ▾</a>
+        <div class="cat-dropdown" id="cat-dropdown">
+          <button id="cat-all">All</button>
+          <button data-tag="tag-arcade">Arcade</button>
+          <button data-tag="tag-classic">Classic</button>
+          <button data-tag="tag-wordhunt">Word Hunt</button>
+        </div>
+      </div>
     </nav>
     <div id="visit-counter" style="font-size:0.78rem;color:var(--muted);white-space:nowrap;"></div>
     <div id="lobby-auth-bar"></div>
@@ -328,77 +380,234 @@
 <div class="section">
   <div class="section-header">
     <h2>All Games</h2>
-    <span class="count">4</span>
+    <span class="count">7</span>
   </div>
 
   <div class="games-grid">
 
-    <!-- ── Blocks Classic ── -->
-    <a class="game-card" href="games/blocks-classic/">
+    <!-- ── Bubble Bobble ── -->
+    <a class="game-card" href="games/bubble-bobble/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="bg1" cx="50%" cy="50%" r="70%">
-              <stop offset="0%" stop-color="#1a0a3a"/>
-              <stop offset="100%" stop-color="#0d0d1a"/>
+            <radialGradient id="bgbb" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#0a1525"/>
+              <stop offset="100%" stop-color="#1a1a2e"/>
+            </radialGradient>
+            <radialGradient id="bubGrad" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stop-color="rgba(180,230,255,0.9)"/>
+              <stop offset="100%" stop-color="rgba(60,140,220,0.5)"/>
             </radialGradient>
           </defs>
-          <rect width="320" height="180" fill="url(#bg1)"/>
-          <!-- Grid lines hint -->
-          <g opacity="0.06">
-            <line x1="50" y1="0" x2="50" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="80" y1="0" x2="80" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="110" y1="0" x2="110" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="140" y1="0" x2="140" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="170" y1="0" x2="170" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="200" y1="0" x2="200" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="230" y1="0" x2="230" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="260" y1="0" x2="260" y2="180" stroke="#fff" stroke-width="1"/>
-            <line x1="0" y1="30" x2="320" y2="30" stroke="#fff" stroke-width="1"/>
-            <line x1="0" y1="60" x2="320" y2="60" stroke="#fff" stroke-width="1"/>
-            <line x1="0" y1="90" x2="320" y2="90" stroke="#fff" stroke-width="1"/>
-            <line x1="0" y1="120" x2="320" y2="120" stroke="#fff" stroke-width="1"/>
-            <line x1="0" y1="150" x2="320" y2="150" stroke="#fff" stroke-width="1"/>
+          <rect width="320" height="180" fill="url(#bgbb)"/>
+          <!-- Platform bricks -->
+          <rect x="0"   y="155" width="320" height="14" rx="2" fill="#e87c2e"/>
+          <rect x="0"   y="155" width="320" height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
+          <rect x="0"   y="90"  width="90"  height="12" rx="2" fill="#e87c2e"/>
+          <rect x="0"   y="90"  width="90"  height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
+          <rect x="230" y="90"  width="90"  height="12" rx="2" fill="#e87c2e"/>
+          <rect x="230" y="90"  width="90"  height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
+          <rect x="110" y="120" width="100" height="12" rx="2" fill="#e87c2e"/>
+          <rect x="110" y="120" width="100" height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
+          <!-- Player dragon -->
+          <ellipse cx="70" cy="140" rx="12" ry="10" fill="#4ecdc4"/>
+          <circle  cx="76" cy="136" r="3.5" fill="white"/>
+          <circle  cx="77" cy="136" r="1.8" fill="black"/>
+          <ellipse cx="66" cy="149" rx="5"  ry="3"  fill="#3ab8b0"/>
+          <ellipse cx="74" cy="149" rx="5"  ry="3"  fill="#3ab8b0"/>
+          <!-- Bubbles with enemies inside -->
+          <circle cx="140" cy="70" r="18" fill="rgba(100,200,255,0.25)" stroke="rgba(80,160,220,0.8)" stroke-width="1.5"/>
+          <ellipse cx="133" cy="63" rx="5" ry="3" fill="rgba(255,255,255,0.45)"/>
+          <circle cx="140" cy="70" r="11" fill="#ff6b6b"/>
+          <circle cx="137" cy="67" r="2.5" fill="white"/>
+          <circle cx="143" cy="67" r="2.5" fill="white"/>
+          <circle cx="140" cy="72" r="4"   fill="#dd4444"/>
+          <!-- Free bubble -->
+          <circle cx="200" cy="55" r="14" fill="rgba(100,200,255,0.2)" stroke="rgba(80,160,220,0.7)" stroke-width="1.5"/>
+          <ellipse cx="194" cy="49" rx="4" ry="2.5" fill="rgba(255,255,255,0.4)"/>
+          <!-- Fruit -->
+          <circle cx="240" cy="145" r="8" fill="#e74c3c"/>
+          <rect   cx="240" x="238" y="133" width="4" height="6" rx="2" fill="#27ae60"/>
+          <!-- HUD elements -->
+          <text x="8"   y="16" font-family="monospace" font-size="9" fill="#aaa">1UP</text>
+          <text x="8"   y="28" font-family="monospace" font-size="9" fill="white">000200</text>
+          <text x="134" y="16" font-family="monospace" font-size="9" fill="#aaa" text-anchor="middle">HI</text>
+          <text x="134" y="28" font-family="monospace" font-size="9" fill="#f5c518" text-anchor="middle">001000</text>
+          <text x="312" y="16" font-family="monospace" font-size="9" fill="#aaa" text-anchor="end">LV</text>
+          <text x="312" y="28" font-family="monospace" font-size="9" fill="white" text-anchor="end">01</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <span class="new-badge">NEW</span>
+        <div class="card-tags">
+          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-classic">Classic</span>
+          <span class="tag tag-wordhunt">Word Hunt</span>
+        </div>
+        <div class="card-title">Bubble Bobble</div>
+        <div class="card-desc">Trap enemies in bubbles, pop them for fruit, clear all enemies to advance. 3 levels of classic arcade action!</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="game-card" href="games/pac-man/">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bgpm" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#05050f"/>
+              <stop offset="100%" stop-color="#0a0a1a"/>
+            </radialGradient>
+          </defs>
+          <!-- Background -->
+          <rect width="320" height="180" fill="url(#bgpm)"/>
+
+          <!-- Maze walls (neon blue) -->
+          <g stroke="#1a1aff" stroke-width="3" stroke-linecap="round" fill="none"
+             filter="drop-shadow(0 0 4px #4466ff)">
+            <!-- Outer border -->
+            <rect x="10" y="10" width="300" height="160" rx="2"/>
+            <!-- Top-left block -->
+            <rect x="30" y="30" width="60" height="35" rx="1"/>
+            <!-- Top-right block -->
+            <rect x="230" y="30" width="60" height="35" rx="1"/>
+            <!-- Middle-left block -->
+            <rect x="30" y="95" width="55" height="35" rx="1"/>
+            <!-- Middle-right block -->
+            <rect x="235" y="95" width="55" height="35" rx="1"/>
+            <!-- Centre divider -->
+            <rect x="120" y="65" width="80" height="50" rx="1"/>
+            <!-- Ghost house door -->
+            <line x1="145" y1="65" x2="175" y2="65" stroke="#ff69b4" stroke-width="2"/>
           </g>
-          <!-- I piece (cyan) falling -->
-          <g opacity="0.9">
-            <rect x="110" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
-            <rect x="140" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
-            <rect x="170" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
-            <rect x="200" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+
+          <!-- Dots -->
+          <g fill="#ffb897">
+            <circle cx="115" cy="45" r="3"/>
+            <circle cx="135" cy="45" r="3"/>
+            <circle cx="155" cy="45" r="3"/>
+            <circle cx="175" cy="45" r="3"/>
+            <circle cx="195" cy="45" r="3"/>
+            <circle cx="115" cy="145" r="3"/>
+            <circle cx="155" cy="145" r="3"/>
+            <circle cx="195" cy="145" r="3"/>
           </g>
-          <!-- T piece (purple) -->
-          <rect x="140" y="75" width="28" height="28" rx="4" fill="#a855f7"/>
-          <rect x="110" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
-          <rect x="140" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
-          <rect x="170" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
-          <!-- Bottom stack -->
-          <rect x="50"  y="135" width="28" height="28" rx="4" fill="#ef4444"/>
-          <rect x="80"  y="135" width="28" height="28" rx="4" fill="#f59e0b"/>
-          <rect x="110" y="135" width="28" height="28" rx="4" fill="#22c55e"/>
-          <rect x="140" y="135" width="28" height="28" rx="4" fill="#3b82f6"/>
-          <rect x="170" y="135" width="28" height="28" rx="4" fill="#ef4444"/>
-          <rect x="200" y="135" width="28" height="28" rx="4" fill="#a855f7"/>
-          <rect x="230" y="135" width="28" height="28" rx="4" fill="#f59e0b"/>
-          <!-- L piece (orange) -->
-          <rect x="230" y="75"  width="28" height="28" rx="4" fill="#f97316"/>
-          <rect x="230" y="105" width="28" height="28" rx="4" fill="#f97316"/>
-          <rect x="260" y="105" width="28" height="28" rx="4" fill="#f97316"/>
-          <!-- Score text -->
-          <text x="16" y="24" font-family="monospace" font-size="11" fill="#94a3b8">SCORE</text>
-          <text x="16" y="42" font-family="monospace" font-size="18" font-weight="bold" fill="#a855f7">3820</text>
-          <text x="16" y="60" font-family="monospace" font-size="11" fill="#94a3b8">LVL 4</text>
-          <!-- Glow effect on falling piece -->
-          <rect x="109" y="14" width="120" height="30" rx="5" fill="none" stroke="#00f5ff" stroke-width="1.5" opacity="0.5"/>
+          <!-- Power pellets -->
+          <circle cx="25"  cy="45"  r="7" fill="#ffb897"/>
+          <circle cx="295" cy="45"  r="7" fill="#ffb897"/>
+          <circle cx="25"  cy="145" r="7" fill="#ffb897"/>
+          <circle cx="295" cy="145" r="7" fill="#ffb897"/>
+
+          <!-- Letter tile (green) -->
+          <circle cx="220" cy="145" r="9" fill="#aaff00" opacity="0.9"
+                  filter="drop-shadow(0 0 5px #aaff00)"/>
+          <text x="220" y="149" text-anchor="middle"
+                font-family="monospace" font-size="10" font-weight="bold" fill="#000">A</text>
+
+          <!-- Ghost (red, Blinky) -->
+          <g transform="translate(215,90)">
+            <ellipse cx="0" cy="-8" rx="14" ry="14" fill="#ff0000"/>
+            <rect x="-14" y="-8" width="28" height="14" fill="#ff0000"/>
+            <polygon points="-14,6 -7,0 0,6 7,0 14,6" fill="#ff0000"/>
+            <circle cx="-5" cy="-10" r="4" fill="white"/>
+            <circle cx="5"  cy="-10" r="4" fill="white"/>
+            <circle cx="-4" cy="-10" r="2" fill="#222"/>
+            <circle cx="6"  cy="-10" r="2" fill="#222"/>
+          </g>
+
+          <!-- Pac-Man (yellow, mouth open) -->
+          <g transform="translate(80,140)">
+            <path d="M0,0 L22,0 A22,22 0 1,0 16,16 Z" fill="#FFD700"
+                  transform="rotate(-30)"/>
+          </g>
+
+          <!-- Title overlay -->
+          <rect x="0" y="148" width="320" height="32" fill="rgba(0,0,0,0.55)"/>
+          <text x="160" y="169" text-anchor="middle"
+                font-family="monospace" font-size="13" font-weight="bold"
+                fill="#FFD700" letter-spacing="1">PAC-MAN WORD HUNT</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <span class="new-badge">NEW</span>
+        <div class="card-tags">
+          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-wordhunt">Word Hunt</span>
+        </div>
+        <div class="card-title">Pac-Man Word Hunt</div>
+        <div class="card-desc">Chomp through the maze collecting letter tiles to spell words — but watch out for the ghosts!</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
+    <!-- ── Bounce Rush ── -->
+    <a class="game-card" href="games/bounce-rush/">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg5" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#0c1f09"/>
+              <stop offset="100%" stop-color="#060e04"/>
+            </radialGradient>
+            <radialGradient id="ballGrad" cx="35%" cy="35%" r="60%">
+              <stop offset="0%"   stop-color="#ffe566"/>
+              <stop offset="55%"  stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#b45309"/>
+            </radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#bg5)"/>
+          <!-- Platforms with gaps -->
+          <rect x="0"   y="148" width="105" height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="0"   y="148" width="105" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+          <rect x="215" y="148" width="105" height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="215" y="148" width="105" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+
+          <rect x="0"   y="106" width="70"  height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="0"   y="106" width="70"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+          <rect x="180" y="106" width="140" height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="180" y="106" width="140" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+
+          <rect x="90"  y="65"  width="90"  height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="90"  y="65"  width="90"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+          <rect x="240" y="65"  width="80"  height="12" rx="4" fill="#3c6b3c"/>
+          <rect x="240" y="65"  width="80"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
+
+          <!-- Ball trail -->
+          <circle cx="175" cy="155" r="5"  fill="rgba(251,191,36,0.25)"/>
+          <circle cx="168" cy="140" r="5"  fill="rgba(251,191,36,0.35)"/>
+          <circle cx="158" cy="124" r="6"  fill="rgba(251,191,36,0.45)"/>
+          <circle cx="148" cy="106" r="7"  fill="rgba(251,191,36,0.55)"/>
+          <!-- Ball -->
+          <circle cx="136" cy="90"  r="14" fill="rgba(245,158,11,0.2)"/>
+          <circle cx="136" cy="90"  r="12" fill="url(#ballGrad)"/>
+          <ellipse cx="130" cy="85" rx="4" ry="2.5" fill="rgba(255,255,255,0.38)"/>
+          <circle  cx="132" cy="89" r="2.2" fill="#5a2a00"/>
+          <circle  cx="140" cy="89" r="2.2" fill="#5a2a00"/>
+          <!-- Goal star (glow) -->
+          <circle cx="50" cy="38" r="14" fill="rgba(255,215,0,0.18)"/>
+          <polygon points="50,27 53,35 62,35 55,41 58,49 50,43 42,49 45,41 38,35 47,35"
+                   fill="#ffd700"/>
+          <!-- Aim line from ball to click point -->
+          <line x1="136" y1="90" x2="50" y2="38" stroke="rgba(255,215,0,0.5)" stroke-width="1.5" stroke-dasharray="5,4"/>
+          <!-- Click indicator -->
+          <circle cx="50" cy="38" r="6" fill="none" stroke="rgba(255,215,0,0.7)" stroke-width="1.5"/>
+          <!-- Trajectory preview dots -->
+          <circle cx="120" cy="76"  r="2.5" fill="rgba(255,215,0,0.5)"/>
+          <circle cx="102" cy="62"  r="2.5" fill="rgba(255,215,0,0.38)"/>
+          <circle cx="82"  cy="50"  r="2"   fill="rgba(255,215,0,0.28)"/>
+          <!-- HUD -->
+          <text x="170" y="18"  font-family="monospace" font-size="10" fill="#fbbf24">Boosts: 3</text>
+          <text x="8"   y="175" font-family="monospace" font-size="10" fill="#4ade80">Lvl 3: Forest</text>
+          <text x="280" y="175" font-family="monospace" font-size="10" fill="#fbbf24" text-anchor="middle">⭐⭐☆</text>
         </svg>
       </div>
       <div class="card-body">
         <div class="card-tags">
-          <span class="tag tag-puzzle">Puzzle</span>
-          <span class="tag tag-classic">Classic</span>
+          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-casual">Casual</span>
         </div>
-        <div class="card-title">Blocks Classic</div>
-        <div class="card-desc">Stack falling blocks to clear lines and rack up points. A timeless puzzle game that tests your spatial thinking and reflexes.</div>
+        <div class="card-title">Bounce Rush</div>
+        <div class="card-desc">Click anywhere to rocket your bouncy ball through platform gaps toward the golden star. 8 levels, fewer boosts = more stars!</div>
         <div class="play-btn">▶ Play Now</div>
       </div>
     </a>
@@ -665,231 +874,78 @@
       </div>
     </a>
 
-    <!-- ── Bounce Rush ── -->
-    <a class="game-card" href="games/bounce-rush/">
+    <!-- ── Blocks Classic ── -->
+    <a class="game-card" href="games/blocks-classic/">
       <div class="card-thumb">
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="bg5" cx="50%" cy="50%" r="70%">
-              <stop offset="0%" stop-color="#0c1f09"/>
-              <stop offset="100%" stop-color="#060e04"/>
-            </radialGradient>
-            <radialGradient id="ballGrad" cx="35%" cy="35%" r="60%">
-              <stop offset="0%"   stop-color="#ffe566"/>
-              <stop offset="55%"  stop-color="#f59e0b"/>
-              <stop offset="100%" stop-color="#b45309"/>
+            <radialGradient id="bg1" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#1a0a3a"/>
+              <stop offset="100%" stop-color="#0d0d1a"/>
             </radialGradient>
           </defs>
-          <rect width="320" height="180" fill="url(#bg5)"/>
-          <!-- Platforms with gaps -->
-          <rect x="0"   y="148" width="105" height="12" rx="4" fill="#3c6b3c"/>
-          <rect x="0"   y="148" width="105" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
-          <rect x="215" y="148" width="105" height="12" rx="4" fill="#3c6b3c"/>
-          <rect x="215" y="148" width="105" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
-
-          <rect x="0"   y="106" width="70"  height="12" rx="4" fill="#3c6b3c"/>
-          <rect x="0"   y="106" width="70"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
-          <rect x="180" y="106" width="140" height="12" rx="4" fill="#3c6b3c"/>
-          <rect x="180" y="106" width="140" height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
-
-          <rect x="90"  y="65"  width="90"  height="12" rx="4" fill="#3c6b3c"/>
-          <rect x="90"  y="65"  width="90"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
-          <rect x="240" y="65"  width="80"  height="12" rx="4" fill="#3c6b3c"/>
-          <rect x="240" y="65"  width="80"  height="4"  rx="3" fill="rgba(120,220,120,0.3)"/>
-
-          <!-- Ball trail -->
-          <circle cx="175" cy="155" r="5"  fill="rgba(251,191,36,0.25)"/>
-          <circle cx="168" cy="140" r="5"  fill="rgba(251,191,36,0.35)"/>
-          <circle cx="158" cy="124" r="6"  fill="rgba(251,191,36,0.45)"/>
-          <circle cx="148" cy="106" r="7"  fill="rgba(251,191,36,0.55)"/>
-          <!-- Ball -->
-          <circle cx="136" cy="90"  r="14" fill="rgba(245,158,11,0.2)"/>
-          <circle cx="136" cy="90"  r="12" fill="url(#ballGrad)"/>
-          <ellipse cx="130" cy="85" rx="4" ry="2.5" fill="rgba(255,255,255,0.38)"/>
-          <circle  cx="132" cy="89" r="2.2" fill="#5a2a00"/>
-          <circle  cx="140" cy="89" r="2.2" fill="#5a2a00"/>
-          <!-- Goal star (glow) -->
-          <circle cx="50" cy="38" r="14" fill="rgba(255,215,0,0.18)"/>
-          <polygon points="50,27 53,35 62,35 55,41 58,49 50,43 42,49 45,41 38,35 47,35"
-                   fill="#ffd700"/>
-          <!-- Aim line from ball to click point -->
-          <line x1="136" y1="90" x2="50" y2="38" stroke="rgba(255,215,0,0.5)" stroke-width="1.5" stroke-dasharray="5,4"/>
-          <!-- Click indicator -->
-          <circle cx="50" cy="38" r="6" fill="none" stroke="rgba(255,215,0,0.7)" stroke-width="1.5"/>
-          <!-- Trajectory preview dots -->
-          <circle cx="120" cy="76"  r="2.5" fill="rgba(255,215,0,0.5)"/>
-          <circle cx="102" cy="62"  r="2.5" fill="rgba(255,215,0,0.38)"/>
-          <circle cx="82"  cy="50"  r="2"   fill="rgba(255,215,0,0.28)"/>
-          <!-- HUD -->
-          <text x="170" y="18"  font-family="monospace" font-size="10" fill="#fbbf24">Boosts: 3</text>
-          <text x="8"   y="175" font-family="monospace" font-size="10" fill="#4ade80">Lvl 3: Forest</text>
-          <text x="280" y="175" font-family="monospace" font-size="10" fill="#fbbf24" text-anchor="middle">⭐⭐☆</text>
+          <rect width="320" height="180" fill="url(#bg1)"/>
+          <!-- Grid lines hint -->
+          <g opacity="0.06">
+            <line x1="50" y1="0" x2="50" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="80" y1="0" x2="80" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="110" y1="0" x2="110" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="140" y1="0" x2="140" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="170" y1="0" x2="170" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="200" y1="0" x2="200" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="230" y1="0" x2="230" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="260" y1="0" x2="260" y2="180" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="30" x2="320" y2="30" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="60" x2="320" y2="60" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="90" x2="320" y2="90" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="120" x2="320" y2="120" stroke="#fff" stroke-width="1"/>
+            <line x1="0" y1="150" x2="320" y2="150" stroke="#fff" stroke-width="1"/>
+          </g>
+          <!-- I piece (cyan) falling -->
+          <g opacity="0.9">
+            <rect x="110" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+            <rect x="140" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+            <rect x="170" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+            <rect x="200" y="15" width="28" height="28" rx="4" fill="#00f5ff" opacity="0.9"/>
+          </g>
+          <!-- T piece (purple) -->
+          <rect x="140" y="75" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="110" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="140" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="170" y="105" width="28" height="28" rx="4" fill="#a855f7"/>
+          <!-- Bottom stack -->
+          <rect x="50"  y="135" width="28" height="28" rx="4" fill="#ef4444"/>
+          <rect x="80"  y="135" width="28" height="28" rx="4" fill="#f59e0b"/>
+          <rect x="110" y="135" width="28" height="28" rx="4" fill="#22c55e"/>
+          <rect x="140" y="135" width="28" height="28" rx="4" fill="#3b82f6"/>
+          <rect x="170" y="135" width="28" height="28" rx="4" fill="#ef4444"/>
+          <rect x="200" y="135" width="28" height="28" rx="4" fill="#a855f7"/>
+          <rect x="230" y="135" width="28" height="28" rx="4" fill="#f59e0b"/>
+          <!-- L piece (orange) -->
+          <rect x="230" y="75"  width="28" height="28" rx="4" fill="#f97316"/>
+          <rect x="230" y="105" width="28" height="28" rx="4" fill="#f97316"/>
+          <rect x="260" y="105" width="28" height="28" rx="4" fill="#f97316"/>
+          <!-- Score text -->
+          <text x="16" y="24" font-family="monospace" font-size="11" fill="#94a3b8">SCORE</text>
+          <text x="16" y="42" font-family="monospace" font-size="18" font-weight="bold" fill="#a855f7">3820</text>
+          <text x="16" y="60" font-family="monospace" font-size="11" fill="#94a3b8">LVL 4</text>
+          <!-- Glow effect on falling piece -->
+          <rect x="109" y="14" width="120" height="30" rx="5" fill="none" stroke="#00f5ff" stroke-width="1.5" opacity="0.5"/>
         </svg>
       </div>
       <div class="card-body">
         <div class="card-tags">
-          <span class="tag tag-arcade">Arcade</span>
-          <span class="tag tag-casual">Casual</span>
-        </div>
-        <div class="card-title">Bounce Rush</div>
-        <div class="card-desc">Click anywhere to rocket your bouncy ball through platform gaps toward the golden star. 8 levels, fewer boosts = more stars!</div>
-        <div class="play-btn">▶ Play Now</div>
-      </div>
-    </a>
-
-    <!-- ── Bubble Bobble ── -->
-    <a class="game-card" href="games/bubble-bobble/">
-      <div class="card-thumb">
-        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="bgbb" cx="50%" cy="50%" r="70%">
-              <stop offset="0%" stop-color="#0a1525"/>
-              <stop offset="100%" stop-color="#1a1a2e"/>
-            </radialGradient>
-            <radialGradient id="bubGrad" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stop-color="rgba(180,230,255,0.9)"/>
-              <stop offset="100%" stop-color="rgba(60,140,220,0.5)"/>
-            </radialGradient>
-          </defs>
-          <rect width="320" height="180" fill="url(#bgbb)"/>
-          <!-- Platform bricks -->
-          <rect x="0"   y="155" width="320" height="14" rx="2" fill="#e87c2e"/>
-          <rect x="0"   y="155" width="320" height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
-          <rect x="0"   y="90"  width="90"  height="12" rx="2" fill="#e87c2e"/>
-          <rect x="0"   y="90"  width="90"  height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
-          <rect x="230" y="90"  width="90"  height="12" rx="2" fill="#e87c2e"/>
-          <rect x="230" y="90"  width="90"  height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
-          <rect x="110" y="120" width="100" height="12" rx="2" fill="#e87c2e"/>
-          <rect x="110" y="120" width="100" height="4"  rx="2" fill="rgba(255,200,120,0.35)"/>
-          <!-- Player dragon -->
-          <ellipse cx="70" cy="140" rx="12" ry="10" fill="#4ecdc4"/>
-          <circle  cx="76" cy="136" r="3.5" fill="white"/>
-          <circle  cx="77" cy="136" r="1.8" fill="black"/>
-          <ellipse cx="66" cy="149" rx="5"  ry="3"  fill="#3ab8b0"/>
-          <ellipse cx="74" cy="149" rx="5"  ry="3"  fill="#3ab8b0"/>
-          <!-- Bubbles with enemies inside -->
-          <circle cx="140" cy="70" r="18" fill="rgba(100,200,255,0.25)" stroke="rgba(80,160,220,0.8)" stroke-width="1.5"/>
-          <ellipse cx="133" cy="63" rx="5" ry="3" fill="rgba(255,255,255,0.45)"/>
-          <circle cx="140" cy="70" r="11" fill="#ff6b6b"/>
-          <circle cx="137" cy="67" r="2.5" fill="white"/>
-          <circle cx="143" cy="67" r="2.5" fill="white"/>
-          <circle cx="140" cy="72" r="4"   fill="#dd4444"/>
-          <!-- Free bubble -->
-          <circle cx="200" cy="55" r="14" fill="rgba(100,200,255,0.2)" stroke="rgba(80,160,220,0.7)" stroke-width="1.5"/>
-          <ellipse cx="194" cy="49" rx="4" ry="2.5" fill="rgba(255,255,255,0.4)"/>
-          <!-- Fruit -->
-          <circle cx="240" cy="145" r="8" fill="#e74c3c"/>
-          <rect   cx="240" x="238" y="133" width="4" height="6" rx="2" fill="#27ae60"/>
-          <!-- HUD elements -->
-          <text x="8"   y="16" font-family="monospace" font-size="9" fill="#aaa">1UP</text>
-          <text x="8"   y="28" font-family="monospace" font-size="9" fill="white">000200</text>
-          <text x="134" y="16" font-family="monospace" font-size="9" fill="#aaa" text-anchor="middle">HI</text>
-          <text x="134" y="28" font-family="monospace" font-size="9" fill="#f5c518" text-anchor="middle">001000</text>
-          <text x="312" y="16" font-family="monospace" font-size="9" fill="#aaa" text-anchor="end">LV</text>
-          <text x="312" y="28" font-family="monospace" font-size="9" fill="white" text-anchor="end">01</text>
-        </svg>
-      </div>
-      <div class="card-body">
-        <div class="card-tags">
-          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-puzzle">Puzzle</span>
           <span class="tag tag-classic">Classic</span>
         </div>
-        <div class="card-title">Bubble Bobble</div>
-        <div class="card-desc">Trap enemies in bubbles, pop them for fruit, clear all enemies to advance. 3 levels of classic arcade action!</div>
-        <div class="play-btn">▶ Play Now</div>
-      </div>
-    </a>
-
-    <a class="game-card" href="games/pac-man/">
-      <div class="card-thumb">
-        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="bgpm" cx="50%" cy="50%" r="70%">
-              <stop offset="0%" stop-color="#05050f"/>
-              <stop offset="100%" stop-color="#0a0a1a"/>
-            </radialGradient>
-          </defs>
-          <!-- Background -->
-          <rect width="320" height="180" fill="url(#bgpm)"/>
-
-          <!-- Maze walls (neon blue) -->
-          <g stroke="#1a1aff" stroke-width="3" stroke-linecap="round" fill="none"
-             filter="drop-shadow(0 0 4px #4466ff)">
-            <!-- Outer border -->
-            <rect x="10" y="10" width="300" height="160" rx="2"/>
-            <!-- Top-left block -->
-            <rect x="30" y="30" width="60" height="35" rx="1"/>
-            <!-- Top-right block -->
-            <rect x="230" y="30" width="60" height="35" rx="1"/>
-            <!-- Middle-left block -->
-            <rect x="30" y="95" width="55" height="35" rx="1"/>
-            <!-- Middle-right block -->
-            <rect x="235" y="95" width="55" height="35" rx="1"/>
-            <!-- Centre divider -->
-            <rect x="120" y="65" width="80" height="50" rx="1"/>
-            <!-- Ghost house door -->
-            <line x1="145" y1="65" x2="175" y2="65" stroke="#ff69b4" stroke-width="2"/>
-          </g>
-
-          <!-- Dots -->
-          <g fill="#ffb897">
-            <circle cx="115" cy="45" r="3"/>
-            <circle cx="135" cy="45" r="3"/>
-            <circle cx="155" cy="45" r="3"/>
-            <circle cx="175" cy="45" r="3"/>
-            <circle cx="195" cy="45" r="3"/>
-            <circle cx="115" cy="145" r="3"/>
-            <circle cx="155" cy="145" r="3"/>
-            <circle cx="195" cy="145" r="3"/>
-          </g>
-          <!-- Power pellets -->
-          <circle cx="25"  cy="45"  r="7" fill="#ffb897"/>
-          <circle cx="295" cy="45"  r="7" fill="#ffb897"/>
-          <circle cx="25"  cy="145" r="7" fill="#ffb897"/>
-          <circle cx="295" cy="145" r="7" fill="#ffb897"/>
-
-          <!-- Letter tile (green) -->
-          <circle cx="220" cy="145" r="9" fill="#aaff00" opacity="0.9"
-                  filter="drop-shadow(0 0 5px #aaff00)"/>
-          <text x="220" y="149" text-anchor="middle"
-                font-family="monospace" font-size="10" font-weight="bold" fill="#000">A</text>
-
-          <!-- Ghost (red, Blinky) -->
-          <g transform="translate(215,90)">
-            <ellipse cx="0" cy="-8" rx="14" ry="14" fill="#ff0000"/>
-            <rect x="-14" y="-8" width="28" height="14" fill="#ff0000"/>
-            <polygon points="-14,6 -7,0 0,6 7,0 14,6" fill="#ff0000"/>
-            <circle cx="-5" cy="-10" r="4" fill="white"/>
-            <circle cx="5"  cy="-10" r="4" fill="white"/>
-            <circle cx="-4" cy="-10" r="2" fill="#222"/>
-            <circle cx="6"  cy="-10" r="2" fill="#222"/>
-          </g>
-
-          <!-- Pac-Man (yellow, mouth open) -->
-          <g transform="translate(80,140)">
-            <path d="M0,0 L22,0 A22,22 0 1,0 16,16 Z" fill="#FFD700"
-                  transform="rotate(-30)"/>
-          </g>
-
-          <!-- Title overlay -->
-          <rect x="0" y="148" width="320" height="32" fill="rgba(0,0,0,0.55)"/>
-          <text x="160" y="169" text-anchor="middle"
-                font-family="monospace" font-size="13" font-weight="bold"
-                fill="#FFD700" letter-spacing="1">PAC-MAN WORD HUNT</text>
-        </svg>
-      </div>
-      <div class="card-body">
-        <div class="card-tags">
-          <span class="tag tag-arcade">Arcade</span>
-          <span class="tag tag-puzzle">Word Hunt</span>
-        </div>
-        <div class="card-title">Pac-Man Word Hunt</div>
-        <div class="card-desc">Chomp through the maze collecting letter tiles to spell words — but watch out for the ghosts!</div>
+        <div class="card-title">Blocks Classic</div>
+        <div class="card-desc">Stack falling blocks to clear lines and rack up points. A timeless puzzle game that tests your spatial thinking and reflexes.</div>
         <div class="play-btn">▶ Play Now</div>
       </div>
     </a>
 
   </div>
+  <div id="no-results">No games found. Try a different filter.</div>
 </div>
 
 <footer>
@@ -946,6 +1002,106 @@
           const el = document.getElementById('visit-counter');
           if (el && total !== null) el.textContent = total.toLocaleString() + ' total visits';
         });
+      }
+    });
+
+    // ── Nav filter logic ──────────────────────────────
+    const NEW_HREFS = ['games/bubble-bobble/', 'games/pac-man/'];
+    const TOP_HREFS = ['games/bubble-bobble/', 'games/pac-man/'];
+
+    let activeFilter = null;
+    let activeTag    = null;
+
+    function applyFilter() {
+      const cards = document.querySelectorAll('.game-card');
+      let shown = 0;
+      cards.forEach(card => {
+        let show = true;
+        if (activeFilter === 'new') {
+          show = NEW_HREFS.some(h => card.href.includes(h));
+        } else if (activeFilter === 'top') {
+          show = TOP_HREFS.some(h => card.href.includes(h));
+        } else if (activeFilter === 'tag' && activeTag) {
+          show = card.querySelector('.' + activeTag) !== null;
+        }
+        card.style.display = show ? '' : 'none';
+        if (show) shown++;
+      });
+      document.getElementById('no-results').style.display = shown === 0 ? 'block' : 'none';
+    }
+
+    function clearFilter() {
+      activeFilter = null;
+      activeTag    = null;
+      document.querySelectorAll('.game-card').forEach(c => c.style.display = '');
+      document.getElementById('no-results').style.display = 'none';
+      document.querySelectorAll('nav a[data-filter]').forEach(a => a.classList.remove('active'));
+      document.querySelectorAll('.cat-dropdown button').forEach(b => b.classList.remove('active'));
+      document.getElementById('cat-dropdown').classList.remove('open');
+      const si = document.getElementById('search-input');
+      if (si) si.value = '';
+    }
+
+    document.getElementById('search-input').addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      if (q === '') { clearFilter(); return; }
+      // Clear nav filter state without resetting the search input
+      activeFilter = null; activeTag = null;
+      document.querySelectorAll('nav a[data-filter]').forEach(a => a.classList.remove('active'));
+      document.querySelectorAll('.cat-dropdown button').forEach(b => b.classList.remove('active'));
+      document.getElementById('cat-dropdown').classList.remove('open');
+      const cards = document.querySelectorAll('.game-card');
+      let shown = 0;
+      cards.forEach(card => {
+        const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+        const tags  = Array.from(card.querySelectorAll('.tag')).map(t => t.textContent.toLowerCase()).join(' ');
+        const show  = title.includes(q) || tags.includes(q);
+        card.style.display = show ? '' : 'none';
+        if (show) shown++;
+      });
+      document.getElementById('no-results').style.display = shown === 0 ? 'block' : 'none';
+    });
+
+    document.querySelectorAll('nav a[data-filter]').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const filter = link.dataset.filter;
+        if (filter === 'categories') {
+          document.getElementById('cat-dropdown').classList.toggle('open');
+          return;
+        }
+        if (activeFilter === filter) { clearFilter(); return; }
+        clearFilter();
+        activeFilter = filter;
+        link.classList.add('active');
+        applyFilter();
+      });
+    });
+
+    document.getElementById('cat-all').addEventListener('click', e => {
+      e.stopPropagation();
+      clearFilter();
+    });
+
+    document.querySelectorAll('.cat-dropdown button[data-tag]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const tag = btn.dataset.tag;
+        if (activeTag === tag) { clearFilter(); return; }
+        clearFilter();
+        activeFilter = 'tag';
+        activeTag    = tag;
+        document.getElementById('nav-categories').classList.add('active');
+        btn.classList.add('active');
+        document.getElementById('cat-dropdown').classList.remove('open');
+        applyFilter();
+      });
+    });
+
+    document.addEventListener('click', e => {
+      const wrap = document.querySelector('.nav-categories-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('cat-dropdown').classList.remove('open');
       }
     });
   });

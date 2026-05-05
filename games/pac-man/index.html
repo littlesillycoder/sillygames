@@ -28,16 +28,16 @@ canvas {
 }
 .gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;transition:background 0.15s,color 0.15s}
 .gbtn:hover{background:#2a2a55;color:#fff}
-#game-avatar{position:fixed;top:12px;right:12px;z-index:999;}
+#game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
 #pac-exit-btn{background:linear-gradient(135deg,#dc2626,#991b1b);border:1px solid #991b1b;color:#fff;font-family:monospace;font-size:0.85rem;padding:0.45rem 1rem;border-radius:8px;cursor:pointer;letter-spacing:.5px;transition:opacity 0.15s;}
 #pac-exit-btn:hover{opacity:0.85;}
 #pac-canvas-wrap{position:relative;display:inline-block;}
 </style>
 </head>
 <body>
-<div id="game-avatar"></div>
 <div id="pac-topbar">
   <button id="pac-exit-btn">✕ EXIT</button>
+  <div id="game-avatar"></div>
 </div>
 <div id="pac-canvas-wrap">
   <canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
@@ -376,9 +376,9 @@ const MOUTH_RATE = 6;
 const MX = CS / 2 - 2;    // 6px: fits in 16px wide column (2px each side)
 const MY = CSH / 2 - 4;   // 12px: fits in 32px tall corridor
 
-// Spawn: pixel centre of r5, col 6
-const SPAWN_X = 6 * CS + CS / 2;
-const SPAWN_Y = 5 * CSH + CSH / 2;
+// Spawn: pixel centre of r9, col 17 — center-bottom, 4 rows below ghost house
+const SPAWN_X = 17 * CS + CS / 2;
+const SPAWN_Y = 9 * CSH + CSH / 2;
 
 const pac = {
   x:    SPAWN_X,
@@ -1521,7 +1521,7 @@ drawStartPrompt();
 // ─── Pac-Man Firebase wiring ──────────────────────────────
 document.getElementById('pac-exit-btn').addEventListener('click', () => {
   if (gameRunning && !gameOver && !youWin) saveProgress();
-  window.location.href = '/';
+  window.location.href = '../../';
 });
 
 SillyFirebase.onAuthChanged(async user => {
