@@ -656,6 +656,7 @@ function saveProgress() {
                ? SillyFirebase.currentUser.uid : null;
   const data = { highScore, currentLevel: level, savedAt: Date.now(), ...(uid ? { uid } : {}) };
   localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(data));
+  if (uid) localStorage.setItem(`pacman_save_${uid}`, JSON.stringify(data));
   if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('pacMan', data);
 }
 
@@ -1718,23 +1719,27 @@ document.getElementById('pac-exit-btn').addEventListener('click', () => {
 SillyFirebase.renderAvatarFromCache('game-avatar');
 SillyFirebase.onAuthChanged(async user => {
   if (user) {
+    const userSaveKey = `pacman_save_${user.uid}`;
+    // Load from cloud and user-specific localStorage (persists through sign-out)
     const cloud = await SillyFirebase.loadProgress('pacMan');
-    let local = null;
-    try { local = JSON.parse(localStorage.getItem(PAC_SAVE_KEY)); } catch(e) {}
+    let userLocal = null;
+    try { userLocal = JSON.parse(localStorage.getItem(userSaveKey)); } catch(e) {}
 
     let best = null;
-    if (cloud && local) {
-      best = (cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local;
+    if (cloud && userLocal) {
+      best = (cloud.savedAt || 0) >= (userLocal.savedAt || 0) ? cloud : userLocal;
     } else {
-      best = cloud || local;
+      best = cloud || userLocal;
     }
     if (best) {
-      highScore = best.highScore || 0;
+      highScore  = best.highScore || 0;
       savedLevel = best.currentLevel || 1;
       localStorage.setItem('pacman_hs', highScore);
       localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(best));
-      if ((cloud && local) && (local.savedAt || 0) > (cloud.savedAt || 0)) {
-        await SillyFirebase.saveProgress('pacMan', local);
+      localStorage.setItem(userSaveKey, JSON.stringify(best));
+      // Sync local→cloud if local is newer
+      if (userLocal && (!cloud || (userLocal.savedAt || 0) > (cloud.savedAt || 0))) {
+        await SillyFirebase.saveProgress('pacMan', userLocal);
       }
     }
   } else {
