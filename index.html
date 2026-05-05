@@ -87,12 +87,55 @@
       color: var(--muted); font-size: 0.9rem;
     }
 
-    nav { margin-left: auto; display: flex; gap: 1.5rem; }
+    nav { margin-left: auto; display: flex; gap: 1.5rem; align-items: center; }
     nav a {
       color: var(--muted); text-decoration: none; font-size: 0.9rem;
-      font-weight: 500; transition: color 0.2s;
+      font-weight: 500; transition: color 0.2s; position: relative;
     }
     nav a:hover { color: var(--text); }
+    nav a.active { color: var(--accent2); }
+    nav a.active::after {
+      content: ''; display: block; height: 2px;
+      background: var(--accent2); border-radius: 2px; margin-top: 2px;
+    }
+
+    .nav-categories-wrap { position: relative; }
+    .cat-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.4rem;
+      min-width: 130px;
+      z-index: 300;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .cat-dropdown.open { display: block; }
+    .cat-dropdown button {
+      display: block; width: 100%; background: none; border: none;
+      color: var(--muted); font-size: 0.85rem; font-weight: 500;
+      padding: 0.45rem 0.8rem; text-align: left; cursor: pointer;
+      border-radius: 6px; transition: background 0.15s, color 0.15s;
+    }
+    .cat-dropdown button:hover { background: var(--card-hover); color: var(--text); }
+    .cat-dropdown button.active { background: var(--card-hover); color: var(--accent2); }
+
+    .new-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #f97316, #dc2626);
+      color: #fff; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.5px; padding: 0.15rem 0.45rem;
+      border-radius: 4px; margin-bottom: 0.4rem;
+    }
+
+    #no-results {
+      display: none; text-align: center;
+      color: var(--muted); padding: 3rem 1rem; font-size: 1rem;
+    }
 
     /* ── HERO ── */
     .hero {
@@ -184,12 +227,13 @@
       padding: 0.2rem 0.55rem;
       border-radius: 4px;
     }
-    .tag-puzzle { background: rgba(124,58,237,0.2); color: #a78bfa; }
-    .tag-arcade { background: rgba(6,182,212,0.2); color: #67e8f9; }
-    .tag-classic { background: rgba(245,158,11,0.2); color: #fcd34d; }
-    .tag-casual { background: rgba(16,185,129,0.2); color: #6ee7b7; }
-    .tag-action { background: rgba(239,68,68,0.2); color: #fca5a5; }
-    .tag-runner { background: rgba(249,115,22,0.2); color: #fdba74; }
+    .tag-puzzle   { background: rgba(124,58,237,0.2); color: #a78bfa; }
+    .tag-wordhunt { background: rgba(124,58,237,0.2); color: #a78bfa; }
+    .tag-arcade   { background: rgba(6,182,212,0.2); color: #67e8f9; }
+    .tag-classic  { background: rgba(245,158,11,0.2); color: #fcd34d; }
+    .tag-casual   { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .tag-action   { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .tag-runner   { background: rgba(249,115,22,0.2); color: #fdba74; }
 
     .card-title {
       font-size: 1.05rem;
@@ -311,9 +355,17 @@
       <input type="text" placeholder="Search games…" />
     </div>
     <nav>
-      <a href="#">New</a>
-      <a href="#">Top</a>
-      <a href="#">Categories</a>
+      <a href="#" data-filter="new">New</a>
+      <a href="#" data-filter="top">Top</a>
+      <div class="nav-categories-wrap">
+        <a href="#" data-filter="categories" id="nav-categories">Categories ▾</a>
+        <div class="cat-dropdown" id="cat-dropdown">
+          <button id="cat-all">All</button>
+          <button data-tag="tag-arcade">Arcade</button>
+          <button data-tag="tag-classic">Classic</button>
+          <button data-tag="tag-wordhunt">Word Hunt</button>
+        </div>
+      </div>
     </nav>
     <div id="visit-counter" style="font-size:0.78rem;color:var(--muted);white-space:nowrap;"></div>
     <div id="lobby-auth-bar"></div>
@@ -386,10 +438,11 @@
         </svg>
       </div>
       <div class="card-body">
+        <span class="new-badge">NEW</span>
         <div class="card-tags">
           <span class="tag tag-arcade">Arcade</span>
           <span class="tag tag-classic">Classic</span>
-          <span class="tag tag-puzzle">Word Hunt</span>
+          <span class="tag tag-wordhunt">Word Hunt</span>
         </div>
         <div class="card-title">Bubble Bobble</div>
         <div class="card-desc">Trap enemies in bubbles, pop them for fruit, clear all enemies to advance. 3 levels of classic arcade action!</div>
@@ -476,9 +529,10 @@
         </svg>
       </div>
       <div class="card-body">
+        <span class="new-badge">NEW</span>
         <div class="card-tags">
           <span class="tag tag-arcade">Arcade</span>
-          <span class="tag tag-puzzle">Word Hunt</span>
+          <span class="tag tag-wordhunt">Word Hunt</span>
         </div>
         <div class="card-title">Pac-Man Word Hunt</div>
         <div class="card-desc">Chomp through the maze collecting letter tiles to spell words — but watch out for the ghosts!</div>
@@ -891,6 +945,7 @@
     </a>
 
   </div>
+  <div id="no-results">No games found. Try a different filter.</div>
 </div>
 
 <footer>
@@ -947,6 +1002,84 @@
           const el = document.getElementById('visit-counter');
           if (el && total !== null) el.textContent = total.toLocaleString() + ' total visits';
         });
+      }
+    });
+
+    // ── Nav filter logic ──────────────────────────────
+    const NEW_HREFS = ['games/bubble-bobble/', 'games/pac-man/'];
+    const TOP_HREFS = ['games/bubble-bobble/', 'games/pac-man/'];
+
+    let activeFilter = null;
+    let activeTag    = null;
+
+    function applyFilter() {
+      const cards = document.querySelectorAll('.game-card');
+      let shown = 0;
+      cards.forEach(card => {
+        let show = true;
+        if (activeFilter === 'new') {
+          show = NEW_HREFS.some(h => card.href.includes(h));
+        } else if (activeFilter === 'top') {
+          show = TOP_HREFS.some(h => card.href.includes(h));
+        } else if (activeFilter === 'tag' && activeTag) {
+          show = card.querySelector('.' + activeTag) !== null;
+        }
+        card.style.display = show ? '' : 'none';
+        if (show) shown++;
+      });
+      document.getElementById('no-results').style.display = shown === 0 ? 'block' : 'none';
+    }
+
+    function clearFilter() {
+      activeFilter = null;
+      activeTag    = null;
+      document.querySelectorAll('.game-card').forEach(c => c.style.display = '');
+      document.getElementById('no-results').style.display = 'none';
+      document.querySelectorAll('nav a[data-filter]').forEach(a => a.classList.remove('active'));
+      document.querySelectorAll('.cat-dropdown button').forEach(b => b.classList.remove('active'));
+      document.getElementById('cat-dropdown').classList.remove('open');
+    }
+
+    document.querySelectorAll('nav a[data-filter]').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const filter = link.dataset.filter;
+        if (filter === 'categories') {
+          document.getElementById('cat-dropdown').classList.toggle('open');
+          return;
+        }
+        if (activeFilter === filter) { clearFilter(); return; }
+        clearFilter();
+        activeFilter = filter;
+        link.classList.add('active');
+        applyFilter();
+      });
+    });
+
+    document.getElementById('cat-all').addEventListener('click', e => {
+      e.stopPropagation();
+      clearFilter();
+    });
+
+    document.querySelectorAll('.cat-dropdown button[data-tag]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const tag = btn.dataset.tag;
+        if (activeTag === tag) { clearFilter(); return; }
+        clearFilter();
+        activeFilter = 'tag';
+        activeTag    = tag;
+        document.getElementById('nav-categories').classList.add('active');
+        btn.classList.add('active');
+        document.getElementById('cat-dropdown').classList.remove('open');
+        applyFilter();
+      });
+    });
+
+    document.addEventListener('click', e => {
+      const wrap = document.querySelector('.nav-categories-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('cat-dropdown').classList.remove('open');
       }
     });
   });
