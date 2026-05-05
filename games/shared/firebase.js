@@ -157,9 +157,7 @@ const SillyFirebase = {
   renderAvatarFromCache(elementId) {
     try {
       const cached = JSON.parse(localStorage.getItem(this._AVATAR_CACHE_KEY));
-      if (cached) {
-        this._renderAvatarCircle(elementId, cached.initial, cached.color, true);
-      }
+      if (cached) this._renderAvatarCircle(elementId, cached.initial, cached.color, true);
     } catch(e) {}
   },
 
@@ -172,14 +170,49 @@ const SillyFirebase = {
       font-size:16px;font-weight:700;font-family:sans-serif;
       display:flex;align-items:center;justify-content:center;
       box-shadow:0 2px 6px rgba(0,0,0,0.3);
-      user-select:none;${clickable ? 'cursor:pointer;' : ''}"
-      ${clickable ? 'title="Sign out"' : ''}>${initial}</div>`;
+      user-select:none;${clickable ? 'cursor:pointer;' : ''}">${initial}</div>`;
     if (clickable && el.firstChild) {
-      el.firstChild.addEventListener('click', () => this.signOut());
+      el.firstChild.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._toggleAvatarPopup(el.firstChild);
+      });
     }
   },
 
-  // Render avatar circle (signed in) or Sign In button (signed out).
+  _toggleAvatarPopup(anchor) {
+    const existing = document.getElementById('_sf_avatar_popup');
+    if (existing) { existing.remove(); return; }
+    const user = this.currentUser;
+    if (!user) return;
+    const name = user.displayName || user.email || '?';
+    const rect = anchor.getBoundingClientRect();
+    const popup = document.createElement('div');
+    popup.id = '_sf_avatar_popup';
+    popup.style.cssText = `
+      position:fixed;top:${rect.bottom + 8}px;right:${window.innerWidth - rect.right}px;
+      background:#1a1a2e;border:1px solid #3a3a60;border-radius:10px;
+      padding:14px 16px;min-width:200px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.6);z-index:9999;font-family:sans-serif;`;
+    popup.innerHTML = `
+      <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:3px;">Hi, ${name}!</div>
+      <div style="font-size:12px;color:#888;margin-bottom:12px;">${user.email || ''}</div>
+      <button id="_sf_so_btn" style="width:100%;padding:8px;background:#1c1c38;
+        border:1px solid #3a3a60;color:#ccc;border-radius:6px;cursor:pointer;
+        font-size:13px;font-family:sans-serif;">Sign Out</button>`;
+    document.body.appendChild(popup);
+    popup.querySelector('#_sf_so_btn').addEventListener('click', () => {
+      popup.remove(); this.signOut();
+    });
+    const close = (e) => {
+      if (!popup.contains(e.target) && !anchor.contains(e.target)) {
+        popup.remove();
+        document.removeEventListener('click', close, true);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', close, true), 0);
+  },
+
+  // Render avatar circle (signed in) or compact sign-in circle (signed out).
   // onSignIn — optional callback fired before the Google popup opens
   //            (use this to pause the game, etc.)
   renderAvatar(elementId, user, onSignIn) {
@@ -192,11 +225,12 @@ const SillyFirebase = {
       this._cacheAvatar(user);
       this._renderAvatarCircle(elementId, initial, color, true);
     } else {
-      el.innerHTML = `<button style="
-        background:#1c1c38;border:1px solid #3a3a60;color:#aaa;
-        font-family:monospace;font-size:10px;padding:4px 8px;
-        border-radius:4px;cursor:pointer;letter-spacing:.5px;
-        white-space:nowrap;">Sign In</button>`;
+      // Same 36×36 size as avatar circle so topbar width never changes
+      el.innerHTML = `<div style="
+        width:36px;height:36px;border-radius:50%;
+        border:2px dashed #3a3a60;color:#666;font-size:20px;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;user-select:none;" title="Sign in">+</div>`;
       el.firstChild.addEventListener('click', () =>
         this.signIn(typeof onSignIn === 'function' ? onSignIn : undefined));
     }
