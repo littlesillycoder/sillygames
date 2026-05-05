@@ -142,7 +142,8 @@ const SillyFirebase = {
     try {
       localStorage.setItem(this._AVATAR_CACHE_KEY, JSON.stringify({
         initial: name.charAt(0).toUpperCase(),
-        color: this.avatarColor(name)
+        color: this.avatarColor(name),
+        uid: user.uid
       }));
     } catch(e) {}
   },

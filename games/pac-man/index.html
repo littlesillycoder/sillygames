@@ -1717,6 +1717,23 @@ document.getElementById('pac-exit-btn').addEventListener('click', () => {
 });
 
 SillyFirebase.renderAvatarFromCache('game-avatar');
+
+// Pre-load savedLevel from user-specific localStorage using cached uid —
+// eliminates the title screen pop-in delay before onAuthChanged resolves.
+(function() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SillyFirebase._AVATAR_CACHE_KEY));
+    if (cached && cached.uid) {
+      const userSave = JSON.parse(localStorage.getItem(`pacman_save_${cached.uid}`));
+      if (userSave && userSave.currentLevel > 1) {
+        savedLevel = userSave.currentLevel;
+        highScore  = userSave.highScore || highScore;
+        localStorage.setItem('pacman_hs', highScore);
+      }
+    }
+  } catch(e) {}
+})();
+
 SillyFirebase.onAuthChanged(async user => {
   if (user) {
     const userSaveKey = `pacman_save_${user.uid}`;
