@@ -1735,11 +1735,18 @@ SillyFirebase.onAuthChanged(async user => {
       }
     }
   } else {
-    // Guest — read from localStorage (may have guest save)
+    // Guest — only use localStorage save if it has no uid (genuine guest save)
     try {
       const local = JSON.parse(localStorage.getItem(PAC_SAVE_KEY));
-      if (local) { savedLevel = local.currentLevel || 1; highScore = local.highScore || 0; }
-      else { savedLevel = 1; }
+      if (local && !local.uid) {
+        savedLevel = local.currentLevel || 1;
+        highScore  = local.highScore || 0;
+      } else {
+        // Signed-in user's save — discard so guest starts fresh
+        localStorage.removeItem(PAC_SAVE_KEY);
+        savedLevel = 1;
+        highScore  = parseInt(localStorage.getItem('pacman_hs') || '0', 10);
+      }
     } catch(e) { savedLevel = 1; }
   }
   // Re-draw title screen if game hasn't started yet
