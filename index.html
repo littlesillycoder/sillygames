@@ -352,7 +352,7 @@
     </a>
     <div class="search-bar">
       <span class="search-icon">🔍</span>
-      <input type="text" placeholder="Search games…" />
+      <input type="text" id="search-input" placeholder="Search games…" />
     </div>
     <nav>
       <a href="#" data-filter="new">New</a>
@@ -1038,7 +1038,29 @@
       document.querySelectorAll('nav a[data-filter]').forEach(a => a.classList.remove('active'));
       document.querySelectorAll('.cat-dropdown button').forEach(b => b.classList.remove('active'));
       document.getElementById('cat-dropdown').classList.remove('open');
+      const si = document.getElementById('search-input');
+      if (si) si.value = '';
     }
+
+    document.getElementById('search-input').addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      if (q === '') { clearFilter(); return; }
+      // Clear nav filter state without resetting the search input
+      activeFilter = null; activeTag = null;
+      document.querySelectorAll('nav a[data-filter]').forEach(a => a.classList.remove('active'));
+      document.querySelectorAll('.cat-dropdown button').forEach(b => b.classList.remove('active'));
+      document.getElementById('cat-dropdown').classList.remove('open');
+      const cards = document.querySelectorAll('.game-card');
+      let shown = 0;
+      cards.forEach(card => {
+        const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+        const tags  = Array.from(card.querySelectorAll('.tag')).map(t => t.textContent.toLowerCase()).join(' ');
+        const show  = title.includes(q) || tags.includes(q);
+        card.style.display = show ? '' : 'none';
+        if (show) shown++;
+      });
+      document.getElementById('no-results').style.display = shown === 0 ? 'block' : 'none';
+    });
 
     document.querySelectorAll('nav a[data-filter]').forEach(link => {
       link.addEventListener('click', e => {
