@@ -157,11 +157,13 @@ const SillyFirebase = {
   renderAvatarFromCache(elementId) {
     try {
       const cached = JSON.parse(localStorage.getItem(this._AVATAR_CACHE_KEY));
-      if (cached) this._renderAvatarCircle(elementId, cached.initial, cached.color);
+      if (cached) {
+        this._renderAvatarCircle(elementId, cached.initial, cached.color, true);
+      }
     } catch(e) {}
   },
 
-  _renderAvatarCircle(elementId, initial, color) {
+  _renderAvatarCircle(elementId, initial, color, clickable = false) {
     const el = document.getElementById(elementId);
     if (!el) return;
     el.innerHTML = `<div style="
@@ -170,12 +172,17 @@ const SillyFirebase = {
       font-size:16px;font-weight:700;font-family:sans-serif;
       display:flex;align-items:center;justify-content:center;
       box-shadow:0 2px 6px rgba(0,0,0,0.3);
-      user-select:none;">${initial}</div>`;
+      user-select:none;${clickable ? 'cursor:pointer;' : ''}"
+      ${clickable ? 'title="Sign out"' : ''}>${initial}</div>`;
+    if (clickable && el.firstChild) {
+      el.firstChild.addEventListener('click', () => this.signOut());
+    }
   },
 
-  // Render a read-only avatar circle (initial letter) into an element.
-  // Shows when signed in, clears when signed out.
-  renderAvatar(elementId, user) {
+  // Render avatar circle (signed in) or Sign In button (signed out).
+  // onSignIn — optional callback fired before the Google popup opens
+  //            (use this to pause the game, etc.)
+  renderAvatar(elementId, user, onSignIn) {
     const el = document.getElementById(elementId);
     if (!el) return;
     if (user) {
@@ -183,9 +190,15 @@ const SillyFirebase = {
       const initial = name.charAt(0).toUpperCase();
       const color = this.avatarColor(name);
       this._cacheAvatar(user);
-      this._renderAvatarCircle(elementId, initial, color);
+      this._renderAvatarCircle(elementId, initial, color, true);
     } else {
-      el.innerHTML = '';
+      el.innerHTML = `<button style="
+        background:#1c1c38;border:1px solid #3a3a60;color:#aaa;
+        font-family:monospace;font-size:10px;padding:4px 8px;
+        border-radius:4px;cursor:pointer;letter-spacing:.5px;
+        white-space:nowrap;">Sign In</button>`;
+      el.firstChild.addEventListener('click', () =>
+        this.signIn(typeof onSignIn === 'function' ? onSignIn : undefined));
     }
   },
 
