@@ -652,7 +652,9 @@ function saveProgress() {
     highScore = score;
     localStorage.setItem('pacman_hs', highScore);
   }
-  const data = { highScore, currentLevel: level, savedAt: Date.now() };
+  const uid  = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+               ? SillyFirebase.currentUser.uid : null;
+  const data = { highScore, currentLevel: level, savedAt: Date.now(), ...(uid ? { uid } : {}) };
   localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(data));
   if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('pacMan', data);
 }
