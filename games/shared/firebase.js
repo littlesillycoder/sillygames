@@ -84,6 +84,7 @@ const SillyFirebase = {
   signIn(onBeforePopup) {
     if (typeof onBeforePopup === 'function') onBeforePopup();
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     _sfAuth.signInWithPopup(provider).catch(e => console.warn('[SillyFirebase] sign-in failed', e));
   },
 
