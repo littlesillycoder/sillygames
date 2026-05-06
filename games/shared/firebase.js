@@ -237,6 +237,33 @@ const SillyFirebase = {
     }
   },
 
+  // ─── Display-only avatar (in-game use — no sign-in/out interaction) ─────────
+
+  // Like renderAvatarFromCache but never adds a click handler.
+  renderAvatarFromCacheDisplay(elementId) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(this._AVATAR_CACHE_KEY));
+      if (cached) this._renderAvatarCircle(elementId, cached.initial, cached.color, false);
+    } catch(e) {}
+  },
+
+  // Show avatar (signed in) or a dim placeholder (signed out). No interactivity.
+  renderAvatarDisplay(elementId, user) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (user) {
+      const name = user.displayName || user.email || '?';
+      this._cacheAvatar(user);
+      this._renderAvatarCircle(elementId, name.charAt(0).toUpperCase(), this.avatarColor(name), false);
+    } else {
+      el.innerHTML = `<div style="
+        width:36px;height:36px;border-radius:50%;
+        border:2px dashed #3a3a60;color:#444;font-size:20px;
+        display:flex;align-items:center;justify-content:center;
+        user-select:none;" title="Sign in from lobby"></div>`;
+    }
+  },
+
   // ─── Visit tracking ──────────────────────────────────────────
 
   // Increment visit counter for pageId and return the new total.

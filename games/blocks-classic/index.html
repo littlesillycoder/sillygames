@@ -78,6 +78,10 @@
       background: linear-gradient(135deg, #dc2626, #991b1b);
       color: #fff;
     }
+    .btn-secondary {
+      background: linear-gradient(135deg, #1e4d8c, #1a3a6b);
+      color: #fff;
+    }
 
     /* ── GAME AREA ── */
     .game-wrapper {
@@ -331,7 +335,8 @@
       Fill complete horizontal lines to clear them and score points.<br>
       Speed increases every 10 lines. Don't let blocks reach the top!
     </p>
-    <div class="modal-buttons">
+    <div class="modal-buttons" style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;">
+      <button class="btn btn-secondary" id="continueBtn" style="display:none;min-width:150px;font-size:1rem;padding:0.7rem 1.5rem">▶ Continue</button>
       <button class="btn btn-primary" id="startBtn" style="min-width:150px;font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
     </div>
   </div>
@@ -455,6 +460,7 @@ function playGameOver() {
 // ─────────────────────────────────────────────
 let board, currentPiece, currentX, currentY, nextPiece;
 let score, level, lines, gameRunning, paused, dropTimer, dropInterval;
+let gamePlayedAs = null; // uid of user who started the current game, null for guest
 let screenFlash = { timer: 0, r: 255, g: 255, b: 255 };
 let comboDisplay  = { text: '', timer: 0 };
 
@@ -508,9 +514,11 @@ function clearLines() {
     }
   }
   if (cleared) {
+    const prevLevel = level;
     score += SCORE_TABLE[cleared] * level;
     lines += cleared;
     level = Math.min(10, Math.floor(lines / 10) + 1);
+    if (level > prevLevel) saveProgress();
     playLineClear(cleared);
     // Screen flash colour & combo label
     const flashPalette = [[80,220,255],[180,100,255],[255,160,40],[255,215,0]];
@@ -567,9 +575,82 @@ function tick() {
   draw();
 }
 
-function initGame() {
+// ─────────────────────────────────────────────
+//  SAVE / LOAD PROGRESS
+// ─────────────────────────────────────────────
+const BC_SAVE_KEY   = 'blocksClassic_save';       // signed-in user: localStorage
+const BC_GUEST_KEY  = 'blocksClassic_guest_save';  // guest only: sessionStorage
+
+// savedState: { score, level, lines } or null
+// Guest: sessionStorage under BC_GUEST_KEY (separate from signed-in key — no collision)
+// Signed-in: localStorage under BC_SAVE_KEY + per-user key + Firestore
+let savedState = (() => {
+  try {
+    const local = JSON.parse(localStorage.getItem(BC_SAVE_KEY));
+    if (local && local.uid) return local;
+    const sess = JSON.parse(sessionStorage.getItem(BC_GUEST_KEY));
+    return sess || null;
+  } catch(e) { return null; }
+})();
+
+function saveProgress() {
+  const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+              ? SillyFirebase.currentUser.uid : null;
+  const data = { score, level, lines, savedAt: Date.now(), ...(uid ? { uid } : {}) };
+  if (uid) {
+    localStorage.setItem(BC_SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(`blocksClassic_save_${uid}`, JSON.stringify(data));
+    if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('blocksClassic', data);
+  } else {
+    sessionStorage.setItem(BC_GUEST_KEY, JSON.stringify(data));
+  }
+  savedState = data;
+}
+
+function clearSaveProgress() {
+  savedState = null;
+  localStorage.removeItem(BC_SAVE_KEY);
+  // Only clear the save that belongs to whoever started this game
+  if (gamePlayedAs) {
+    // Signed-in user's game — clear their keys; leave guest session untouched
+    localStorage.removeItem(`blocksClassic_save_${gamePlayedAs}`);
+    if (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser?.uid === gamePlayedAs) {
+      SillyFirebase.saveProgress('blocksClassic', { score: 0, level: 1, lines: 0, savedAt: Date.now() });
+    }
+  } else {
+    // Guest's game — clear guest session key
+    sessionStorage.removeItem(BC_GUEST_KEY);
+  }
+}
+
+function updateStartOverlay() {
+  const continueBtn = document.getElementById('continueBtn');
+  const startBtn    = document.getElementById('startBtn');
+  if (gameRunning) {
+    continueBtn.style.display = 'none';
+    startBtn.textContent = '▶ Resume Game';
+  } else if (savedState && savedState.level > 1) {
+    continueBtn.style.display = '';
+    continueBtn.textContent   = `▶ Continue (Level ${savedState.level})`;
+    startBtn.textContent = '▶ New Game';
+  } else {
+    continueBtn.style.display = 'none';
+    startBtn.textContent = '▶ Start Game';
+  }
+}
+
+function initGame(fromSave = false) {
   board = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
-  score = 0; level = 1; lines = 0;
+  gamePlayedAs = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+                  ? SillyFirebase.currentUser.uid : null;
+  if (fromSave && savedState) {
+    score = savedState.score || 0;
+    level = savedState.level || 1;
+    lines = savedState.lines || 0;
+  } else {
+    score = 0; level = 1; lines = 0;
+    clearSaveProgress();
+  }
   nextPiece = randomPiece();
   spawnPiece();
   gameRunning = true;
@@ -582,6 +663,16 @@ function initGame() {
 function endGame() {
   gameRunning = false;
   clearInterval(dropInterval);
+  clearSaveProgress();
+  // If a signed-in user's save exists and they didn't play this game, restore it
+  const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+              ? SillyFirebase.currentUser.uid : null;
+  if (uid && uid !== gamePlayedAs) {
+    try {
+      const s = JSON.parse(localStorage.getItem(`blocksClassic_save_${uid}`));
+      if (s && s.uid === uid) savedState = s;
+    } catch(e) {}
+  }
   playGameOver();
   document.getElementById('finalScore').textContent = score.toLocaleString();
   document.getElementById('finalLevel').textContent = level;
@@ -774,29 +865,36 @@ document.getElementById('restartBtn').addEventListener('click', () => {
   document.getElementById('gameOverOverlay').classList.remove('active');
   document.getElementById('pauseBadge').classList.remove('visible');
   document.getElementById('pauseBtn').textContent = '⏸ Pause';
-  initGame();
+  initGame(false);
 });
 document.getElementById('exitBtn').addEventListener('click', () => {
+  if (gameRunning) saveProgress();
   window.location.href = '../../';
 });
 document.getElementById('gameOverRestartBtn').addEventListener('click', () => {
   document.getElementById('gameOverOverlay').classList.remove('active');
   document.getElementById('pauseBadge').classList.remove('visible');
   document.getElementById('pauseBtn').textContent = '⏸ Pause';
-  initGame();
+  initGame(false);
 });
 document.getElementById('gameOverExitBtn').addEventListener('click', () => {
   window.location.href = '../../';
 });
 document.getElementById('howToPlayBtn').addEventListener('click', () => {
   if (gameRunning && !paused) togglePause();
-  document.getElementById('startBtn').textContent = gameRunning ? '▶ Resume Game' : '▶ Start Game';
+  updateStartOverlay();
   document.getElementById('startOverlay').classList.add('active');
+});
+document.getElementById('continueBtn').addEventListener('click', () => {
+  document.getElementById('startOverlay').classList.remove('active');
+  document.getElementById('pauseBadge').classList.remove('visible');
+  document.getElementById('pauseBtn').textContent = '⏸ Pause';
+  initGame(true);
 });
 document.getElementById('startBtn').addEventListener('click', () => {
   document.getElementById('startOverlay').classList.remove('active');
   if (!gameRunning) {
-    initGame();
+    initGame(false);
   } else if (paused) {
     togglePause();
   }
@@ -809,14 +907,51 @@ currentPiece = randomPiece();
 currentX = 3; currentY = 0;
 score = 0; level = 1; lines = 0;
 draw();
+updateStartOverlay();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="../shared/firebase.js"></script>
 <script>
-SillyFirebase.renderAvatarFromCache('game-avatar');
-SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatar('game-avatar', user));
+// Pre-load savedState from per-user localStorage before async auth resolves
+(() => {
+  try {
+    const cached = JSON.parse(localStorage.getItem('_sfAvatarCache'));
+    if (cached && cached.uid) {
+      const local = JSON.parse(localStorage.getItem(`blocksClassic_save_${cached.uid}`));
+      if (local && local.uid === cached.uid) {
+        savedState = local;
+        updateStartOverlay();
+      }
+    }
+  } catch(e) {}
+})();
+
+SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+SillyFirebase.onAuthChanged(async user => {
+  SillyFirebase.renderAvatarDisplay('game-avatar', user);
+  if (user) {
+    const localKey = `blocksClassic_save_${user.uid}`;
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(localKey)); } catch(e) {}
+    if (local && local.uid === user.uid) {
+      savedState = local;
+    } else {
+      await SillyFirebase.syncProgress('blocksClassic', localKey);
+      try { savedState = JSON.parse(localStorage.getItem(localKey)); } catch(e) {}
+    }
+    if (!gameRunning) updateStartOverlay();
+  } else {
+    savedState = null;
+    localStorage.removeItem(BC_SAVE_KEY);
+    try {
+      const sess = JSON.parse(sessionStorage.getItem(BC_GUEST_KEY));
+      if (sess) savedState = sess;
+    } catch(e) {}
+    if (!gameRunning) updateStartOverlay();
+  }
+});
 </script>
 </body>
 </html>

@@ -1077,8 +1077,9 @@ openModal(false);
   } catch(e) {}
 })();
 
-SillyFirebase.renderAvatarFromCache('game-avatar');
+SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
 SillyFirebase.onAuthChanged(async user => {
+  SillyFirebase.renderAvatarDisplay('game-avatar', user);
   if (user) {
     const userSaveKey = `bounceRush_save_${user.uid}`;
     const cloud = await SillyFirebase.loadProgress('bounceRush');
@@ -1099,18 +1100,16 @@ SillyFirebase.onAuthChanged(async user => {
         await SillyFirebase.saveProgress('bounceRush', userLocal);
       }
     }
-    // Refresh modal if still on title screen
     if (gameState === 'idle') openModal(false);
   } else {
-    // Guest: clear signed-in save, use sessionStorage
-    const local = JSON.parse(localStorage.getItem(BR_SAVE_KEY) || 'null');
-    if (local && local.uid) {
-      localStorage.removeItem(BR_SAVE_KEY);
-      savedLevel = 0;
-    }
+    localStorage.removeItem(BR_SAVE_KEY);
+    savedLevel = 0;
+    try {
+      const sess = JSON.parse(sessionStorage.getItem(BR_SAVE_KEY) || 'null');
+      if (sess && !sess.uid) savedLevel = sess.currentLevel || 0;
+    } catch(e) {}
     if (gameState === 'idle') openModal(false);
   }
-  SillyFirebase.renderAvatar('game-avatar', user);
 });
 </script>
 </body>

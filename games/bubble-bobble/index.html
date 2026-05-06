@@ -1360,18 +1360,12 @@ updateHUD();
 <script src="../shared/firebase.js"></script>
 <script>
 // ─── Bubble Bobble Firebase wiring ───────────────────────────
-SillyFirebase.renderAvatarFromCache('game-avatar');
-let _bbAuthReady = false;
+SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
 SillyFirebase.onAuthChanged(async user => {
+  SillyFirebase.renderAvatarDisplay('game-avatar', user);
   if (user) {
-    _bbAuthReady = true;
     await SillyFirebase.syncProgress('bubbleBobble', SAVE_KEY);
-  } else if (_bbAuthReady) {
-    // Real sign-out (not the initial null flash on page load)
-    clearSave();
   }
-  _bbAuthReady = true;
-  SillyFirebase.renderAvatar('game-avatar', user);
 });
 </script>
 </body>
