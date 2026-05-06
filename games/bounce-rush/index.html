@@ -1069,7 +1069,7 @@ openModal(false);
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="../shared/firebase.js"></script>
 <script>
-// Pre-load savedLevel from cached uid
+// Pre-load savedLevel from cached uid — re-open modal so Continue shows immediately
 (function() {
   try {
     const cached = JSON.parse(localStorage.getItem(SillyFirebase._AVATAR_CACHE_KEY));
@@ -1077,6 +1077,7 @@ openModal(false);
       const userSave = JSON.parse(localStorage.getItem(`bounceRush_save_${cached.uid}`));
       if (userSave && userSave.currentLevel > 0) {
         savedLevel = userSave.currentLevel;
+        if (gameState === 'idle') openModal(false);
       }
     }
   } catch(e) {}
