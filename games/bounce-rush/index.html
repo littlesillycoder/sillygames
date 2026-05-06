@@ -99,19 +99,13 @@
     cursor: pointer; transition: opacity 0.2s;
   }
   .modal-start:hover { opacity: 0.85; }
-  .level-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem;
-    margin: 0.5rem 0 0.9rem;
+  .modal-continue {
+    flex: 1; background: linear-gradient(135deg, #0891b2, #0e7490);
+    border: none; color: #fff; border-radius: 9px;
+    padding: 0.65rem; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; transition: opacity 0.2s;
   }
-  .lvl-btn {
-    background: #14142b; border: 1px solid #2a2a50;
-    border-radius: 7px; padding: 0.35rem 0.1rem;
-    font-size: 0.8rem; font-weight: 600; color: #94a3b8;
-    cursor: pointer; transition: all 0.15s; text-align: center;
-  }
-  .lvl-btn:hover  { background: #22224a; color: #e2e8f0; }
-  .lvl-btn.active { background: #7c3aed; border-color: #a78bfa; color: #fff; }
-  .lvl-btn.done   { border-color: #22c55e; color: #4ade80; }
+  .modal-continue:hover { opacity: 0.85; }
   #game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
 </style>
 </head>
@@ -145,7 +139,7 @@
   <canvas id="c" width="460" height="540"></canvas>
 </div>
 
-<!-- Instructions / Level Select Modal -->
+<!-- Instructions / Title Modal -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <h2>🟡 Bounce Rush</h2>
@@ -157,9 +151,8 @@
       <li>Fewer boosts = more stars</li>
     </ul>
     <p style="color:#64748b; font-size:0.78rem;">Tip: Click near the ball for a gentle redirect, far away for full power.</p>
-    <p style="margin-top:0.4rem; color:#e2e8f0; font-size:0.82rem; font-weight:600;">Select Level</p>
-    <div class="level-grid" id="levelGrid"></div>
-    <div class="modal-btns">
+    <div class="modal-btns" id="modalBtns">
+      <button class="modal-continue" id="modalContinueBtn" style="display:none">▶ Continue</button>
       <button class="modal-start" id="modalStartBtn">▶ Start Game</button>
     </div>
   </div>
@@ -339,6 +332,41 @@ let gameState  = 'idle';   // idle | playing | win
 let savedState = null;
 
 let currentLevel = 0;
+const BR_SAVE_KEY = 'bounceRush_save';
+
+// savedLevel: index of level to resume from (0 = first level)
+// Guest: sessionStorage (clears on browser close)
+// Signed-in: localStorage + Firestore
+let savedLevel = (() => {
+  try {
+    const local = JSON.parse(localStorage.getItem(BR_SAVE_KEY));
+    if (local && local.uid) return local.currentLevel || 0;
+    const sess = JSON.parse(sessionStorage.getItem(BR_SAVE_KEY));
+    return sess ? (sess.currentLevel || 0) : 0;
+  } catch(e) { return 0; }
+})();
+
+function saveProgress() {
+  const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+              ? SillyFirebase.currentUser.uid : null;
+  const data = { currentLevel: savedLevel, savedAt: Date.now(), ...(uid ? { uid } : {}) };
+  if (uid) {
+    localStorage.setItem(BR_SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(`bounceRush_save_${uid}`, JSON.stringify(data));
+    if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('bounceRush', data);
+  } else {
+    sessionStorage.setItem(BR_SAVE_KEY, JSON.stringify(data));
+  }
+}
+
+function clearSaveProgress() {
+  savedLevel = 0;
+  localStorage.removeItem(BR_SAVE_KEY);
+  sessionStorage.removeItem(BR_SAVE_KEY);
+  if (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+    SillyFirebase.saveProgress('bounceRush', { currentLevel: 0, savedAt: Date.now() });
+}
+
 let levelDone    = new Array(LEVELS.length).fill(false);
 let levelStars   = new Array(LEVELS.length).fill(0);
 
@@ -930,8 +958,12 @@ canvas.addEventListener('click', e => {
     const bx = CW/2 - 82, by = CH/2 + 40;
     if (pos.x >= bx && pos.x <= bx+164 && pos.y >= by && pos.y <= by+44) {
       if (currentLevel < LEVELS.length - 1) {
-        loadLevel(currentLevel + 1);
+        savedLevel = currentLevel + 1;
+        saveProgress();
+        loadLevel(savedLevel);
         startMusic();
+      } else {
+        clearSaveProgress();
       }
     }
     return;
@@ -947,7 +979,14 @@ canvas.addEventListener('touchstart', e => {
   if (gameState === 'win') {
     const bx = CW/2 - 82, by = CH/2 + 40;
     if (pos.x >= bx && pos.x <= bx+164 && pos.y >= by && pos.y <= by+44) {
-      if (currentLevel < LEVELS.length - 1) { loadLevel(currentLevel + 1); startMusic(); }
+      if (currentLevel < LEVELS.length - 1) {
+        savedLevel = currentLevel + 1;
+        saveProgress();
+        loadLevel(savedLevel);
+        startMusic();
+      } else {
+        clearSaveProgress();
+      }
     }
     return;
   }
@@ -956,31 +995,42 @@ canvas.addEventListener('touchstart', e => {
 }, {passive: false});
 
 // ═══════════════════════════════════════════════════════
-//  MODAL + BUTTONS
+//  MODAL (Title / How-to-Play)
 // ═══════════════════════════════════════════════════════
-function buildLevelGrid() {
-  const grid = document.getElementById('levelGrid');
-  grid.innerHTML = '';
-  for (let i = 0; i < LEVELS.length; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'lvl-btn' +
-      (i === currentLevel ? ' active' : '') +
-      (levelDone[i] ? ' done' : '');
-    btn.textContent = i + 1;
-    btn.title = LEVELS[i].name;
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentLevel = i;
-    });
-    grid.appendChild(btn);
-  }
-}
-
 function openModal(isResume) {
-  buildLevelGrid();
-  document.getElementById('modalStartBtn').textContent =
-    isResume ? '▶ Resume Game' : '▶ Start Game';
+  const continueBtn = document.getElementById('modalContinueBtn');
+  const startBtn    = document.getElementById('modalStartBtn');
+
+  if (isResume) {
+    // Opened via How to Play during gameplay
+    continueBtn.style.display = 'none';
+    startBtn.textContent = '▶ Resume Game';
+    startBtn.onclick = closeModal;
+  } else {
+    // Title screen
+    if (savedLevel > 0) {
+      continueBtn.style.display = '';
+      continueBtn.textContent = `▶ Continue (Level ${savedLevel + 1})`;
+      continueBtn.onclick = () => {
+        document.getElementById('modalOverlay').classList.add('hidden');
+        loadLevel(savedLevel);
+        startMusic();
+      };
+      startBtn.textContent = '▶ New Game';
+      startBtn.onclick = () => {
+        savedLevel = 0;
+        clearSaveProgress();
+        document.getElementById('modalOverlay').classList.add('hidden');
+        loadLevel(0);
+        startMusic();
+      };
+    } else {
+      continueBtn.style.display = 'none';
+      startBtn.textContent = '▶ Start Game';
+      startBtn.onclick = closeModal;
+    }
+  }
+
   document.getElementById('modalOverlay').classList.remove('hidden');
   savedState = gameState;
   gameState = 'idle';
@@ -989,7 +1039,7 @@ function openModal(isResume) {
 function closeModal() {
   document.getElementById('modalOverlay').classList.add('hidden');
   if (savedState === 'idle' || savedState === null) {
-    loadLevel(currentLevel);
+    loadLevel(savedLevel);
   } else {
     gameState = savedState;
   }
@@ -1000,14 +1050,13 @@ function closeModal() {
 document.getElementById('howBtn').addEventListener('click', () => {
   openModal(gameState !== 'idle');
 });
-document.getElementById('modalStartBtn').addEventListener('click', closeModal);
 
 document.getElementById('restartBtn').addEventListener('click', () => {
   loadLevel(currentLevel);
   startMusic();
 });
 
-// Launch with modal
+// Launch with title modal
 openModal(false);
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1015,7 +1064,53 @@ openModal(false);
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="../shared/firebase.js"></script>
 <script>
-SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatar('game-avatar', user));
+// Pre-load savedLevel from cached uid
+(function() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SillyFirebase._AVATAR_CACHE_KEY));
+    if (cached && cached.uid) {
+      const userSave = JSON.parse(localStorage.getItem(`bounceRush_save_${cached.uid}`));
+      if (userSave && userSave.currentLevel > 0) {
+        savedLevel = userSave.currentLevel;
+      }
+    }
+  } catch(e) {}
+})();
+
+SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+SillyFirebase.onAuthChanged(async user => {
+  SillyFirebase.renderAvatarDisplay('game-avatar', user);
+  if (user) {
+    const userSaveKey = `bounceRush_save_${user.uid}`;
+    const cloud = await SillyFirebase.loadProgress('bounceRush');
+    let userLocal = null;
+    try { userLocal = JSON.parse(localStorage.getItem(userSaveKey)); } catch(e) {}
+
+    let best = null;
+    if (cloud && userLocal) {
+      best = (cloud.savedAt || 0) >= (userLocal.savedAt || 0) ? cloud : userLocal;
+    } else {
+      best = cloud || userLocal;
+    }
+    if (best) {
+      savedLevel = best.currentLevel || 0;
+      localStorage.setItem(BR_SAVE_KEY, JSON.stringify(best));
+      localStorage.setItem(userSaveKey, JSON.stringify(best));
+      if (userLocal && (!cloud || (userLocal.savedAt || 0) > (cloud.savedAt || 0))) {
+        await SillyFirebase.saveProgress('bounceRush', userLocal);
+      }
+    }
+    if (gameState === 'idle') openModal(false);
+  } else {
+    localStorage.removeItem(BR_SAVE_KEY);
+    savedLevel = 0;
+    try {
+      const sess = JSON.parse(sessionStorage.getItem(BR_SAVE_KEY) || 'null');
+      if (sess && !sess.uid) savedLevel = sess.currentLevel || 0;
+    } catch(e) {}
+    if (gameState === 'idle') openModal(false);
+  }
+});
 </script>
 </body>
 </html>

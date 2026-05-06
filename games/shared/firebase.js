@@ -84,6 +84,7 @@ const SillyFirebase = {
   signIn(onBeforePopup) {
     if (typeof onBeforePopup === 'function') onBeforePopup();
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     _sfAuth.signInWithPopup(provider).catch(e => console.warn('[SillyFirebase] sign-in failed', e));
   },
 
@@ -95,8 +96,16 @@ const SillyFirebase = {
   // callback(user) is called whenever the user signs in or out.
   // Also keeps SillyFirebase.currentUser in sync.
   onAuthChanged(callback) {
+    let firstCall = true;
     _sfAuth.onAuthStateChanged(user => {
       this.currentUser = user;
+      if (user) {
+        this._cacheAvatar(user);
+      } else if (!firstCall) {
+        // Real sign-out — clear cache. Skip on initial null flash at page load.
+        this._clearAvatarCache();
+      }
+      firstCall = false;
       callback(user);
     });
   },
@@ -120,6 +129,8 @@ const SillyFirebase = {
 
   // ─── Avatar indicator ────────────────────────────────────────
 
+  _AVATAR_CACHE_KEY: '_sfAvatarCache',
+
   // Generate a consistent HSL color from a string (display name or email).
   avatarColor(str) {
     let hash = 0;
@@ -127,24 +138,129 @@ const SillyFirebase = {
     return `hsl(${Math.abs(hash) % 360}, 65%, 48%)`;
   },
 
-  // Render a read-only avatar circle (initial letter) into an element.
-  // Shows when signed in, clears when signed out.
-  renderAvatar(elementId, user) {
+  _cacheAvatar(user) {
+    const name = user.displayName || user.email || '?';
+    try {
+      localStorage.setItem(this._AVATAR_CACHE_KEY, JSON.stringify({
+        initial: name.charAt(0).toUpperCase(),
+        color: this.avatarColor(name),
+        uid: user.uid
+      }));
+    } catch(e) {}
+  },
+
+  _clearAvatarCache() {
+    try { localStorage.removeItem(this._AVATAR_CACHE_KEY); } catch(e) {}
+  },
+
+  // Render avatar immediately from localStorage cache (no async).
+  // Call this before onAuthChanged to avoid pop-in delay for returning users.
+  renderAvatarFromCache(elementId) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(this._AVATAR_CACHE_KEY));
+      if (cached) this._renderAvatarCircle(elementId, cached.initial, cached.color, true);
+    } catch(e) {}
+  },
+
+  _renderAvatarCircle(elementId, initial, color, clickable = false) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.innerHTML = `<div style="
+      width:36px;height:36px;border-radius:50%;
+      background:${color};color:#fff;
+      font-size:16px;font-weight:700;font-family:sans-serif;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      user-select:none;${clickable ? 'cursor:pointer;' : ''}">${initial}</div>`;
+    if (clickable && el.firstChild) {
+      el.firstChild.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._toggleAvatarPopup(el.firstChild);
+      });
+    }
+  },
+
+  _toggleAvatarPopup(anchor) {
+    const existing = document.getElementById('_sf_avatar_popup');
+    if (existing) { existing.remove(); return; }
+    const user = this.currentUser;
+    if (!user) return;
+    const name = user.displayName || user.email || '?';
+    const rect = anchor.getBoundingClientRect();
+    const popup = document.createElement('div');
+    popup.id = '_sf_avatar_popup';
+    popup.style.cssText = `
+      position:fixed;top:${rect.bottom + 8}px;right:${window.innerWidth - rect.right}px;
+      background:#1a1a2e;border:1px solid #3a3a60;border-radius:10px;
+      padding:14px 16px;min-width:200px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.6);z-index:9999;font-family:sans-serif;`;
+    popup.innerHTML = `
+      <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:3px;">Hi, ${name}!</div>
+      <div style="font-size:12px;color:#888;margin-bottom:12px;">${user.email || ''}</div>
+      <button id="_sf_so_btn" style="width:100%;padding:8px;background:#1c1c38;
+        border:1px solid #3a3a60;color:#ccc;border-radius:6px;cursor:pointer;
+        font-size:13px;font-family:sans-serif;">Sign Out</button>`;
+    document.body.appendChild(popup);
+    popup.querySelector('#_sf_so_btn').addEventListener('click', () => {
+      popup.remove(); this.signOut();
+    });
+    const close = (e) => {
+      if (!popup.contains(e.target) && !anchor.contains(e.target)) {
+        popup.remove();
+        document.removeEventListener('click', close, true);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', close, true), 0);
+  },
+
+  // Render avatar circle (signed in) or compact sign-in circle (signed out).
+  // onSignIn — optional callback fired before the Google popup opens
+  //            (use this to pause the game, etc.)
+  renderAvatar(elementId, user, onSignIn) {
     const el = document.getElementById(elementId);
     if (!el) return;
     if (user) {
       const name = user.displayName || user.email || '?';
       const initial = name.charAt(0).toUpperCase();
       const color = this.avatarColor(name);
+      this._cacheAvatar(user);
+      this._renderAvatarCircle(elementId, initial, color, true);
+    } else {
+      // Same 36×36 size as avatar circle so topbar width never changes
       el.innerHTML = `<div style="
         width:36px;height:36px;border-radius:50%;
-        background:${color};color:#fff;
-        font-size:16px;font-weight:700;font-family:sans-serif;
+        border:2px dashed #3a3a60;color:#666;font-size:20px;
         display:flex;align-items:center;justify-content:center;
-        box-shadow:0 2px 6px rgba(0,0,0,0.3);
-        user-select:none;">${initial}</div>`;
+        cursor:pointer;user-select:none;" title="Sign in">+</div>`;
+      el.firstChild.addEventListener('click', () =>
+        this.signIn(typeof onSignIn === 'function' ? onSignIn : undefined));
+    }
+  },
+
+  // ─── Display-only avatar (in-game use — no sign-in/out interaction) ─────────
+
+  // Like renderAvatarFromCache but never adds a click handler.
+  renderAvatarFromCacheDisplay(elementId) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(this._AVATAR_CACHE_KEY));
+      if (cached) this._renderAvatarCircle(elementId, cached.initial, cached.color, false);
+    } catch(e) {}
+  },
+
+  // Show avatar (signed in) or a dim placeholder (signed out). No interactivity.
+  renderAvatarDisplay(elementId, user) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (user) {
+      const name = user.displayName || user.email || '?';
+      this._cacheAvatar(user);
+      this._renderAvatarCircle(elementId, name.charAt(0).toUpperCase(), this.avatarColor(name), false);
     } else {
-      el.innerHTML = '';
+      el.innerHTML = `<div style="
+        width:36px;height:36px;border-radius:50%;
+        border:2px dashed #3a3a60;color:#444;font-size:20px;
+        display:flex;align-items:center;justify-content:center;
+        user-select:none;" title="Sign in from lobby"></div>`;
     }
   },
 

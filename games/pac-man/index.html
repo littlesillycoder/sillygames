@@ -16,7 +16,7 @@ body {
   font-family: 'Courier New', monospace;
 }
 #pac-topbar {
-  width: 576px;
+  width: 980px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -31,16 +31,130 @@ canvas {
 #game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
 #pac-exit-btn{background:linear-gradient(135deg,#dc2626,#991b1b);border:1px solid #991b1b;color:#fff;font-family:monospace;font-size:0.85rem;padding:0.45rem 1rem;border-radius:8px;cursor:pointer;letter-spacing:.5px;transition:opacity 0.15s;}
 #pac-exit-btn:hover{opacity:0.85;}
+#pac-pause-btn{background:#1c1c38;border:1px solid #3a3a60;color:#ffd700;font-family:monospace;font-size:0.85rem;padding:0.45rem 1rem;border-radius:8px;cursor:pointer;letter-spacing:.5px;margin-right:0.5rem;transition:background 0.15s;}
+#pac-pause-btn:hover{background:#2a2a55;}
 #pac-canvas-wrap{position:relative;display:inline-block;}
+
+.pac-game-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.pac-side-panel {
+  width: 190px;
+  background: #0a0a18;
+  border: 1px solid #1a1aff;
+  border-radius: 8px;
+  padding: 14px 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  color: #fff;
+  line-height: 1.7;
+  flex-shrink: 0;
+  margin-top: 32px;
+}
+.pac-side-panel h3 {
+  color: #ffd700;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #1a1aff;
+}
+.pac-side-panel .tip { margin-bottom: 5px; color: #fff; }
+.pac-side-panel .key {
+  display: inline-block;
+  background: #1a1a3a;
+  border: 1px solid #3a3a60;
+  border-radius: 3px;
+  padding: 0 5px;
+  font-size: 13px;
+  color: #fff;
+}
+.pac-side-panel .section { margin-top: 10px; padding-top: 8px; border-top: 1px solid #1a1a40; }
+@media (max-width: 1050px) {
+  .pac-side-panel { display: none; }
+}
+.panel-word-slot { margin-top: 8px; }
+.panel-word-label {
+  font-size: 12px;
+  color: #888;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+.panel-word-label.active { color: #aaa; }
+.panel-word-label.done   { color: #ffd700; }
+.panel-letter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.panel-letter-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  font-size: 13px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  border-radius: 2px;
+  border: 1px solid #333;
+  color: #333;
+  background: #111;
+}
+.panel-letter-box.collected {
+  border-color: #aaff00;
+  color: #aaff00;
+  background: #0a1a00;
+}
+.panel-letter-box.done-word {
+  border-color: #ffd700;
+  color: #ffd700;
+  background: #1a1400;
+}
+.panel-letter-box.future {
+  border-color: #222;
+  color: #222;
+  background: #0a0a0a;
+}
 </style>
 </head>
 <body>
 <div id="pac-topbar">
+  <button id="pac-pause-btn">⏸ PAUSE</button>
   <button id="pac-exit-btn">✕ EXIT</button>
   <div id="game-avatar"></div>
 </div>
-<div id="pac-canvas-wrap">
-  <canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
+<div class="pac-game-wrap">
+  <div class="pac-side-panel" id="pac-panel-left">
+    <h3>Controls</h3>
+    <div class="tip"><span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span> Move</div>
+    <div class="tip"><span class="key">P</span> Pause / Resume</div>
+    <div class="tip">Collect letters to spell each word</div>
+    <div class="section">
+      <h3>Tips</h3>
+      <div class="tip">🟡 Power pellet → ghosts turn blue</div>
+      <div class="tip">👻 Eat blue ghost → bonus points</div>
+      <div class="tip">Spell 3 words → next level</div>
+    </div>
+  </div>
+
+  <div id="pac-canvas-wrap">
+    <canvas id="c" width="576" height="412"></canvas><!-- 352 maze + 60 tray -->
+  </div>
+
+  <div class="pac-side-panel" id="pac-panel-right">
+    <h3>Progress</h3>
+    <div id="panel-level" class="tip">Level —</div>
+    <div id="panel-word-slots"></div>
+    <div class="section">
+      <h3>Score</h3>
+      <div id="panel-score" class="tip">0</div>
+      <div id="panel-hiscore" class="tip" style="color:#ffd700">HI 0</div>
+    </div>
+  </div>
 </div>
 <script src="../shared/words.js"></script>
 <script>
@@ -450,7 +564,7 @@ document.addEventListener('keydown', e => {
   }
   if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') &&
       gameRunning && !gameOver && !dying) {
-    paused = !paused;
+    togglePause();
   }
   if (e.key === 'm' || e.key === 'M') toggleSound();
 });
@@ -491,16 +605,18 @@ function tryEat() {
   lastEatCol = cc; lastEatRow = r;
   if (r < 0 || r >= ROWS) return;
   const cell = dots[r][cc];
-  if (cell === D) { dots[r][cc] = null; score += 10; dotsLeft--; playChomp(); }
-  if (cell === P) { dots[r][cc] = null; score += 50; dotsLeft--; triggerFrightened(); playPellet(); }
+  if (cell === D) { dots[r][cc] = null; score += 10; dotsLeft--; playChomp(); updateSidePanel(); }
+  if (cell === P) { dots[r][cc] = null; score += 50; dotsLeft--; triggerFrightened(); playPellet(); updateSidePanel(); }
   if (cell === L) {
     const idx = letterIdxMap[r][cc];
     dots[r][cc] = null; score += 15; dotsLeft--; playChomp();
     if (idx >= 0) {
       collected[idx] = true;
+      updateSidePanel();
       if (collected.every(Boolean)) {
         const bonus = 100 * currentWord.length;
         score += bonus;
+        completedWords[wordsThisLevel] = true;
         wordsThisLevel++;
         wordFlash = { text: `${currentWord}! +${bonus}`, timer: 2.5 };
         playWordFound();
@@ -509,6 +625,7 @@ function tryEat() {
         } else {
           levelClear = true;
         }
+        updateSidePanel();
       }
     }
   }
@@ -535,8 +652,11 @@ function saveProgress() {
     highScore = score;
     localStorage.setItem('pacman_hs', highScore);
   }
-  const data = { highScore, currentLevel: level, savedAt: Date.now() };
+  const uid  = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+               ? SillyFirebase.currentUser.uid : null;
+  const data = { highScore, currentLevel: level, savedAt: Date.now(), ...(uid ? { uid } : {}) };
   localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(data));
+  if (uid) localStorage.setItem(`pacman_save_${uid}`, JSON.stringify(data));
   if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('pacMan', data);
 }
 
@@ -557,6 +677,13 @@ function startLevel() {
   wordIndex = 0;
   wordFlash = null;
   wordsThisLevel = 0;
+  completedWords = [false, false, false];
+  // Pre-pick all 3 words for this level
+  levelWords = [
+    shuffledWords[wordIndex++] || '',
+    shuffledWords[wordIndex++] || '',
+    shuffledWords[wordIndex++] || ''
+  ];
   initWord();
   initGhosts();
   dying = false;
@@ -576,6 +703,7 @@ function startGame() {
   youWin   = false;
   paused   = false;
   startLevel();
+  updateSidePanel();
   gameRunning = true;
   lastTime = performance.now();
   requestAnimationFrame(loop);
@@ -774,6 +902,15 @@ function drawYouWin() {
 // ── Game loop ─────────────────────────────────────────────
 let paused = false;
 
+function togglePause() {
+  if (!gameRunning || gameOver || dying) return;
+  paused = !paused;
+  const btn = document.getElementById('pac-pause-btn');
+  if (btn) btn.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+}
+
+document.getElementById('pac-pause-btn').addEventListener('click', togglePause);
+
 function drawPaused() {
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.fillRect(0, CH / 2 - 40, CW, 80);
@@ -827,7 +964,9 @@ function loop(now) {
         clearProgress();
       } else {
         level++;
+        saveProgress();
         startLevel();
+        updateSidePanel();
       }
     }
   }
@@ -1131,6 +1270,7 @@ function checkGhostCollision() {
       g.mode = 'eyes';
       score += 200;
       playGhostEaten();
+      updateSidePanel();
     } else if (g.mode !== 'eyes' && !dying) {
       dying = true;
       lives--;
@@ -1217,10 +1357,12 @@ function drawGhost(g) {
 
 // ── Word state ─────────────────────────────────────────────
 // WORD_LIST provided by games/shared/words.js
-let shuffledWords = [];
-let wordIndex     = 0;
-let currentWord   = '';      // e.g. 'GHOST'
-let collected     = [];      // bool[i] — true when letter i eaten
+let shuffledWords  = [];
+let wordIndex      = 0;
+let levelWords     = ['', '', ''];  // all 3 words pre-picked for this level
+let completedWords = [false, false, false]; // which have been collected
+let currentWord    = '';      // e.g. 'GHOST'
+let collected      = [];      // bool[i] — true when letter i eaten
 let letterMap     = [];      // letterMap[r][c] = 'A'..'Z' or null
 let letterIdxMap  = [];      // letterIdxMap[r][c] = index into currentWord
 let wordFlash     = null;    // { text, timer }
@@ -1231,12 +1373,8 @@ function initWord() {
     for (let c = 0; c < COLS; c++)
       if (dots[r][c] === L) { dots[r][c] = null; dotsLeft--; }
 
-  // Reshuffle when exhausted
-  if (wordIndex >= shuffledWords.length) {
-    shuffledWords = [...WORD_LIST].sort(() => Math.random() - 0.5);
-    wordIndex = 0;
-  }
-  currentWord = shuffledWords[wordIndex++];
+  // Use the pre-picked word for this slot
+  currentWord = levelWords[wordsThisLevel] || '';
   collected   = new Array(currentWord.length).fill(false);
 
   letterMap    = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -1254,6 +1392,60 @@ function initWord() {
     dots[r][c]        = L;
     letterMap[r][c]   = currentWord[i];  // uppercase
     letterIdxMap[r][c] = i;
+  }
+  updateSidePanel();
+}
+
+// ── Side panel update ──────────────────────────────────────
+function updateSidePanel() {
+  const elLevel = document.getElementById('panel-level');
+  const elSlots = document.getElementById('panel-word-slots');
+  const elScore = document.getElementById('panel-score');
+  const elHi    = document.getElementById('panel-hiscore');
+  if (!elLevel) return;
+  elLevel.textContent = 'Level ' + level;
+  elScore.textContent = score.toLocaleString();
+  elHi.textContent    = 'HI ' + highScore.toLocaleString();
+
+  if (!elSlots) return;
+  elSlots.innerHTML = '';
+  for (let wi = 0; wi < 3; wi++) {
+    const word = levelWords[wi] || '';
+    const isDone   = completedWords[wi];
+    const isActive = !isDone && wi === wordsThisLevel;
+    const isFuture = !isDone && wi > wordsThisLevel;
+
+    const slot = document.createElement('div');
+    slot.className = 'panel-word-slot';
+
+    const label = document.createElement('div');
+    label.className = 'panel-word-label' + (isDone ? ' done' : isActive ? ' active' : '');
+    label.textContent = isDone ? 'WORD ' + (wi + 1) + ' ✓' : 'WORD ' + (wi + 1);
+    slot.appendChild(label);
+
+    const row = document.createElement('div');
+    row.className = 'panel-letter-row';
+
+    if (word) {
+      for (let li = 0; li < word.length; li++) {
+        const box = document.createElement('div');
+        if (isDone) {
+          box.className = 'panel-letter-box done-word';
+          box.textContent = word[li];
+        } else if (isFuture) {
+          box.className = 'panel-letter-box future';
+          box.textContent = word[li];
+        } else {
+          // active word
+          box.className = 'panel-letter-box' + (collected[li] ? ' collected' : '');
+          box.textContent = collected[li] ? word[li] : '_';
+        }
+        row.appendChild(box);
+      }
+    }
+
+    slot.appendChild(row);
+    elSlots.appendChild(slot);
   }
 }
 
@@ -1524,38 +1716,67 @@ document.getElementById('pac-exit-btn').addEventListener('click', () => {
   window.location.href = '../../';
 });
 
+SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+
+// Pre-load savedLevel from user-specific localStorage using cached uid —
+// eliminates the title screen pop-in delay before onAuthChanged resolves.
+(function() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SillyFirebase._AVATAR_CACHE_KEY));
+    if (cached && cached.uid) {
+      const userSave = JSON.parse(localStorage.getItem(`pacman_save_${cached.uid}`));
+      if (userSave && userSave.currentLevel > 1) {
+        savedLevel = userSave.currentLevel;
+        highScore  = userSave.highScore || highScore;
+        localStorage.setItem('pacman_hs', highScore);
+      }
+    }
+  } catch(e) {}
+})();
+
 SillyFirebase.onAuthChanged(async user => {
   if (user) {
+    const userSaveKey = `pacman_save_${user.uid}`;
+    // Load from cloud and user-specific localStorage (persists through sign-out)
     const cloud = await SillyFirebase.loadProgress('pacMan');
-    let local = null;
-    try { local = JSON.parse(localStorage.getItem(PAC_SAVE_KEY)); } catch(e) {}
+    let userLocal = null;
+    try { userLocal = JSON.parse(localStorage.getItem(userSaveKey)); } catch(e) {}
 
     let best = null;
-    if (cloud && local) {
-      best = (cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local;
+    if (cloud && userLocal) {
+      best = (cloud.savedAt || 0) >= (userLocal.savedAt || 0) ? cloud : userLocal;
     } else {
-      best = cloud || local;
+      best = cloud || userLocal;
     }
     if (best) {
-      highScore = best.highScore || 0;
+      highScore  = best.highScore || 0;
       savedLevel = best.currentLevel || 1;
       localStorage.setItem('pacman_hs', highScore);
       localStorage.setItem(PAC_SAVE_KEY, JSON.stringify(best));
-      if ((cloud && local) && (local.savedAt || 0) > (cloud.savedAt || 0)) {
-        await SillyFirebase.saveProgress('pacMan', local);
+      localStorage.setItem(userSaveKey, JSON.stringify(best));
+      // Sync local→cloud if local is newer
+      if (userLocal && (!cloud || (userLocal.savedAt || 0) > (cloud.savedAt || 0))) {
+        await SillyFirebase.saveProgress('pacMan', userLocal);
       }
     }
   } else {
-    // Guest — read from localStorage (may have guest save)
+    // Guest — only use localStorage save if it has no uid (genuine guest save)
     try {
       const local = JSON.parse(localStorage.getItem(PAC_SAVE_KEY));
-      if (local) { savedLevel = local.currentLevel || 1; highScore = local.highScore || 0; }
-      else { savedLevel = 1; }
+      if (local && !local.uid) {
+        savedLevel = local.currentLevel || 1;
+        highScore  = local.highScore || 0;
+      } else {
+        // Signed-in user's save — discard so guest starts fresh
+        localStorage.removeItem(PAC_SAVE_KEY);
+        savedLevel = 1;
+        highScore  = parseInt(localStorage.getItem('pacman_hs') || '0', 10);
+      }
     } catch(e) { savedLevel = 1; }
   }
   // Re-draw title screen if game hasn't started yet
   if (!gameRunning) { drawMaze(); drawPac(); drawTray(); drawSoundIcon(); drawStartPrompt(); }
-  SillyFirebase.renderAvatar('game-avatar', user);
+  SillyFirebase.renderAvatarDisplay('game-avatar', user);
 });
 </script>
 </body>
