@@ -154,6 +154,7 @@
     <div class="modal-btns" id="modalBtns">
       <button class="modal-continue" id="modalContinueBtn" style="display:none">▶ Continue</button>
       <button class="modal-start" id="modalStartBtn">▶ Start Game</button>
+      <button class="modal-exit" id="modalExitBtn" onclick="window.location.href='../../'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;border-radius:10px;padding:0.75rem 1.5rem;font-size:1rem;font-weight:700;cursor:pointer;margin-top:0.4rem;">✕ Exit to Lobby</button>
     </div>
   </div>
 </div>
@@ -1001,12 +1002,15 @@ function openModal(isResume) {
   const continueBtn = document.getElementById('modalContinueBtn');
   const startBtn    = document.getElementById('modalStartBtn');
 
+  const exitBtn = document.getElementById('modalExitBtn');
   if (isResume) {
-    // Opened via How to Play during gameplay
+    // Opened via How to Play during gameplay — hide Exit
     continueBtn.style.display = 'none';
+    if (exitBtn) exitBtn.style.display = 'none';
     startBtn.textContent = '▶ Resume Game';
     startBtn.onclick = closeModal;
   } else {
+    if (exitBtn) exitBtn.style.display = '';
     // Title screen
     if (savedLevel > 0) {
       continueBtn.style.display = '';
