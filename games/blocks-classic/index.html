@@ -98,7 +98,7 @@
       display: flex;
       flex-direction: column;
       gap: 1rem;
-      width: 140px;
+      width: 180px;
     }
     .stat-box {
       background: var(--surface);
@@ -107,11 +107,11 @@
       padding: 0.9rem;
     }
     .stat-label {
-      font-size: 0.7rem;
+      font-size: 14px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: var(--muted);
+      color: var(--accent2);
       margin-bottom: 0.3rem;
     }
     .stat-value {
@@ -139,16 +139,26 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0.9rem;
-      font-size: 0.72rem;
-      color: var(--muted);
+      font-size: 12px;
+      color: var(--text);
       line-height: 1.8;
     }
     .controls-box .stat-label { margin-bottom: 0.4rem; }
+    .tips-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem;
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.8;
+    }
+    .tips-box .stat-label { margin-bottom: 0.4rem; }
     .controls-box kbd {
       background: var(--border);
       border-radius: 4px;
       padding: 0.1rem 0.35rem;
-      font-size: 0.68rem;
+      font-size: 12px;
       color: var(--text);
     }
 
@@ -258,6 +268,40 @@
     }
     .pause-badge.visible { display: block; }
     #game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
+
+    /* ── WORD HUNT PANEL ── */
+    .wh-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem 0.7rem;
+    }
+    .wh-word-slot { margin-bottom: 0.6rem; }
+    .wh-word-slot:last-child { margin-bottom: 0; }
+    .wh-letter-row { display: flex; gap: 3px; flex-wrap: nowrap; }
+    .wh-letter-box {
+      width: 23px; height: 23px; border-radius: 4px;
+      border: 1px solid var(--border);
+      font-size: 14px; font-weight: 700; font-family: monospace;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      color: var(--muted); background: var(--bg);
+    }
+    .wh-panel .stat-label,
+    .wh-lightning-box .stat-label { color: var(--accent2); }
+    .wh-letter-box.collected { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+    .wh-letter-box.done-word { background: #fbbf24; border-color: #f59e0b; color: #000; }
+    .wh-letter-box.future    { background: var(--bg); border-color: var(--border); color: transparent; }
+    .wh-lightning-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.7rem;
+      text-align: center;
+    }
+    .wh-lightning-count { font-size: 12px; font-weight: 800; color: #ffe600; }
+    .wh-lightning-count.dim { color: var(--muted); }
+    .wh-lightning-hint { font-size: 0.62rem; color: var(--muted); margin-top: 0.15rem; }
   </style>
 </head>
 <body>
@@ -298,19 +342,35 @@
       <div class="stat-label">Next</div>
       <canvas id="nextCanvas" width="100" height="100"></canvas>
     </div>
+    <div class="tips-box">
+      <div class="stat-label">Tips</div>
+      <div>⚡ Earn: every 3 words</div>
+      <div>Press L to activate</div>
+      <div>↑/↓ to select row</div>
+      <div>Space to delete row</div>
+    </div>
   </div>
 
   <canvas id="gameCanvas" width="300" height="600"></canvas>
 
   <div class="sidebar">
+    <div class="wh-panel">
+      <div class="stat-label">Word Hunt</div>
+      <div id="wh-word-slots"></div>
+    </div>
+    <div class="wh-lightning-box">
+      <div class="stat-label">Lightning</div>
+      <div class="wh-lightning-count dim" id="wh-lightning-count">⚡ ×0</div>
+    </div>
     <div class="controls-box">
       <div class="stat-label">Controls</div>
-      <ul style="list-style:none;display:flex;flex-direction:column;gap:0.35rem;font-size:0.72rem;color:var(--muted)">
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:0.35rem;font-size:12px;color:var(--text)">
         <li><kbd>←→</kbd> Move</li>
         <li><kbd>↑ / Z</kbd> Rotate</li>
         <li><kbd>↓</kbd> Soft drop</li>
         <li><kbd>Space</kbd> Hard drop</li>
         <li><kbd>P</kbd> Pause</li>
+        <li><kbd>L</kbd> Lightning</li>
       </ul>
     </div>
   </div>
@@ -359,6 +419,7 @@
   </div>
 </div>
 
+<script src="../shared/words.js"></script>
 <script>
 // ─────────────────────────────────────────────
 //  CONSTANTS
@@ -455,6 +516,18 @@ function playGameOver() {
     Sound.tone(f, 'triangle', t + i * 0.2, 0.55, 0.2));
   Sound.sweep(180, 70, 'sawtooth', t + 0.68, 0.65, 0.15);
 }
+function playWordComplete() {
+  const t = Sound.ac().currentTime;
+  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
+    Sound.tone(f, 'sine', t + i * 0.075, 0.38, 0.2));
+  Sound.tone(1318.5, 'sine', t + 0.3, 0.45, 0.16);
+}
+function playLightning() {
+  const t = Sound.ac().currentTime;
+  Sound.sweep(900, 180, 'sawtooth', t, 0.14, 0.28);
+  Sound.noise(t, 0.1, 0.22, 2200, 0.5);
+  Sound.sweep(120, 55, 'sine', t + 0.08, 0.18, 0.22);
+}
 
 // ─────────────────────────────────────────────
 //  STATE
@@ -464,6 +537,23 @@ let score, level, lines, gameRunning, paused, dropTimer, dropInterval;
 let gamePlayedAs = null; // uid of user who started the current game, null for guest
 let screenFlash = { timer: 0, r: 255, g: 255, b: 255 };
 let comboDisplay  = { text: '', timer: 0 };
+
+// ─── WORD HUNT STATE ─────────────────────────────
+let wh_boardLetters = null; // ROWS×COLS — each cell: null | {letter,wi,li}
+let wh_shuffled = [], wh_shuffleIdx = 0;
+let wh_levelWords = ['', '', ''];
+let wh_wordIdx = 0;
+let wh_collected = [];
+let wh_done = [false, false, false];
+let wh_totalDone = 0;
+let wh_lightning = 0;
+let wh_mode = null;        // null | 'lightning'
+let wh_lrow = 19;          // selected row during lightning mode
+let wh_flash = null;       // { text, timer }
+let wh_letterActive = false; // true = a letter cell is on the board or in current piece
+let wh_pieceLetterCell = null; // {r,c,letter,wi,li} within current piece, or null
+let wh_pieceCounter = 0;      // pieces spawned since last letter
+let wh_nextLetterAt = 3;      // spawn letter when counter reaches this (3–5)
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -499,21 +589,46 @@ function collides(shape, ox, oy) {
 function merge() {
   currentPiece.shape.forEach((row, r) =>
     row.forEach((v, c) => {
-      if (v) board[currentY + r][currentX + c] = currentPiece.key;
+      if (v) {
+        board[currentY + r][currentX + c] = currentPiece.key;
+        if (wh_boardLetters && wh_pieceLetterCell &&
+            r === wh_pieceLetterCell.r && c === wh_pieceLetterCell.c) {
+          const br = currentY + r, bc = currentX + c;
+          if (br >= 0 && br < ROWS) {
+            wh_boardLetters[br][bc] = {
+              letter: wh_pieceLetterCell.letter,
+              wi: wh_pieceLetterCell.wi,
+              li: wh_pieceLetterCell.li
+            };
+          } else {
+            wh_letterActive = false;
+          }
+        }
+      }
     })
   );
+  wh_pieceLetterCell = null;
 }
 
 function clearLines() {
   let cleared = 0;
+  const lettersToCollect = [];
   for (let r = ROWS - 1; r >= 0; r--) {
     if (board[r].every(c => c)) {
+      if (wh_boardLetters) {
+        for (let c = 0; c < COLS; c++) {
+          if (wh_boardLetters[r][c]) lettersToCollect.push(wh_boardLetters[r][c]);
+        }
+        wh_boardLetters.splice(r, 1);
+        wh_boardLetters.unshift(new Array(COLS).fill(null));
+      }
       board.splice(r, 1);
       board.unshift(new Array(COLS).fill(0));
       cleared++;
       r++;
     }
   }
+  for (const lt of lettersToCollect) whCollectLetter(lt.wi, lt.li);
   if (cleared) {
     const prevLevel = level;
     score += SCORE_TABLE[cleared] * level;
@@ -521,7 +636,6 @@ function clearLines() {
     level = Math.min(10, Math.floor(lines / 10) + 1);
     if (level > prevLevel) saveProgress();
     playLineClear(cleared);
-    // Screen flash colour & combo label
     const flashPalette = [[80,220,255],[180,100,255],[255,160,40],[255,215,0]];
     const fp = flashPalette[cleared - 1];
     screenFlash = { timer: cleared === 4 ? 22 : 14, r: fp[0], g: fp[1], b: fp[2] };
@@ -543,6 +657,7 @@ function spawnPiece() {
   nextPiece = randomPiece();
   currentX = Math.floor(COLS / 2) - Math.floor(currentPiece.shape[0].length / 2);
   currentY = 0;
+  whAssignLetterToPiece(currentPiece);
   if (collides(currentPiece.shape, currentX, currentY)) {
     endGame();
   }
@@ -558,6 +673,177 @@ function resetDropTimer() {
   clearInterval(dropInterval);
   const speed = SPEED_TABLE[Math.min(level - 1, SPEED_TABLE.length - 1)];
   dropInterval = setInterval(tick, speed);
+}
+
+// ─────────────────────────────────────────────
+//  WORD HUNT
+// ─────────────────────────────────────────────
+function whInit() {
+  if (typeof WORD_LIST === 'undefined' || !WORD_LIST.length) return;
+  wh_shuffled = [...WORD_LIST].sort(() => Math.random() - 0.5);
+  wh_shuffleIdx = 0;
+  wh_boardLetters = Array.from({length: ROWS}, () => new Array(COLS).fill(null));
+  wh_letterActive = false;
+  wh_pieceLetterCell = null;
+  wh_mode = null;
+  wh_lrow = ROWS - 1;
+  wh_flash = null;
+  wh_lightning = 0;
+  wh_totalDone = 0;
+  wh_pieceCounter = 0;
+  wh_nextLetterAt = 3 + Math.floor(Math.random() * 3);
+  whPickWords();
+}
+
+function whPickWords() {
+  wh_levelWords = [];
+  for (let i = 0; i < 3; i++) {
+    if (wh_shuffleIdx >= wh_shuffled.length) {
+      wh_shuffled = [...WORD_LIST].sort(() => Math.random() - 0.5);
+      wh_shuffleIdx = 0;
+    }
+    wh_levelWords.push(wh_shuffled[wh_shuffleIdx++]);
+  }
+  wh_wordIdx = 0;
+  wh_done = [false, false, false];
+  wh_collected = new Array(wh_levelWords[0].length).fill(false);
+  wh_letterActive = false;
+  wh_pieceLetterCell = null;
+  whRenderPanel();
+}
+
+function whAssignLetterToPiece(piece) {
+  wh_pieceLetterCell = null;
+  if (typeof WORD_LIST === 'undefined' || wh_wordIdx >= 3) return;
+  wh_pieceCounter++;
+  if (wh_pieceCounter < wh_nextLetterAt) return;
+  wh_pieceCounter = 0;
+  wh_nextLetterAt = 3 + Math.floor(Math.random() * 3); // next letter in 3, 4, or 5 pieces
+  const word = wh_levelWords[wh_wordIdx];
+  if (!word) return;
+  const nextLi = wh_collected.findIndex(c => !c);
+  if (nextLi < 0) return;
+  // Pick a random filled cell from the piece
+  const cells = [];
+  piece.shape.forEach((row, r) => row.forEach((v, c) => { if (v) cells.push({r, c}); }));
+  if (!cells.length) return;
+  const cell = cells[Math.floor(Math.random() * cells.length)];
+  wh_pieceLetterCell = { r: cell.r, c: cell.c, letter: word[nextLi], wi: wh_wordIdx, li: nextLi };
+  wh_letterActive = true;
+}
+
+function whOnMerge() {
+  if (!wh_pieceLetterCell || !wh_boardLetters) return;
+  const {r: lr, c: lc, letter, wi, li} = wh_pieceLetterCell;
+  const br = currentY + lr, bc = currentX + lc;
+  if (br >= 0 && br < ROWS && bc >= 0 && bc < COLS) {
+    wh_boardLetters[br][bc] = { letter, wi, li };
+  } else {
+    wh_letterActive = false; // piece went off-screen top — reset
+  }
+  wh_pieceLetterCell = null;
+}
+
+function whCollectLetter(wi, li) {
+  if (wi !== wh_wordIdx) { wh_letterActive = false; return; }
+  const nextLi = wh_collected.findIndex(c => !c);
+  if (li !== nextLi) { wh_letterActive = false; return; }
+  wh_collected[li] = true;
+  wh_letterActive = false;
+  if (wh_collected.every(Boolean)) {
+    whWordComplete();
+  } else {
+    whRenderPanel();
+  }
+}
+
+function whWordComplete() {
+  const word = wh_levelWords[wh_wordIdx];
+  const bonus = 100 * word.length;
+  score += bonus;
+  wh_done[wh_wordIdx] = true;
+  wh_totalDone++;
+  const earnedLightning = wh_totalDone % 3 === 0;
+  if (earnedLightning) {
+    wh_lightning++;
+    wh_flash = { text: `${word}!  +${bonus}  ⚡ +1`, timer: 110 };
+  } else {
+    wh_flash = { text: `${word}!  +${bonus}`, timer: 90 };
+  }
+  playWordComplete();
+  updateUI();
+  if (wh_wordIdx < 2) {
+    wh_wordIdx++;
+    wh_collected = new Array(wh_levelWords[wh_wordIdx].length).fill(false);
+    wh_letterActive = false;
+    wh_pieceLetterCell = null;
+    whRenderPanel();
+  } else {
+    whPickWords(); // all 3 done → new set
+  }
+}
+
+function whActivateLightning() {
+  if (wh_lightning <= 0 || !gameRunning || paused) return;
+  wh_mode = 'lightning';
+  wh_lrow = ROWS - 1;
+  draw();
+}
+
+function whUseLightning() {
+  if (wh_mode !== 'lightning') return;
+  if (board[wh_lrow].every(c => !c)) { wh_mode = null; draw(); return; } // empty row — cancel
+  // Remove the row
+  board.splice(wh_lrow, 1);
+  board.unshift(new Array(COLS).fill(0));
+  if (wh_boardLetters) {
+    wh_boardLetters.splice(wh_lrow, 1);
+    wh_boardLetters.unshift(new Array(COLS).fill(null));
+  }
+  wh_lightning--;
+  wh_letterActive = false; // letter might have been on that row
+  wh_mode = null;
+  screenFlash = { timer: 12, r: 255, g: 230, b: 0 };
+  playLightning();
+  updateUI();
+  whRenderPanel();
+  draw();
+}
+
+function whRenderPanel() {
+  const slotsEl = document.getElementById('wh-word-slots');
+  if (!slotsEl) return;
+  slotsEl.innerHTML = '';
+  for (let wi = 0; wi < 3; wi++) {
+    const word = wh_levelWords[wi] || '';
+    const isDone   = wh_done[wi];
+    const isActive = !isDone && wi === wh_wordIdx;
+    const slot = document.createElement('div');
+    slot.className = 'wh-word-slot';
+    const row = document.createElement('div');
+    row.className = 'wh-letter-row';
+    for (let li = 0; li < word.length; li++) {
+      const box = document.createElement('div');
+      if (isDone) {
+        box.className = 'wh-letter-box done-word';
+        box.textContent = word[li];
+      } else if (isActive) {
+        box.className = 'wh-letter-box' + (wh_collected[li] ? ' collected' : '');
+        box.textContent = wh_collected[li] ? word[li] : '_';
+      } else {
+        box.className = 'wh-letter-box future';
+        box.textContent = '_';
+      }
+      row.appendChild(box);
+    }
+    slot.appendChild(row);
+    slotsEl.appendChild(slot);
+  }
+  const ltEl = document.getElementById('wh-lightning-count');
+  if (ltEl) {
+    ltEl.textContent = `⚡ ×${wh_lightning}`;
+    ltEl.className = 'wh-lightning-count' + (wh_lightning === 0 ? ' dim' : '');
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -642,6 +928,7 @@ function updateStartOverlay() {
 
 function initGame(fromSave = false) {
   board = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+  whInit();
   gamePlayedAs = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
                   ? SillyFirebase.currentUser.uid : null;
   if (fromSave && savedState) {
@@ -663,6 +950,9 @@ function initGame(fromSave = false) {
 
 function endGame() {
   gameRunning = false;
+  wh_letterActive = false;
+  wh_pieceLetterCell = null;
+  wh_mode = null;
   clearInterval(dropInterval);
   clearSaveProgress();
   // If a signed-in user's save exists and they didn't play this game, restore it
@@ -728,6 +1018,26 @@ function draw() {
     })
   );
 
+  // Letters on board cells
+  if (wh_boardLetters) {
+    ctx.font = 'bold 17px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    board.forEach((row, r) =>
+      row.forEach((v, c) => {
+        const lt = wh_boardLetters[r][c];
+        if (lt && v) {
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.beginPath();
+          ctx.roundRect(c * CELL + 3, r * CELL + 3, CELL - 6, CELL - 6, 3);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.fillText(lt.letter, c * CELL + CELL / 2, r * CELL + CELL / 2 + 1);
+        }
+      })
+    );
+  }
+
   // Ghost piece
   if (gameRunning && !paused) {
     const gy = ghostY();
@@ -758,6 +1068,23 @@ function draw() {
     );
   }
 
+  // Letter on current falling piece
+  if (gameRunning && wh_pieceLetterCell) {
+    const {r: lr, c: lc, letter} = wh_pieceLetterCell;
+    const br = currentY + lr, bc = currentX + lc;
+    if (br >= 0 && br < ROWS && bc >= 0 && bc < COLS) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.roundRect(bc * CELL + 3, br * CELL + 3, CELL - 6, CELL - 6, 3);
+      ctx.fill();
+      ctx.font = 'bold 17px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(letter, bc * CELL + CELL / 2, br * CELL + CELL / 2 + 1);
+    }
+  }
+
   // Screen flash
   if (screenFlash.timer > 0) {
     ctx.fillStyle = `rgba(${screenFlash.r},${screenFlash.g},${screenFlash.b},${(screenFlash.timer / 22) * 0.38})`;
@@ -784,6 +1111,42 @@ function draw() {
     comboDisplay.timer--;
   }
 
+  // Word hunt flash
+  if (wh_flash && wh_flash.timer > 0) {
+    const alpha = Math.min(1, wh_flash.timer / 28);
+    const bounce = 1 + Math.sin(wh_flash.timer * 0.22) * 0.05;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(canvas.width / 2, canvas.height / 2 - 60);
+    ctx.scale(bounce, bounce);
+    ctx.font = 'bold 20px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#06b6d4';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillText(wh_flash.text, 0, 0);
+    ctx.restore();
+    wh_flash.timer--;
+  }
+
+  // Lightning row highlight
+  if (wh_mode === 'lightning') {
+    ctx.fillStyle = 'rgba(255,230,0,0.22)';
+    ctx.fillRect(0, wh_lrow * CELL, COLS * CELL, CELL);
+    ctx.strokeStyle = '#ffe600';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, wh_lrow * CELL + 1, COLS * CELL - 2, CELL - 2);
+    // Hint bar at bottom
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(0, canvas.height - 22, canvas.width, 22);
+    ctx.fillStyle = '#ffe600';
+    ctx.font = 'bold 10px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('↑↓ Select   Space/Enter = Delete Row   L = Cancel', canvas.width / 2, canvas.height - 11);
+  }
+
   // Next piece preview
   nCtx.fillStyle = '#0d0d1a';
   nCtx.fillRect(0, 0, 100, 100);
@@ -804,6 +1167,18 @@ function draw() {
 //  INPUT
 // ─────────────────────────────────────────────
 document.addEventListener('keydown', e => {
+  // Lightning mode intercepts all keys
+  if (wh_mode === 'lightning') {
+    switch (e.code) {
+      case 'ArrowUp':   wh_lrow = Math.max(0, wh_lrow - 1); break;
+      case 'ArrowDown': wh_lrow = Math.min(ROWS - 1, wh_lrow + 1); break;
+      case 'Space': case 'Enter': whUseLightning(); break;
+      case 'KeyL': case 'Escape': wh_mode = null; break;
+    }
+    draw();
+    e.preventDefault();
+    return;
+  }
   if (!gameRunning) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused) return;
@@ -824,7 +1199,13 @@ document.addEventListener('keydown', e => {
       const kicks = [0, -1, 1, -2, 2];
       for (const k of kicks) {
         if (!collides(rotated, currentX + k, currentY)) {
-          currentPiece.shape = rotated; currentX += k; playRotate(); draw(); break;
+          currentPiece.shape = rotated; currentX += k;
+          if (wh_pieceLetterCell) {
+            const N = rotated.length;
+            const {r, c} = wh_pieceLetterCell;
+            wh_pieceLetterCell = {...wh_pieceLetterCell, r: c, c: N - 1 - r};
+          }
+          playRotate(); draw(); break;
         }
       }
       e.preventDefault(); break;
@@ -834,7 +1215,13 @@ document.addEventListener('keydown', e => {
       const kicks = [0, -1, 1, -2, 2];
       for (const k of kicks) {
         if (!collides(rotatedL, currentX + k, currentY)) {
-          currentPiece.shape = rotatedL; currentX += k; playRotate(); draw(); break;
+          currentPiece.shape = rotatedL; currentX += k;
+          if (wh_pieceLetterCell) {
+            const N = rotatedL.length;
+            const {r, c} = wh_pieceLetterCell;
+            wh_pieceLetterCell = {...wh_pieceLetterCell, r: N - 1 - c, c: r};
+          }
+          playRotate(); draw(); break;
         }
       }
       e.preventDefault(); break;
@@ -846,6 +1233,9 @@ document.addEventListener('keydown', e => {
       merge(); playLand(); clearLines(); spawnPiece(); draw();
       e.preventDefault(); break;
     }
+    case 'KeyL':
+      whActivateLightning();
+      e.preventDefault(); break;
   }
 });
 
@@ -909,6 +1299,7 @@ currentX = 3; currentY = 0;
 score = 0; level = 1; lines = 0;
 draw();
 updateStartOverlay();
+whRenderPanel();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
