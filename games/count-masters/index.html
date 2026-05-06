@@ -54,6 +54,7 @@
     .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .btn-ghost:hover { border-color: var(--accent); }
     .btn-primary { background: linear-gradient(135deg, var(--accent), #5b21b6); color: #fff; }
+    .btn-secondary { background: linear-gradient(135deg, #374151, #1f2937); color: #e2e8f0; border: 1px solid var(--border); }
     .btn-danger { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; }
     .btn-success { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; }
 
@@ -105,7 +106,7 @@
     .modal {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 18px; padding: 2rem 2.2rem;
-      max-width: 440px; width: 90%; text-align: center;
+      max-width: 560px; width: 90%; text-align: center;
     }
     .modal h2 { font-size: 1.7rem; font-weight: 800; margin-bottom: 0.4rem; }
     .modal .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.4rem; }
@@ -125,7 +126,7 @@
     .modal .instructions .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: -1px; }
     .modal-score { font-size: 2.8rem; font-weight: 900; color: var(--accent2); margin: 0.4rem 0; }
     .modal-buttons { display: flex; gap: 0.7rem; justify-content: center; margin-top: 1rem; }
-    .modal-buttons .btn { min-width: 120px; }
+    .modal-buttons .btn { white-space: nowrap; }
 
     /* Pause badge */
     .pause-badge {
@@ -253,7 +254,9 @@
       <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> ÷2, −5, −10</div>
     </div>
     <div class="modal-buttons">
-      <button class="btn btn-primary" id="startBtn" style="min-width:160px;font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
+      <button class="btn btn-secondary" id="continueBtn" style="display:none;font-size:1rem;padding:0.7rem 1.5rem">▶ Continue</button>
+      <button class="btn btn-primary" id="startBtn" style="font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" style="font-size:1rem;padding:0.7rem 1.5rem">✕ EXIT</button>
     </div>
   </div>
 </div>
@@ -476,6 +479,50 @@ let dashOffset = 0;
 // State saved when How to Play is opened mid-game
 let savedGameState = null;
 
+// ─── SAVE / LOAD ─────────────────────────────────────────────
+const CM_SAVE_KEY  = 'countMasters_save';
+const CM_GUEST_KEY = 'countMasters_guest_save';
+let savedLevel   = 0;    // 0 = no save; N > 1 = continue from level N
+let gamePlayedAs = null; // null = guest; uid = signed-in user who started current game
+
+function saveProgress() {
+  const data = { level: level, savedAt: Date.now() };
+  if (gamePlayedAs) {
+    data.uid = gamePlayedAs;
+    localStorage.setItem(CM_SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(`countMasters_save_${gamePlayedAs}`, JSON.stringify(data));
+    if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('countMasters', data);
+  } else {
+    sessionStorage.setItem(CM_GUEST_KEY, JSON.stringify(data));
+  }
+}
+
+function clearSaveProgress() {
+  const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+    ? SillyFirebase.currentUser.uid : null;
+  if (uid) {
+    localStorage.removeItem(CM_SAVE_KEY);
+    localStorage.removeItem(`countMasters_save_${uid}`);
+    if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('countMasters', null);
+  } else {
+    sessionStorage.removeItem(CM_GUEST_KEY);
+  }
+  savedLevel = 0;
+}
+
+function updateStartPanel() {
+  const continueBtn = document.getElementById('continueBtn');
+  const startBtn    = document.getElementById('startBtn');
+  if (savedLevel > 1) {
+    continueBtn.style.display = '';
+    continueBtn.textContent   = `▶ Continue (Level ${savedLevel})`;
+    startBtn.textContent      = '↺ New Game';
+  } else {
+    continueBtn.style.display = 'none';
+    startBtn.textContent      = '▶ Start Game';
+  }
+}
+
 // ═══════════════════════════════════════════════
 //  CANVAS
 // ═══════════════════════════════════════════════
@@ -544,6 +591,9 @@ function buildLevel(lvl) {
 //  INIT
 // ═══════════════════════════════════════════════
 function initGame(keepCount = false) {
+  gamePlayedAs = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+    ? SillyFirebase.currentUser.uid : null;
+  if (level > 1) saveProgress(); // save current level so Continue resumes exactly here
   const cfg = LEVEL_CFG[Math.min(level - 1, LEVEL_CFG.length - 1)];
   if (!keepCount) count = cfg.startCount || count;
   crowdX = 0;
@@ -1330,6 +1380,7 @@ document.getElementById('startBtn').addEventListener('click', () => {
     setPauseBtnText(false);
     requestAnimationFrame(loop); // restart the stopped loop
   } else {
+    clearSaveProgress();
     level = 1;
     score = 0;
     count = 10;
@@ -1337,8 +1388,17 @@ document.getElementById('startBtn').addEventListener('click', () => {
   }
 });
 
+document.getElementById('continueBtn').addEventListener('click', () => {
+  document.getElementById('startOverlay').classList.remove('active');
+  level = savedLevel;
+  score = 0;
+  count = 10;
+  initGame();
+});
+
 document.getElementById('restartBtn').addEventListener('click', () => {
   document.getElementById('resultOverlay').classList.remove('active');
+  clearSaveProgress();
   level = 1; score = 0; count = 10;
   initGame();
 });
@@ -1351,7 +1411,12 @@ document.getElementById('howToPlayBtn').addEventListener('click', () => {
     gameState = 'paused';
     setPauseBtnText(true);
   }
-  document.getElementById('startBtn').textContent = isResumable ? '▶ Resume Game' : '▶ Start Game';
+  if (isResumable) {
+    document.getElementById('continueBtn').style.display = 'none';
+    document.getElementById('startBtn').textContent = '▶ Resume Game';
+  } else {
+    updateStartPanel();
+  }
   document.getElementById('startOverlay').classList.add('active');
 });
 
@@ -1363,6 +1428,7 @@ document.getElementById('resultContinueBtn').addEventListener('click', () => {
 
 document.getElementById('resultRestartBtn').addEventListener('click', () => {
   document.getElementById('resultOverlay').classList.remove('active');
+  clearSaveProgress();
   level = 1; score = 0; count = 10;
   initGame();
 });
@@ -1386,7 +1452,57 @@ document.getElementById('resultExitBtn').addEventListener('click', () => { windo
 <script src="../shared/firebase.js"></script>
 <script>
 SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
-SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatarDisplay('game-avatar', user));
+
+// Pre-load savedLevel from cached uid — shows Continue immediately, no pop-in
+(function() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('_sfAvatarCache'));
+    if (cached && cached.uid) {
+      const userSave = JSON.parse(localStorage.getItem(`countMasters_save_${cached.uid}`));
+      if (userSave && userSave.level > 1) {
+        savedLevel = userSave.level;
+        updateStartPanel();
+      }
+    }
+  } catch(e) {}
+})();
+
+SillyFirebase.onAuthChanged(async user => {
+  SillyFirebase.renderAvatarDisplay('game-avatar', user);
+  if (user) {
+    const userSaveKey = `countMasters_save_${user.uid}`;
+    const cloud = await SillyFirebase.loadProgress('countMasters');
+    let userLocal = null;
+    try { userLocal = JSON.parse(localStorage.getItem(userSaveKey)); } catch(e) {}
+
+    let best = null;
+    if (cloud && userLocal) {
+      best = (cloud.savedAt || 0) >= (userLocal.savedAt || 0) ? cloud : userLocal;
+    } else {
+      best = cloud || userLocal;
+    }
+    if (best) {
+      savedLevel = best.level || 0;
+      const stamped = { ...best, uid: user.uid };
+      localStorage.setItem(CM_SAVE_KEY, JSON.stringify(stamped));
+      localStorage.setItem(userSaveKey, JSON.stringify(stamped));
+      if (userLocal && (!cloud || (userLocal.savedAt || 0) > (cloud.savedAt || 0))) {
+        await SillyFirebase.saveProgress('countMasters', userLocal);
+      }
+    } else {
+      savedLevel = 0;
+    }
+    if (gameState === 'idle') updateStartPanel();
+  } else {
+    localStorage.removeItem(CM_SAVE_KEY);
+    savedLevel = 0;
+    try {
+      const sess = JSON.parse(sessionStorage.getItem(CM_GUEST_KEY));
+      if (sess && !sess.uid) savedLevel = sess.level || 0;
+    } catch(e) {}
+    if (gameState === 'idle') updateStartPanel();
+  }
+});
 </script>
 </body>
 </html>

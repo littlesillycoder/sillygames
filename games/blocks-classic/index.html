@@ -178,7 +178,7 @@
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 2rem 2.2rem;
-      max-width: 420px;
+      max-width: 560px;
       width: 90%;
       text-align: center;
     }
@@ -239,7 +239,7 @@
       justify-content: center;
       margin-top: 0.4rem;
     }
-    .modal-buttons .btn { min-width: 120px; }
+    .modal-buttons .btn { white-space: nowrap; }
 
     /* Pause indicator */
     .pause-badge {
@@ -335,9 +335,10 @@
       Fill complete horizontal lines to clear them and score points.<br>
       Speed increases every 10 lines. Don't let blocks reach the top!
     </p>
-    <div class="modal-buttons" style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;">
-      <button class="btn btn-secondary" id="continueBtn" style="display:none;min-width:150px;font-size:1rem;padding:0.7rem 1.5rem">▶ Continue</button>
-      <button class="btn btn-primary" id="startBtn" style="min-width:150px;font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
+    <div class="modal-buttons" style="display:flex;gap:0.6rem;justify-content:center;">
+      <button class="btn btn-secondary" id="continueBtn" style="display:none;font-size:1rem;padding:0.7rem 1.5rem">▶ Continue</button>
+      <button class="btn btn-primary" id="startBtn" style="font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" style="font-size:1rem;padding:0.7rem 1.5rem">✕ EXIT</button>
     </div>
   </div>
 </div>

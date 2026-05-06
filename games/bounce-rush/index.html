@@ -84,14 +84,15 @@
   .modal {
     background: #1c1c38; border: 1px solid #3a3a6a;
     border-radius: 16px; padding: 1.8rem 2rem;
-    max-width: 350px; width: 92%;
+    max-width: 480px; width: 92%;
     box-shadow: 0 20px 60px rgba(0,0,0,0.6);
   }
   .modal h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.9rem; text-align: center; }
   .modal p  { font-size: 0.87rem; color: #94a3b8; line-height: 1.6; margin-bottom: 0.5rem; }
   .modal ul { padding-left: 1.2rem; margin-bottom: 0.8rem; }
   .modal li { font-size: 0.87rem; color: #94a3b8; line-height: 1.7; }
-  .modal-btns { display: flex; gap: 0.6rem; margin-top: 1.2rem; }
+  .modal-btns { display: flex; gap: 0.6rem; margin-top: 1.2rem; justify-content: center; }
+  .modal-btns button { white-space: nowrap; }
   .modal-start {
     flex: 1; background: linear-gradient(135deg, #7c3aed, #5b21b6);
     border: none; color: #fff; border-radius: 9px;
@@ -154,6 +155,7 @@
     <div class="modal-btns" id="modalBtns">
       <button class="modal-continue" id="modalContinueBtn" style="display:none">▶ Continue</button>
       <button class="modal-start" id="modalStartBtn">▶ Start Game</button>
+      <button class="modal-exit" id="modalExitBtn" onclick="window.location.href='../../'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;border-radius:10px;padding:0.75rem 1.5rem;font-size:1rem;font-weight:700;cursor:pointer;margin-top:0.4rem;">✕ EXIT</button>
     </div>
   </div>
 </div>
@@ -1001,12 +1003,15 @@ function openModal(isResume) {
   const continueBtn = document.getElementById('modalContinueBtn');
   const startBtn    = document.getElementById('modalStartBtn');
 
+  const exitBtn = document.getElementById('modalExitBtn');
   if (isResume) {
-    // Opened via How to Play during gameplay
+    // Opened via How to Play during gameplay — hide Exit
     continueBtn.style.display = 'none';
+    if (exitBtn) exitBtn.style.display = 'none';
     startBtn.textContent = '▶ Resume Game';
     startBtn.onclick = closeModal;
   } else {
+    if (exitBtn) exitBtn.style.display = '';
     // Title screen
     if (savedLevel > 0) {
       continueBtn.style.display = '';
@@ -1064,7 +1069,7 @@ openModal(false);
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="../shared/firebase.js"></script>
 <script>
-// Pre-load savedLevel from cached uid
+// Pre-load savedLevel from cached uid — re-open modal so Continue shows immediately
 (function() {
   try {
     const cached = JSON.parse(localStorage.getItem(SillyFirebase._AVATAR_CACHE_KEY));
@@ -1072,6 +1077,7 @@ openModal(false);
       const userSave = JSON.parse(localStorage.getItem(`bounceRush_save_${cached.uid}`));
       if (userSave && userSave.currentLevel > 0) {
         savedLevel = userSave.currentLevel;
+        if (gameState === 'idle') openModal(false);
       }
     }
   } catch(e) {}

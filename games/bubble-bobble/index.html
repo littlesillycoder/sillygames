@@ -317,6 +317,7 @@ function consume(k) { if(pressed.has(k)){pressed.delete(k);return true;} return 
 
 // ─── Save / Load ─────────────────────────────────────────────
 const SAVE_KEY = 'bubbleBobbleSave';
+let _cachedUid = null; // pre-loaded from avatar cache before auth resolves
 function saveProgress() {
   const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser) ? SillyFirebase.currentUser.uid : null;
   const data = { level:gs.level, score:gs.score, lives:gs.lives, wordStreak:gs.wordStreak, savedAt:Date.now(), uid };
@@ -876,7 +877,9 @@ function drawTitle(ctx, frame) {
   ctx.fillStyle='#f5c518'; ctx.font='bold 36px monospace'; ctx.fillText('BUBBLE',CW/2,CH/2-50);
   ctx.fillStyle='#4ecdc4'; ctx.font='bold 36px monospace'; ctx.fillText('BOBBLE',CW/2,CH/2-10);
   const sv = loadSave();
-  const _currentUid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser) ? SillyFirebase.currentUser.uid : null;
+  const _currentUid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+    ? SillyFirebase.currentUser.uid
+    : _cachedUid;
   if(sv && sv.uid === _currentUid){
     const opts = [
       { label:'Continue (Level '+String(sv.level).padStart(2,'0')+')', color:'#4ecdc4' },
@@ -1361,8 +1364,20 @@ updateHUD();
 <script>
 // ─── Bubble Bobble Firebase wiring ───────────────────────────
 SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+
+// Pre-load _cachedUid from avatar cache so drawTitle can show Continue immediately
+(function() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('_sfAvatarCache'));
+    if (cached && cached.uid) {
+      _cachedUid = cached.uid;
+    }
+  } catch(e) {}
+})();
+
 SillyFirebase.onAuthChanged(async user => {
   SillyFirebase.renderAvatarDisplay('game-avatar', user);
+  _cachedUid = user ? user.uid : null;
   if (user) {
     await SillyFirebase.syncProgress('bubbleBobble', SAVE_KEY);
   }
