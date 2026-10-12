@@ -196,7 +196,7 @@
         <div class="stone-icon black"></div>
         <div class="player-info">
           <div class="player-name"><span id="blackName">黑 Black</span><span class="thinking"><i></i><i></i><i></i></span></div>
-          <div class="player-sub">黑先 Plays first</div>
+          <div class="player-sub" id="blackSub">黑先・貼 7.5 目</div>
         </div>
         <div class="cap-count"><div class="num" id="blackCaps">0</div><div class="lbl">提子 Captures</div></div>
       </div>
@@ -204,7 +204,7 @@
         <div class="stone-icon white"></div>
         <div class="player-info">
           <div class="player-name"><span id="whiteName">白 White</span><span class="thinking"><i></i><i></i><i></i></span></div>
-          <div class="player-sub" id="komiLabel">貼 7.5 Komi</div>
+          <div class="player-sub" id="whiteSub"></div>
         </div>
         <div class="cap-count"><div class="num" id="whiteCaps">0</div><div class="lbl">提子 Captures</div></div>
       </div>
@@ -218,8 +218,9 @@
     <div class="scoring-panel" id="scoringPanel">
       <h3>🏁 數子 Counting</h3>
       <p>雙方虛手，點擊棋串可標記<b>死子</b>／活子，確認後計算勝負。<br>Both passed. Tap a group to mark it <b>dead</b> or alive, then confirm.</p>
-      <div class="score-row"><span>⚫ 黑 Black</span><b id="scoreBlack">0</b></div>
-      <div class="score-row"><span>⚪ 白 White（含貼目 incl. komi）</span><b id="scoreWhite">0</b></div>
+      <div class="score-row"><span>⚫ 黑 Black（子 stones）</span><b id="scoreBlack">0</b></div>
+      <div class="score-row"><span>⚪ 白 White（子 stones）</span><b id="scoreWhite">0</b></div>
+      <div class="score-row" style="color:var(--muted)"><span>黑勝標準 Black needs</span><b id="scoreNeed">185</b></div>
       <div class="score-lead" id="scoreLead"></div>
       <div class="btns">
         <button class="btn btn-ghost" id="resumeBtn">↩ 續弈 Resume</button>
@@ -244,7 +245,7 @@
   <div class="modal">
     <div class="modal-icon">⚫⚪</div>
     <h2>Go · 圍棋</h2>
-    <p>台灣規則（計點制，貼 7.5 目）。圍住比對手更多的地盤，吃掉沒有氣的棋子。<br>Taiwan rules, 7.5 komi. Surround more of the board than your opponent and capture stones with no liberties.</p>
+    <p>台灣數子法：黑棋貼 7.5 目（19 路黑 185 子勝）。圍住比對手更多的地盤，吃掉沒有氣的棋子。<br>Taiwan area counting, Black gives 7.5 komi. Surround more of the board than your opponent and capture stones with no liberties.</p>
 
     <div class="opt-label">棋盤 Board size</div>
     <div class="pills" data-group="size">
@@ -288,9 +289,9 @@
       <li>雙方輪流在空的<b>交叉點</b>落子，黑先。<br>Take turns placing a stone on an empty <b>intersection</b>. Black goes first.</li>
       <li>棋串旁邊的空點是它的<b>氣</b>；沒有氣的棋子會被<b>提走</b>。<br>Empty points next to a group are its <b>liberties</b>. A group with none is <b>captured</b>.</li>
       <li><b>打劫</b>：單子提劫後，對方不能立刻提回，必須先在別處下一手。<br><b>Ko:</b> you can't retake a single stone immediately — play elsewhere first.</li>
-      <li><b>自殺</b>：可以下兩子以上的自殺手（棋子會被提走），單子自殺不允許。<br><b>Suicide:</b> suicide of 2+ stones is allowed (they are removed); single-stone suicide is not.</li>
+      <li><b>禁著點</b>：不能下讓自己的棋沒有氣的位置（除非能提掉對方的子）。<br><b>No suicide:</b> you can't play where your stones would have no liberties, unless it captures.</li>
       <li>雙方都<b>虛手</b>後終局，標出死子再計算。<br>When both players <b>pass</b>, mark dead stones and count.</li>
-      <li><b>計分</b>：活棋子數 + 圍住的空點，白棋貼 <b>7.5 目</b>。<br><b>Score</b> = your stones + surrounded empty points. White gets <b>7.5 komi</b>.</li>
+      <li><b>數子法</b>：活棋子數 + 圍住的空點，單官雙方各得一半。黑棋貼 <b>7.5 目</b>（= 3¾ 子），所以 19 路黑 <b>185 子</b>勝、13 路 89 子勝、9 路 45 子勝。<br><b>Area counting:</b> stones + surrounded points, neutral points split. Black gives 7.5 komi, so Black needs 185 on 19×19 (89 on 13×13, 45 on 9×9).</li>
     </ul>
     <p style="font-size:.8rem">快捷鍵 Shortcuts：<b>P</b> 虛手 pass · <b>U</b> 悔棋 undo · <b>H</b> 提示 hint · <b>E</b> 形勢 estimate<br>觸控螢幕：點一下預覽，再點一次落子。Touch: tap to preview, tap again to place.</p>
     <div class="modal-btns">
@@ -330,9 +331,29 @@ const LEVELS = {
   hard:   { budgetMs: 3200, maxPlayouts: 1e9,  noise: 0,    allowResign: true  },
 };
 const LEVEL_NAMES = { easy: '電腦(簡單) CPU', medium: '電腦(中等) CPU', hard: '電腦(困難) CPU' };
-// 台灣（應氏）規則：計點制、貼 7.5 目、允許兩子以上自殺
-const RULES_NAME = '台灣規則 Taiwan rules';
-const allowSuicide = () => true;
+// 台灣數子法：黑貼 7.5 目（= 3¾ 子），禁止自殺；19 路黑 185 子勝
+const RULES_NAME = '台灣數子法 Taiwan counting';
+const allowSuicide = () => false;
+
+// 數子法結果：單官各分一半，以「子」表示
+const ZI_FRAC = { 0: '', 0.25: '¼', 0.5: '½', 0.75: '¾' };
+function fmtZi(x) {
+  const whole = Math.floor(x + 1e-9), frac = Math.round((x - whole) * 4) / 4;
+  return (whole || !ZI_FRAC[frac] ? String(whole) : '') + (ZI_FRAC[frac] || '');
+}
+function countStones(dead) {
+  const n = settings.size, total = n * n;
+  const s = board.score(KOMI, dead);
+  const neutral = total - s.black - (s.white - KOMI);
+  const blackZi = s.black + neutral / 2;                 // 黑方子數（含單官一半）
+  const threshold = total / 2 + KOMI / 2;                // 歸本數 + 3¾ 子
+  return {
+    black: blackZi, white: total - blackZi,
+    need: Math.ceil(threshold + 1e-9),                   // 黑勝所需子數（19 路 = 185）
+    whiteNeed: Math.ceil(total - threshold + 1e-9),      // 白勝所需子數（19 路 = 177）
+    margin: blackZi - threshold,                         // > 0 黑勝，單位：子
+  };
+}
 
 let settings = { size: 9, opp: 'medium', color: 1 };
 let humanColor = BLACK;
@@ -576,7 +597,8 @@ function confirmScore() {
   const s = board.score(KOMI, dead);
   const winner = s.diff > 0 ? BLACK : WHITE;
   wasCounted = true;
-  endGame(winner, `黑 Black ${s.black} — 白 White ${s.white}`, Math.abs(s.diff));
+  const z = countStones(dead);
+  endGame(winner, `黑 Black ${fmtZi(z.black)} 子 — 白 White ${fmtZi(z.white)} 子（黑 ${z.need} 子勝）`, Math.abs(z.margin));
 }
 
 function resign() {
@@ -589,7 +611,9 @@ function endGame(winner, detail, margin) {
   if (aiBusy) { restartWorker(); aiBusy = false; reqId++; }
   phase = 'over';
   clearSavedGame();
-  const marginText = margin !== undefined ? ` 勝 ${margin} 目 · wins by ${margin}` : ' 中盤勝 · wins by resignation';
+  const marginText = margin !== undefined
+    ? ` 勝 ${fmtZi(margin)} 子 · wins by ${fmtZi(margin)} stones (${margin * 2} pts)`
+    : ' 中盤勝 · wins by resignation';
   let title, icon;
   if (isCpu()) {
     const won = winner === humanColor;
@@ -688,6 +712,11 @@ function refresh() {
   document.getElementById('whiteName').textContent = wName;
   document.getElementById('blackCaps').textContent = board.captures[BLACK];
   document.getElementById('whiteCaps').textContent = board.captures[WHITE];
+  {
+    const total = settings.size * settings.size, th = total / 2 + KOMI / 2;
+    document.getElementById('blackSub').textContent = `黑先・貼 7.5 目・${Math.ceil(th)} 子勝`;
+    document.getElementById('whiteSub').textContent = `${Math.ceil(total - th)} 子勝 · wins with ${Math.ceil(total - th)}`;
+  }
   const bc = document.getElementById('blackCard'), wc = document.getElementById('whiteCard');
   const playing = phase === 'play';
   bc.classList.toggle('active', playing && board.toPlay === BLACK);
@@ -707,7 +736,7 @@ function refresh() {
     if (estimate) {
       let lead = -KOMI;
       for (const p of allPoints()) lead += estimate[p];
-      t = `📊 ${lead >= 0 ? '黑 Black' : '白 White'} 約領先 leads by ~${Math.abs(lead).toFixed(1)}`;
+      t = `📊 ${lead >= 0 ? '黑 Black' : '白 White'} 約領先 ${(Math.abs(lead) / 2).toFixed(1)} 子 · leads by ~${Math.abs(lead).toFixed(1)} pts`;
     }
     setStatus(t, meta);
   } else if (phase === 'scoring') {
@@ -720,10 +749,12 @@ function refresh() {
   const sp = document.getElementById('scoringPanel');
   sp.classList.toggle('show', phase === 'scoring');
   if (phase === 'scoring') {
-    const s = board.score(KOMI, dead);
-    document.getElementById('scoreBlack').textContent = s.black;
-    document.getElementById('scoreWhite').textContent = s.white;
-    document.getElementById('scoreLead').textContent = `${s.diff > 0 ? '黑 Black' : '白 White'} 領先 leads by ${Math.abs(s.diff)}`;
+    const z = countStones(dead);
+    document.getElementById('scoreBlack').textContent = fmtZi(z.black);
+    document.getElementById('scoreWhite').textContent = fmtZi(z.white);
+    document.getElementById('scoreNeed').textContent = z.need;
+    document.getElementById('scoreLead').textContent =
+      `${z.margin > 0 ? '黑 Black' : '白 White'} 勝 ${fmtZi(Math.abs(z.margin))} 子 · leads by ${Math.abs(z.margin) * 2} pts`;
   }
 
   // buttons
