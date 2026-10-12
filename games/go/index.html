@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>圍棋 Go</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a; --surface: #14142b; --card: #1c1c38; --border: #2a2a50;
+      --accent: #7c3aed; --accent2: #06b6d4; --text: #e2e8f0; --muted: #64748b;
+      --wood: #dcb36a; --gold: #f5c518;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column; user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem; height: 54px; display: flex; align-items: center; gap: 1rem;
+    }
+    .topbar .brand { font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+    .topbar .brand a { color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+    .topbar .brand a:hover { color: var(--text); }
+    .topbar .sep { color: var(--muted); }
+    .topbar-actions { margin-left: auto; display: flex; gap: 0.6rem; align-items: center; }
+    .btn {
+      padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; color: var(--text);
+      font-family: inherit;
+    }
+    .btn:hover { opacity: 0.85; transform: scale(1.02); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #5b21b6); color: #fff; }
+    .btn-danger { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; }
+    .sound-toggle {
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+      padding: 0.4rem 0.7rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+    }
+    .sound-toggle.muted { opacity: 0.4; }
+    #game-avatar { display: flex; align-items: center; margin-left: 0.5rem; }
+
+    /* ── LAYOUT ── */
+    .game-wrapper {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 1.25rem; gap: 1.5rem;
+    }
+    .board-wrap { position: relative; }
+    canvas#board {
+      display: block; border-radius: 10px; touch-action: manipulation;
+      box-shadow: 0 0 40px rgba(124,58,237,0.25), 0 10px 40px rgba(0,0,0,0.6);
+      cursor: pointer;
+    }
+    .sidebar { display: flex; flex-direction: column; gap: 0.8rem; width: 270px; }
+
+    .player-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.75rem 0.9rem; display: flex; align-items: center; gap: 0.75rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .player-card.active { border-color: var(--accent2); box-shadow: 0 0 18px rgba(6,182,212,0.25); }
+    .stone-icon { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
+    .stone-icon.black { background: radial-gradient(circle at 35% 30%, #666, #111 65%); box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+    .stone-icon.white { background: radial-gradient(circle at 35% 30%, #fff, #c9c9c9 70%); box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+    .player-info { flex: 1; min-width: 0; }
+    .player-name { font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; }
+    .player-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .thinking { display: none; gap: 3px; }
+    .player-card.thinking-on .thinking { display: inline-flex; }
+    .thinking i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); animation: blink 1s infinite; }
+    .thinking i:nth-child(2) { animation-delay: .2s; } .thinking i:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%,100% { opacity: .2 } 50% { opacity: 1 } }
+    .cap-count { text-align: right; }
+    .cap-count .num { font-size: 1.3rem; font-weight: 800; color: var(--accent2); font-variant-numeric: tabular-nums; }
+    .cap-count .lbl { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+
+    .status-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.75rem 0.9rem; font-size: 0.88rem; line-height: 1.45; min-height: 3.2rem;
+    }
+    .status-box .meta { color: var(--muted); font-size: 0.75rem; margin-top: 0.3rem; }
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .action-grid .btn { width: 100%; padding: 0.55rem 0.4rem; font-size: 0.8rem; line-height: 1.25; }
+    .action-grid .wide { grid-column: span 2; }
+
+    .scoring-panel {
+      display: none; background: var(--surface); border: 1px solid var(--accent);
+      border-radius: 12px; padding: 0.85rem 0.9rem; font-size: 0.85rem;
+    }
+    .scoring-panel.show { display: block; }
+    .scoring-panel h3 { font-size: 0.95rem; margin-bottom: 0.35rem; }
+    .scoring-panel p { color: var(--muted); font-size: 0.78rem; line-height: 1.45; margin-bottom: 0.6rem; }
+    .score-row { display: flex; justify-content: space-between; padding: 0.2rem 0; font-variant-numeric: tabular-nums; }
+    .score-row b { font-size: 1rem; }
+    .score-lead { margin: 0.4rem 0 0.7rem; font-weight: 700; color: var(--gold); }
+    .scoring-panel .btns { display: flex; gap: 0.5rem; }
+    .scoring-panel .btns .btn { flex: 1; }
+
+    .record { font-size: 0.75rem; color: var(--muted); text-align: center; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: absolute; left: 50%; top: 14px; transform: translate(-50%, -10px);
+      background: rgba(10,10,25,0.88); border: 1px solid var(--border); color: #fff;
+      padding: 0.45rem 1rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600;
+      opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ── OVERLAYS ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+      padding: 1rem;
+    }
+    .overlay.active { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 1.8rem; max-width: 440px; width: 100%;
+      text-align: center; max-height: 92vh; overflow-y: auto;
+    }
+    .modal-icon { font-size: 2.6rem; margin-bottom: 0.5rem; }
+    .modal h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .modal p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.1rem; }
+    .opt-label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); margin: 0.2rem 0 0.45rem;
+    }
+    .pills { display: flex; gap: 0.45rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .pill {
+      padding: 0.35rem 0.9rem; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--muted); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pill:hover { border-color: var(--accent); color: var(--text); }
+    .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .modal-btns { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; margin-top: 0.4rem; }
+    .modal-btns .btn { min-width: 120px; font-size: 0.95rem; padding: 0.65rem 1.2rem; }
+    .rules { text-align: left; color: var(--muted); font-size: 0.86rem; line-height: 1.6; margin: 0 0 1.2rem 1.1rem; }
+    .rules li { margin-bottom: 0.35rem; }
+    .rules b { color: var(--text); }
+    .result-score { font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 860px) {
+      .game-wrapper { flex-direction: column; padding: 0.75rem; gap: 0.75rem; }
+      .sidebar { width: 100%; max-width: 560px; }
+      .players-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+      .action-grid { grid-template-columns: repeat(5, 1fr); }
+      .action-grid .wide { grid-column: auto; }
+      .topbar { padding: 0 0.75rem; gap: 0.5rem; }
+      .topbar .btn { padding: 0.4rem 0.6rem; }
+      .hide-sm { display: none; }
+      .player-card { padding: 0.55rem 0.65rem; gap: 0.5rem; }
+      .player-card .player-sub, .cap-count .lbl { display: none; }
+      .player-name { font-size: 0.8rem; line-height: 1.2; }
+      .stone-icon { width: 24px; height: 24px; }
+      .action-grid .btn { font-size: 0.72rem; padding: 0.45rem 0.2rem; }
+    }
+    @media (min-width: 861px) { .players-row { display: flex; flex-direction: column; gap: 0.8rem; } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="../../">🏠</a>
+    <span class="sep">/</span>
+    ⚫ Go <span style="color:var(--muted);font-weight:600">圍棋</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="sound-toggle" id="soundBtn" title="Toggle sound">🔊</button>
+    <button class="btn btn-ghost" id="howToPlayBtn">❓<span class="hide-sm"> 規則 Rules</span></button>
+    <button class="btn btn-ghost" id="newGameBtn">↺<span class="hide-sm"> 新局 New</span></button>
+    <button class="btn btn-danger" id="exitBtn">✕<span class="hide-sm"> 離開 EXIT</span></button>
+  </div>
+  <div id="game-avatar"></div>
+</div>
+
+<div class="game-wrapper">
+  <div class="board-wrap">
+    <canvas id="board" width="300" height="300"></canvas>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="players-row">
+      <div class="player-card" id="blackCard">
+        <div class="stone-icon black"></div>
+        <div class="player-info">
+          <div class="player-name"><span id="blackName">黑 Black</span><span class="thinking"><i></i><i></i><i></i></span></div>
+          <div class="player-sub">黑先 Plays first</div>
+        </div>
+        <div class="cap-count"><div class="num" id="blackCaps">0</div><div class="lbl">提子 Captures</div></div>
+      </div>
+      <div class="player-card" id="whiteCard">
+        <div class="stone-icon white"></div>
+        <div class="player-info">
+          <div class="player-name"><span id="whiteName">白 White</span><span class="thinking"><i></i><i></i><i></i></span></div>
+          <div class="player-sub" id="komiLabel">貼 7.5 Komi</div>
+        </div>
+        <div class="cap-count"><div class="num" id="whiteCaps">0</div><div class="lbl">提子 Captures</div></div>
+      </div>
+    </div>
+
+    <div class="status-box">
+      <div id="statusText">請選擇設定開始 · Choose your settings to start.</div>
+      <div class="meta" id="statusMeta"></div>
+    </div>
+
+    <div class="scoring-panel" id="scoringPanel">
+      <h3>🏁 數子 Counting</h3>
+      <p>雙方虛手，點擊棋串可標記<b>死子</b>／活子，確認後計算勝負。<br>Both passed. Tap a group to mark it <b>dead</b> or alive, then confirm.</p>
+      <div class="score-row"><span>⚫ 黑 Black</span><b id="scoreBlack">0</b></div>
+      <div class="score-row"><span>⚪ 白 White（含貼目 incl. komi）</span><b id="scoreWhite">0</b></div>
+      <div class="score-lead" id="scoreLead"></div>
+      <div class="btns">
+        <button class="btn btn-ghost" id="resumeBtn">↩ 續弈 Resume</button>
+        <button class="btn btn-primary" id="confirmBtn">✓ 確認 Confirm</button>
+      </div>
+    </div>
+
+    <div class="action-grid" id="actionGrid">
+      <button class="btn btn-ghost" id="passBtn" title="Pass (P)">⏭ 虛手 Pass</button>
+      <button class="btn btn-ghost" id="undoBtn" title="Undo (U)">↶ 悔棋 Undo</button>
+      <button class="btn btn-ghost" id="hintBtn" title="Hint (H)">💡 提示 Hint</button>
+      <button class="btn btn-ghost" id="estimateBtn" title="Show who owns what (E)">📊 形勢 Estimate</button>
+      <button class="btn btn-danger wide" id="resignBtn">🏳 認輸 Resign</button>
+    </div>
+
+    <div class="record" id="recordText"></div>
+  </div>
+</div>
+
+<!-- Setup overlay -->
+<div class="overlay active" id="setupOverlay">
+  <div class="modal">
+    <div class="modal-icon">⚫⚪</div>
+    <h2>Go · 圍棋</h2>
+    <p>台灣規則（計點制，貼 7.5 目）。圍住比對手更多的地盤，吃掉沒有氣的棋子。<br>Taiwan rules, 7.5 komi. Surround more of the board than your opponent and capture stones with no liberties.</p>
+
+    <div class="opt-label">棋盤 Board size</div>
+    <div class="pills" data-group="size">
+      <div class="pill active" data-val="9">9 × 9</div>
+      <div class="pill" data-val="13">13 × 13</div>
+      <div class="pill" data-val="19">19 × 19</div>
+    </div>
+
+    <div class="opt-label">對手 Opponent</div>
+    <div class="pills" data-group="opp">
+      <div class="pill" data-val="easy">電腦・簡單 Easy</div>
+      <div class="pill active" data-val="medium">電腦・中等 Medium</div>
+      <div class="pill" data-val="hard">電腦・困難 Hard</div>
+      <div class="pill" data-val="local">雙人對弈 2 Players</div>
+    </div>
+
+    <div id="colorOpt">
+      <div class="opt-label">執子 You play</div>
+      <div class="pills" data-group="color">
+        <div class="pill active" data-val="1">⚫ 黑 Black</div>
+        <div class="pill" data-val="2">⚪ 白 White</div>
+        <div class="pill" data-val="0">🎲 隨機 Random</div>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="startBtn">▶ 開始 Start</button>
+      <button class="btn btn-ghost" id="continueBtn" style="display:none">⏯ 繼續 Continue</button>
+      <button class="btn btn-ghost" id="cancelSetupBtn" style="display:none">取消 Cancel</button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'">✕ 離開 EXIT</button>
+    </div>
+  </div>
+</div>
+
+<!-- How to play overlay -->
+<div class="overlay" id="helpOverlay">
+  <div class="modal">
+    <div class="modal-icon">📖</div>
+    <h2>台灣規則 How to Play</h2>
+    <ul class="rules">
+      <li>雙方輪流在空的<b>交叉點</b>落子，黑先。<br>Take turns placing a stone on an empty <b>intersection</b>. Black goes first.</li>
+      <li>棋串旁邊的空點是它的<b>氣</b>；沒有氣的棋子會被<b>提走</b>。<br>Empty points next to a group are its <b>liberties</b>. A group with none is <b>captured</b>.</li>
+      <li><b>打劫</b>：單子提劫後，對方不能立刻提回，必須先在別處下一手。<br><b>Ko:</b> you can't retake a single stone immediately — play elsewhere first.</li>
+      <li><b>自殺</b>：可以下兩子以上的自殺手（棋子會被提走），單子自殺不允許。<br><b>Suicide:</b> suicide of 2+ stones is allowed (they are removed); single-stone suicide is not.</li>
+      <li>雙方都<b>虛手</b>後終局，標出死子再計算。<br>When both players <b>pass</b>, mark dead stones and count.</li>
+      <li><b>計分</b>：活棋子數 + 圍住的空點，白棋貼 <b>7.5 目</b>。<br><b>Score</b> = your stones + surrounded empty points. White gets <b>7.5 komi</b>.</li>
+    </ul>
+    <p style="font-size:.8rem">快捷鍵 Shortcuts：<b>P</b> 虛手 pass · <b>U</b> 悔棋 undo · <b>H</b> 提示 hint · <b>E</b> 形勢 estimate<br>觸控螢幕：點一下預覽，再點一次落子。Touch: tap to preview, tap again to place.</p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="helpCloseBtn">知道了 Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result overlay -->
+<div class="overlay" id="resultOverlay">
+  <div class="modal">
+    <div class="modal-icon" id="resultIcon">🏆</div>
+    <h2 id="resultTitle">你贏了！You Win!</h2>
+    <p id="resultSubtitle" class="result-score"></p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="playAgainBtn">▶ 再來一局 Play Again</button>
+      <button class="btn btn-ghost" id="reviewBtn">👁 看棋盤 View Board</button>
+      <button class="btn btn-danger" id="resultExitBtn">✕ 離開 EXIT</button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  CONSTANTS & STATE
+// ═══════════════════════════════════════════════
+const { Board, BLACK, WHITE, EMPTY, PASS } = GoEngine;
+const KOMI = 7.5;
+const COLS = 'ABCDEFGHJKLMNOPQRST';
+const GAME_KEY  = 'go_game';   // in-progress game (local only)
+const STATS_KEY = 'go_save';   // win/loss record (synced to cloud when signed in)
+
+const LEVELS = {
+  easy:   { budgetMs: 350,  maxPlayouts: 250,  noise: 0.45, allowResign: false },
+  medium: { budgetMs: 1200, maxPlayouts: 7000, noise: 0,    allowResign: true  },
+  hard:   { budgetMs: 3200, maxPlayouts: 1e9,  noise: 0,    allowResign: true  },
+};
+const LEVEL_NAMES = { easy: '電腦(簡單) CPU', medium: '電腦(中等) CPU', hard: '電腦(困難) CPU' };
+// 台灣（應氏）規則：計點制、貼 7.5 目、允許兩子以上自殺
+const RULES_NAME = '台灣規則 Taiwan rules';
+const allowSuicide = () => true;
+
+let settings = { size: 9, opp: 'medium', color: 1 };
+let humanColor = BLACK;
+let board = new Board(9, true);
+let moves = [];
+let phase = 'setup';            // setup | play | scoring | over
+let dead = new Set();
+let aiBusy = false;
+let reqId = 0;
+let hover = -1;
+let touchPreview = -1;
+let hintMove = -1;
+let estimate = null;            // Float32Array ownership overlay
+let lastResult = null;
+let wasCounted = false;         // finished by counting (show territory on the final board)
+
+// ═══════════════════════════════════════════════
+//  SOUND
+// ═══════════════════════════════════════════════
+let soundEnabled = true;
+const Sound = (() => {
+  let _ac = null;
+  function ac() {
+    if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ac.state === 'suspended') _ac.resume();
+    return _ac;
+  }
+  function tone(freq, type, when, dur, vol = 0.15) {
+    if (!soundEnabled) return;
+    const c = ac(), o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type = type; o.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0.001, when);
+    g.gain.linearRampToValueAtTime(vol, when + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, when + dur);
+    o.start(when); o.stop(when + dur + 0.02);
+  }
+  function knock(when, vol = 0.35, hz = 1800) {
+    if (!soundEnabled) return;
+    const c = ac();
+    const buf = c.createBuffer(1, Math.ceil(c.sampleRate * 0.06), c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 4);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.frequency.value = hz; f.Q.value = 1.2;
+    s.buffer = buf; s.connect(f); f.connect(g); g.connect(c.destination);
+    g.gain.value = vol; s.start(when);
+    tone(hz / 9, 'sine', when, 0.07, vol * 0.4);
+  }
+  return {
+    stone()   { if (!soundEnabled) return; const t = ac().currentTime; knock(t); },
+    capture(k){ if (!soundEnabled) return; const t = ac().currentTime; knock(t);
+                for (let i = 0; i < Math.min(k, 5); i++) knock(t + 0.09 + i * 0.06, 0.18, 2600); },
+    pass()    { if (!soundEnabled) return; const t = ac().currentTime; tone(520, 'triangle', t, 0.12); tone(390, 'triangle', t + 0.1, 0.15); },
+    bad()     { if (!soundEnabled) return; const t = ac().currentTime; tone(160, 'square', t, 0.12, 0.08); },
+    win()     { if (!soundEnabled) return; const t = ac().currentTime; [523, 659, 784, 1047].forEach((f, i) => tone(f, 'triangle', t + i * 0.12, 0.3)); },
+    lose()    { if (!soundEnabled) return; const t = ac().currentTime; [392, 330, 262].forEach((f, i) => tone(f, 'triangle', t + i * 0.16, 0.35)); },
+  };
+})();
+
+// ═══════════════════════════════════════════════
+//  AI (Web Worker with main-thread fallback)
+// ═══════════════════════════════════════════════
+let worker = null;
+const pending = new Map();
+function makeWorker() {
+  try {
+    worker = new Worker('ai-worker.js');
+    worker.onmessage = e => {
+      const cb = pending.get(e.data.id);
+      if (cb) { pending.delete(e.data.id); cb(e.data); }
+    };
+    worker.onerror = () => { worker = null; };
+  } catch (e) { worker = null; }
+}
+makeWorker();
+
+function restartWorker() {
+  if (worker) worker.terminate();
+  pending.clear();
+  makeWorker();
+}
+
+function aiCall(msg) {
+  const id = ++reqId;
+  msg.id = id; msg.n = settings.size; msg.komi = KOMI; msg.moves = moves.slice(); msg.allowSuicide = allowSuicide();
+  return new Promise(resolve => {
+    const runLocal = () => setTimeout(() => {
+      const b = GoEngine.replay(msg.n, msg.moves, msg.allowSuicide);
+      if (msg.type === 'think') {
+        const o = Object.assign({}, msg.opts, { budgetMs: Math.min(msg.opts.budgetMs, 900) });
+        resolve(Object.assign({ id }, GoEngine.think(b, KOMI, o)));
+      } else {
+        resolve({ id, own: Array.from(GoEngine.ownership(b, KOMI, msg.playouts, 900)) });
+      }
+    }, 30);
+    if (!worker) return runLocal();
+    pending.set(id, resolve);
+    try { worker.postMessage(msg); } catch (e) { pending.delete(id); runLocal(); }
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  GAME FLOW
+// ═══════════════════════════════════════════════
+const isCpu = () => settings.opp !== 'local';
+const isHumanTurn = () => !isCpu() || board.toPlay === humanColor;
+const colorName = c => c === BLACK ? '黑 Black' : '白 White';
+const label = p => { if (p === PASS) return '虛手 pass'; const [x, y] = board.xy(p); return COLS[x] + (settings.size - y); };
+
+function startGame(fromSave) {
+  restartWorker();
+  aiBusy = false;
+  if (!fromSave) {
+    humanColor = settings.color === 0 ? (Math.random() < 0.5 ? BLACK : WHITE) : settings.color;
+    moves = [];
+  }
+  board = GoEngine.replay(settings.size, moves, allowSuicide());
+  dead = new Set(); hintMove = -1; estimate = null; hover = -1; touchPreview = -1;
+  wasCounted = false; lastResult = null;
+  phase = 'play';
+  closeOverlays();
+  resize();
+  if (board.passes >= 2) { moves.pop(); board = GoEngine.replay(settings.size, moves, allowSuicide()); }
+  saveGame();
+  refresh();
+  maybeAI();
+}
+
+function doMove(p) {
+  const mover = board.toPlay;
+  const caps = board.play(p);
+  moves.push(p);
+  hintMove = -1; estimate = null; touchPreview = -1;
+  if (p === PASS) {
+    Sound.pass();
+    toast(`${playerLabel(mover)} 虛手 passed`);
+  } else if (caps > 0) {
+    Sound.capture(caps);
+  } else {
+    Sound.stone();
+  }
+  if (board.passes >= 2) { enterScoring(); return; }
+  saveGame();
+  refresh();
+  maybeAI();
+}
+
+function maybeAI() {
+  if (phase !== 'play' || !isCpu() || board.toPlay === humanColor || aiBusy) return;
+  aiBusy = true;
+  refresh();
+  const myId = reqId + 1;
+  const t0 = Date.now();
+  aiCall({ type: 'think', opts: LEVELS[settings.opp] }).then(res => {
+    if (res.id !== myId || phase !== 'play') return;
+    const wait = Math.max(0, 350 - (Date.now() - t0)); // tiny pause so instant moves don't feel abrupt
+    setTimeout(() => {
+      if (res.id !== reqId || phase !== 'play') return;
+      aiBusy = false;
+      if (res.resign) { endGame(humanColor, `${LEVEL_NAMES[settings.opp]} 認輸 resigned`); return; }
+      if (res.move !== PASS && !board.isLegal(res.move, board.toPlay)) { doMove(PASS); return; }
+      doMove(res.move);
+    }, wait);
+  });
+}
+
+function humanPlay(p) {
+  if (phase !== 'play' || aiBusy || !isHumanTurn()) return;
+  if (!board.isLegal(p, board.toPlay)) {
+    Sound.bad();
+    toast(p === board.ko ? '打劫：請先下別處 Ko — play elsewhere first' : '這裡不能下 Move not allowed');
+    return;
+  }
+  doMove(p);
+}
+
+function playerLabel(c) {
+  if (!isCpu()) return colorName(c);
+  return c === humanColor ? '你 You' : LEVEL_NAMES[settings.opp];
+}
+
+function undo() {
+  if (phase !== 'play' && phase !== 'scoring') return;
+  if (!moves.length) return;
+  if (aiBusy) { restartWorker(); aiBusy = false; reqId++; }
+  moves.pop();
+  if (isCpu()) {
+    // go back to the most recent position where it's the human's turn
+    while (moves.length && ((moves.length % 2 === 0) ? BLACK : WHITE) !== humanColor) moves.pop();
+  }
+  board = GoEngine.replay(settings.size, moves, allowSuicide());
+  phase = 'play'; dead = new Set(); hintMove = -1; estimate = null;
+  saveGame();
+  refresh();
+  maybeAI();
+}
+
+function resumePlay() {
+  // drop the trailing passes and keep playing
+  while (moves.length && moves[moves.length - 1] === PASS) moves.pop();
+  board = GoEngine.replay(settings.size, moves, allowSuicide());
+  phase = 'play'; dead = new Set();
+  saveGame();
+  refresh();
+  maybeAI();
+}
+
+function enterScoring() {
+  phase = 'scoring';
+  dead = new Set();
+  saveGame();
+  refresh();
+  setStatus('判斷死活中… Estimating dead stones…', '');
+  const myId = reqId + 1;
+  aiCall({ type: 'ownership', playouts: 1500, budgetMs: 1500 }).then(res => {
+    if (res.id !== myId || phase !== 'scoring') return;
+    const own = res.own, seen = new Set();
+    for (const p of allPoints()) {
+      const c = board.color[p];
+      if (c === EMPTY || seen.has(board.head[p])) continue;
+      seen.add(board.head[p]);
+      const stones = board.groupStones(p);
+      const avg = stones.reduce((s, q) => s + own[q], 0) / stones.length;
+      if ((c === BLACK && avg < -0.3) || (c === WHITE && avg > 0.3)) stones.forEach(q => dead.add(q));
+    }
+    refresh();
+  });
+}
+
+function toggleDead(p) {
+  if (board.color[p] === EMPTY) return;
+  const stones = board.groupStones(p);
+  const isDead = dead.has(p);
+  stones.forEach(q => isDead ? dead.delete(q) : dead.add(q));
+  Sound.stone();
+  refresh();
+}
+
+function confirmScore() {
+  const s = board.score(KOMI, dead);
+  const winner = s.diff > 0 ? BLACK : WHITE;
+  wasCounted = true;
+  endGame(winner, `黑 Black ${s.black} — 白 White ${s.white}`, Math.abs(s.diff));
+}
+
+function resign() {
+  if (phase !== 'play') return;
+  const loser = isCpu() ? humanColor : board.toPlay;
+  endGame(3 - loser, `${playerLabel(loser)} 認輸 resigned`);
+}
+
+function endGame(winner, detail, margin) {
+  if (aiBusy) { restartWorker(); aiBusy = false; reqId++; }
+  phase = 'over';
+  clearSavedGame();
+  const marginText = margin !== undefined ? ` 勝 ${margin} 目 · wins by ${margin}` : ' 中盤勝 · wins by resignation';
+  let title, icon;
+  if (isCpu()) {
+    const won = winner === humanColor;
+    title = won ? '你贏了！You Win!' : '你輸了 You Lose';
+    icon = won ? '🏆' : '😵';
+    recordResult(won);
+    won ? Sound.win() : Sound.lose();
+  } else {
+    title = `${colorName(winner)} 獲勝 Wins!`;
+    icon = winner === BLACK ? '⚫' : '⚪';
+    Sound.win();
+  }
+  lastResult = `${colorName(winner)}${marginText}`;
+  document.getElementById('resultIcon').textContent = icon;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSubtitle').innerHTML = `${detail}<br><b style="color:var(--text)">${lastResult}</b>`;
+  refresh();
+  setTimeout(() => document.getElementById('resultOverlay').classList.add('active'), 400);
+}
+
+function requestHint() {
+  if (phase !== 'play' || aiBusy || !isHumanTurn()) return;
+  aiBusy = true; refresh();
+  setStatus('幫你想一手… Finding a good move…', '');
+  const myId = reqId + 1;
+  aiCall({ type: 'think', opts: { budgetMs: 1200, maxPlayouts: 8000 } }).then(res => {
+    if (res.id !== myId) return;
+    aiBusy = false;
+    hintMove = res.move;
+    refresh();
+    if (res.move === PASS) toast('提示：可以虛手了 Hint: passing is fine');
+  });
+}
+
+function requestEstimate() {
+  if (phase !== 'play' || aiBusy) return;
+  if (estimate) { estimate = null; refresh(); return; }
+  aiBusy = true; refresh();
+  setStatus('形勢判斷中… Estimating territory…', '');
+  const myId = reqId + 1;
+  aiCall({ type: 'ownership', playouts: 800, budgetMs: 1000 }).then(res => {
+    if (res.id !== myId) return;
+    aiBusy = false;
+    estimate = Float32Array.from(res.own);
+    refresh();
+    maybeAI();
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  SAVE / STATS
+// ═══════════════════════════════════════════════
+function saveGame() {
+  try { localStorage.setItem(GAME_KEY, JSON.stringify({ settings, humanColor, moves })); } catch (e) {}
+}
+function clearSavedGame() { try { localStorage.removeItem(GAME_KEY); } catch (e) {} }
+function loadSavedGame() {
+  try {
+    const s = JSON.parse(localStorage.getItem(GAME_KEY));
+    if (s && s.settings && Array.isArray(s.moves) && [9, 13, 19].includes(s.settings.size)) return s;
+  } catch (e) {}
+  return null;
+}
+function getStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { wins: 0, losses: 0 }; }
+  catch (e) { return { wins: 0, losses: 0 }; }
+}
+function recordResult(won) {
+  const s = getStats();
+  s.wins = (s.wins || 0) + (won ? 1 : 0);
+  s.losses = (s.losses || 0) + (won ? 0 : 1);
+  s.savedAt = Date.now();
+  if (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser) s.uid = SillyFirebase.currentUser.uid;
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) {}
+  if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('go', s);
+}
+
+// ═══════════════════════════════════════════════
+//  UI REFRESH
+// ═══════════════════════════════════════════════
+function allPoints() {
+  const out = [], n = settings.size;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) out.push(board.pt(x, y));
+  return out;
+}
+
+function setStatus(text, meta) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusMeta').textContent = meta;
+}
+
+function refresh() {
+  const bName = isCpu() ? (humanColor === BLACK ? '你 You' : LEVEL_NAMES[settings.opp]) : '黑 Black';
+  const wName = isCpu() ? (humanColor === WHITE ? '你 You' : LEVEL_NAMES[settings.opp]) : '白 White';
+  document.getElementById('blackName').textContent = bName;
+  document.getElementById('whiteName').textContent = wName;
+  document.getElementById('blackCaps').textContent = board.captures[BLACK];
+  document.getElementById('whiteCaps').textContent = board.captures[WHITE];
+  const bc = document.getElementById('blackCard'), wc = document.getElementById('whiteCard');
+  const playing = phase === 'play';
+  bc.classList.toggle('active', playing && board.toPlay === BLACK);
+  wc.classList.toggle('active', playing && board.toPlay === WHITE);
+  const cpuThinking = aiBusy && isCpu() && board.toPlay !== humanColor;
+  bc.classList.toggle('thinking-on', cpuThinking && board.toPlay === BLACK);
+  wc.classList.toggle('thinking-on', cpuThinking && board.toPlay === WHITE);
+
+  const last = moves.length ? moves[moves.length - 1] : -1;
+  const meta = `第 ${board.moveNum} 手 Move · ${RULES_NAME}` + (last >= 0 ? ` · ${colorName(3 - board.toPlay)} ${label(last)}` : '');
+  if (phase === 'play') {
+    let t;
+    if (cpuThinking) t = `${LEVEL_NAMES[settings.opp]} 思考中… thinking…`;
+    else if (isCpu()) t = board.passes === 1 ? `對手虛手，你也虛手即可終局。Opponent passed — pass too to finish.` : '輪到你 Your move.';
+    else t = `輪到${colorName(board.toPlay)} to play.` + (board.passes === 1 ? '（對手虛手 opponent passed）' : '');
+    if (hintMove > 0) t += `  💡 建議 Try ${label(hintMove)}`;
+    if (estimate) {
+      let lead = -KOMI;
+      for (const p of allPoints()) lead += estimate[p];
+      t = `📊 ${lead >= 0 ? '黑 Black' : '白 White'} 約領先 leads by ~${Math.abs(lead).toFixed(1)}`;
+    }
+    setStatus(t, meta);
+  } else if (phase === 'scoring') {
+    setStatus('終局數子中 · Counting the score.', meta);
+  } else if (phase === 'over') {
+    setStatus(lastResult || '對局結束 Game over.', meta);
+  }
+
+  // scoring panel
+  const sp = document.getElementById('scoringPanel');
+  sp.classList.toggle('show', phase === 'scoring');
+  if (phase === 'scoring') {
+    const s = board.score(KOMI, dead);
+    document.getElementById('scoreBlack').textContent = s.black;
+    document.getElementById('scoreWhite').textContent = s.white;
+    document.getElementById('scoreLead').textContent = `${s.diff > 0 ? '黑 Black' : '白 White'} 領先 leads by ${Math.abs(s.diff)}`;
+  }
+
+  // buttons
+  const canAct = phase === 'play' && !aiBusy && isHumanTurn();
+  document.getElementById('passBtn').disabled = !canAct;
+  document.getElementById('hintBtn').disabled = !canAct;
+  document.getElementById('estimateBtn').disabled = phase !== 'play' || aiBusy;
+  document.getElementById('undoBtn').disabled = !(phase === 'play' || phase === 'scoring') || !moves.length ||
+    (isCpu() && !moves.some((m, i) => (i % 2 === 0 ? BLACK : WHITE) === humanColor));
+  document.getElementById('resignBtn').disabled = phase !== 'play';
+  document.getElementById('actionGrid').style.display = phase === 'scoring' ? 'none' : '';
+
+  const st = getStats();
+  document.getElementById('recordText').textContent =
+    isCpu() ? `對電腦戰績 Record vs CPU：${st.wins || 0} 勝 W · ${st.losses || 0} 敗 L` : '雙人對弈 Local 2-player game';
+
+  draw();
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+// ═══════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let cssSize = 600, cell = 30, origin = 30;
+let woodPattern = null;
+
+function resize() {
+  const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
+  const narrow = vw <= 860;
+  const availW = narrow ? vw - 24 : vw - 270 - 24 * 2 - 40;
+  const availH = narrow ? window.innerHeight - 54 - 40 - 230 : window.innerHeight - 54 - 40;
+  cssSize = Math.max(260, Math.min(760, availW, Math.max(availH, narrow ? 300 : 260)));
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = cssSize + 'px';
+  canvas.style.height = cssSize + 'px';
+  canvas.width = Math.round(cssSize * dpr);
+  canvas.height = Math.round(cssSize * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const n = settings.size;
+  cell = cssSize / (n + 0.9);
+  origin = cell * 0.95;
+  woodPattern = null;
+  draw();
+}
+
+function makeWood() {
+  // grain texture, drawn once per resize
+  const off = document.createElement('canvas');
+  off.width = off.height = Math.ceil(cssSize);
+  const g = off.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, cssSize, cssSize);
+  grad.addColorStop(0, '#e6c27a'); grad.addColorStop(0.5, '#d9b064'); grad.addColorStop(1, '#cf9f52');
+  g.fillStyle = grad; g.fillRect(0, 0, cssSize, cssSize);
+  let seed = 7;
+  const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 70; i++) {
+    const y = r() * cssSize, amp = 2 + r() * 6, freq = 0.004 + r() * 0.01;
+    g.strokeStyle = `rgba(120,75,25,${0.04 + r() * 0.07})`;
+    g.lineWidth = 0.6 + r() * 1.6;
+    g.beginPath();
+    for (let x = 0; x <= cssSize; x += 6) {
+      const yy = y + Math.sin(x * freq + i) * amp;
+      x === 0 ? g.moveTo(x, yy) : g.lineTo(x, yy);
+    }
+    g.stroke();
+  }
+  return off;
+}
+
+function stars(n) {
+  if (n === 9) return [[2, 2], [6, 2], [4, 4], [2, 6], [6, 6]];
+  if (n === 13) return [[3, 3], [9, 3], [6, 6], [3, 9], [9, 9]];
+  const a = [3, 9, 15], out = [];
+  for (const x of a) for (const y of a) out.push([x, y]);
+  return out;
+}
+
+const px = i => origin + i * cell;
+
+function drawStone(x, y, c, alpha = 1) {
+  const cx = px(x), cy = px(y), r = cell * 0.47;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (alpha === 1) {
+    ctx.beginPath();
+    ctx.arc(cx + r * 0.08, cy + r * 0.12, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+  }
+  const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+  if (c === BLACK) { g.addColorStop(0, '#6a6a6a'); g.addColorStop(0.45, '#222'); g.addColorStop(1, '#050505'); }
+  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#ececec'); g.addColorStop(1, '#bdbdbd'); }
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+}
+
+function draw() {
+  const n = settings.size;
+  ctx.clearRect(0, 0, cssSize, cssSize);
+  if (!woodPattern) woodPattern = makeWood();
+  ctx.drawImage(woodPattern, 0, 0, cssSize, cssSize);
+
+  // grid
+  ctx.strokeStyle = '#3b2a12';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < n; i++) {
+    ctx.beginPath(); ctx.moveTo(px(0), px(i)); ctx.lineTo(px(n - 1), px(i)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(i), px(0)); ctx.lineTo(px(i), px(n - 1)); ctx.stroke();
+  }
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px(0), px(0), cell * (n - 1), cell * (n - 1));
+  ctx.fillStyle = '#3b2a12';
+  for (const [x, y] of stars(n)) {
+    ctx.beginPath(); ctx.arc(px(x), px(y), Math.max(2.5, cell * 0.1), 0, Math.PI * 2); ctx.fill();
+  }
+
+  // coordinates
+  ctx.fillStyle = 'rgba(59,42,18,0.75)';
+  ctx.font = `600 ${Math.max(9, cell * 0.32)}px 'Segoe UI', system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const edge = origin * 0.45;
+  for (let i = 0; i < n; i++) {
+    ctx.fillText(COLS[i], px(i), edge);
+    ctx.fillText(COLS[i], px(i), cssSize - edge);
+    ctx.fillText(String(n - i), edge, px(i));
+    ctx.fillText(String(n - i), cssSize - edge, px(i));
+  }
+
+  // territory (scoring / game over) or estimate overlay
+  let owner = null;
+  if (phase === 'scoring' || (phase === 'over' && wasCounted)) {
+    owner = new Int8Array(board.size);
+    board.score(KOMI, dead, owner);
+  }
+
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const p = board.pt(x, y), c = board.color[p];
+      if (c !== EMPTY) drawStone(x, y, c, dead.has(p) ? 0.45 : 1);
+    }
+  }
+
+  const sq = (x, y, c, a, sz) => {
+    ctx.globalAlpha = a;
+    ctx.fillStyle = c === BLACK ? '#111' : '#f4f4f4';
+    ctx.strokeStyle = c === BLACK ? '#f4f4f4' : '#111';
+    ctx.lineWidth = 0.6;
+    const s = cell * sz;
+    ctx.fillRect(px(x) - s / 2, px(y) - s / 2, s, s);
+    ctx.strokeRect(px(x) - s / 2, px(y) - s / 2, s, s);
+    ctx.globalAlpha = 1;
+  };
+
+  if (owner) {
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const p = board.pt(x, y);
+      const alive = board.color[p] !== EMPTY && !dead.has(p);
+      if (!alive && owner[p] !== EMPTY) sq(x, y, owner[p], 0.9, 0.3);
+    }
+  } else if (estimate && phase === 'play') {
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const p = board.pt(x, y), o = estimate[p];
+      if (Math.abs(o) < 0.2) continue;
+      const c = o > 0 ? BLACK : WHITE;
+      if (board.color[p] === c) continue;
+      sq(x, y, c, Math.min(0.9, Math.abs(o)), board.color[p] === EMPTY ? 0.42 : 0.3);
+    }
+  }
+
+  // last move marker
+  const last = moves.length ? moves[moves.length - 1] : -1;
+  if (last > 0 && board.color[last] !== EMPTY) {
+    const [x, y] = board.xy(last);
+    ctx.beginPath();
+    ctx.arc(px(x), px(y), cell * 0.17, 0, Math.PI * 2);
+    ctx.strokeStyle = board.color[last] === BLACK ? '#fff' : '#111';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // hint
+  if (hintMove > 0 && phase === 'play') {
+    const [x, y] = board.xy(hintMove);
+    ctx.beginPath();
+    ctx.arc(px(x), px(y), cell * 0.42, 0, Math.PI * 2);
+    ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 3;
+    ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // ghost stone
+  const ghost = touchPreview > 0 ? touchPreview : hover;
+  if (ghost > 0 && phase === 'play' && !aiBusy && isHumanTurn() && board.color[ghost] === EMPTY) {
+    const [x, y] = board.xy(ghost);
+    if (board.isLegal(ghost, board.toPlay)) drawStone(x, y, board.toPlay, touchPreview > 0 ? 0.7 : 0.45);
+    else {
+      ctx.strokeStyle = 'rgba(200,30,30,0.8)'; ctx.lineWidth = 2;
+      const s = cell * 0.18;
+      ctx.beginPath();
+      ctx.moveTo(px(x) - s, px(y) - s); ctx.lineTo(px(x) + s, px(y) + s);
+      ctx.moveTo(px(x) + s, px(y) - s); ctx.lineTo(px(x) - s, px(y) + s);
+      ctx.stroke();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════
+function pointFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left - origin) / cell);
+  const y = Math.round((e.clientY - rect.top - origin) / cell);
+  const n = settings.size;
+  if (x < 0 || y < 0 || x >= n || y >= n) return -1;
+  return board.pt(x, y);
+}
+
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse') return;
+  const p = pointFromEvent(e);
+  if (p !== hover) { hover = p; draw(); }
+});
+canvas.addEventListener('pointerleave', () => { hover = -1; draw(); });
+canvas.addEventListener('pointerup', e => {
+  const p = pointFromEvent(e);
+  if (p < 0) return;
+  if (phase === 'scoring') { toggleDead(p); return; }
+  if (phase !== 'play') return;
+  if (e.pointerType === 'mouse') { humanPlay(p); return; }
+  // touch / pen: first tap previews, second tap on the same point places
+  if (touchPreview === p) { touchPreview = -1; humanPlay(p); }
+  else { touchPreview = p; draw(); }
+});
+
+document.addEventListener('keydown', e => {
+  if (document.querySelector('.overlay.active')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'p' && !document.getElementById('passBtn').disabled) doMove(PASS);
+  else if (k === 'u' || (k === 'z' && (e.ctrlKey || e.metaKey))) undo();
+  else if (k === 'h') requestHint();
+  else if (k === 'e') requestEstimate();
+});
+
+// buttons
+document.getElementById('passBtn').addEventListener('click', () => { if (phase === 'play' && isHumanTurn() && !aiBusy) doMove(PASS); });
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('hintBtn').addEventListener('click', requestHint);
+document.getElementById('estimateBtn').addEventListener('click', requestEstimate);
+let resignArmed = null;
+document.getElementById('resignBtn').addEventListener('click', () => {
+  const btn = document.getElementById('resignBtn');
+  if (resignArmed) { clearTimeout(resignArmed); resignArmed = null; btn.textContent = '🏳 認輸 Resign'; resign(); return; }
+  btn.textContent = '再按一次確認認輸 Tap again';
+  resignArmed = setTimeout(() => { resignArmed = null; btn.textContent = '🏳 認輸 Resign'; }, 3000);
+});
+document.getElementById('resumeBtn').addEventListener('click', resumePlay);
+document.getElementById('confirmBtn').addEventListener('click', confirmScore);
+
+// overlays
+function closeOverlays() { document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active')); }
+function openSetup() {
+  closeOverlays();
+  const saved = loadSavedGame();
+  document.getElementById('continueBtn').style.display = phase === 'setup' && saved ? '' : 'none';
+  document.getElementById('cancelSetupBtn').style.display = phase === 'setup' ? 'none' : '';
+  document.getElementById('setupOverlay').classList.add('active');
+}
+document.querySelectorAll('.pills').forEach(group => {
+  group.addEventListener('click', e => {
+    const pill = e.target.closest('.pill');
+    if (!pill) return;
+    group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    const g = group.dataset.group, v = pill.dataset.val;
+    if (g === 'size') settings.size = +v;
+    if (g === 'opp') { settings.opp = v; document.getElementById('colorOpt').style.display = v === 'local' ? 'none' : ''; }
+    if (g === 'color') settings.color = +v;
+  });
+});
+function syncPills() {
+  const set = (g, v) => document.querySelectorAll(`.pills[data-group="${g}"] .pill`).forEach(p => p.classList.toggle('active', p.dataset.val === String(v)));
+  set('size', settings.size); set('opp', settings.opp); set('color', settings.color);
+  document.getElementById('colorOpt').style.display = settings.opp === 'local' ? 'none' : '';
+}
+document.getElementById('startBtn').addEventListener('click', () => { Sound.stone(); startGame(false); });
+document.getElementById('continueBtn').addEventListener('click', () => {
+  const s = loadSavedGame();
+  if (!s) return;
+  settings = Object.assign(settings, s.settings);
+  humanColor = s.humanColor;
+  moves = s.moves;
+  syncPills();
+  startGame(true);
+});
+document.getElementById('cancelSetupBtn').addEventListener('click', closeOverlays);
+document.getElementById('newGameBtn').addEventListener('click', openSetup);
+document.getElementById('howToPlayBtn').addEventListener('click', () => { closeOverlays(); document.getElementById('helpOverlay').classList.add('active'); });
+document.getElementById('helpCloseBtn').addEventListener('click', () => {
+  closeOverlays();
+  if (phase === 'setup') openSetup();
+});
+document.getElementById('playAgainBtn').addEventListener('click', openSetup);
+document.getElementById('reviewBtn').addEventListener('click', closeOverlays);
+document.getElementById('exitBtn').addEventListener('click', () => window.location.href = '../../');
+document.getElementById('resultExitBtn').addEventListener('click', () => window.location.href = '../../');
+document.getElementById('soundBtn').addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = soundEnabled ? '🔊' : '🔇';
+  btn.classList.toggle('muted', !soundEnabled);
+});
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════
+(function boot() {
+  const saved = loadSavedGame();
+  if (saved) {
+    settings = Object.assign(settings, saved.settings);
+    syncPills();
+  }
+  board = new Board(settings.size, allowSuicide());
+  resize();
+  refresh();
+  openSetup();
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+SillyFirebase.onAuthChanged(user => {
+  SillyFirebase.renderAvatarDisplay('game-avatar', user);
+  if (user) SillyFirebase.syncProgress('go', STATS_KEY).then(() => { if (phase !== 'setup') refresh(); });
+});
+</script>
+</body>
+</html>

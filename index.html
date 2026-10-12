@@ -234,6 +234,7 @@
     .tag-casual   { background: rgba(16,185,129,0.2); color: #6ee7b7; }
     .tag-action   { background: rgba(239,68,68,0.2); color: #fca5a5; }
     .tag-runner   { background: rgba(249,115,22,0.2); color: #fdba74; }
+    .tag-strategy { background: rgba(234,179,8,0.18); color: #fde047; }
 
     .card-title {
       font-size: 1.05rem;
@@ -363,6 +364,7 @@
           <button id="cat-all">All</button>
           <button data-tag="tag-arcade">Arcade</button>
           <button data-tag="tag-classic">Classic</button>
+          <button data-tag="tag-strategy">Strategy</button>
           <button data-tag="tag-wordhunt">Word Hunt</button>
         </div>
       </div>
@@ -380,10 +382,74 @@
 <div class="section">
   <div class="section-header">
     <h2>All Games</h2>
-    <span class="count">7</span>
+    <span class="count">8</span>
   </div>
 
   <div class="games-grid">
+
+    <!-- ── Go ── -->
+    <a class="game-card" href="games/go/">
+      <div class="card-thumb">
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goWood" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#e6c27a"/>
+              <stop offset="100%" stop-color="#c99a4e"/>
+            </linearGradient>
+            <radialGradient id="goBlk" cx="35%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#6a6a6a"/>
+              <stop offset="55%" stop-color="#1c1c1c"/>
+              <stop offset="100%" stop-color="#050505"/>
+            </radialGradient>
+            <radialGradient id="goWht" cx="35%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="70%" stop-color="#e8e8e8"/>
+              <stop offset="100%" stop-color="#b8b8b8"/>
+            </radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="#120c06"/>
+          <rect x="60" y="0" width="200" height="180" fill="url(#goWood)"/>
+          <g stroke="#3b2a12" stroke-width="1">
+            <line x1="76" y1="10" x2="76" y2="170"/><line x1="96" y1="10" x2="96" y2="170"/>
+            <line x1="116" y1="10" x2="116" y2="170"/><line x1="136" y1="10" x2="136" y2="170"/>
+            <line x1="156" y1="10" x2="156" y2="170"/><line x1="176" y1="10" x2="176" y2="170"/>
+            <line x1="196" y1="10" x2="196" y2="170"/><line x1="216" y1="10" x2="216" y2="170"/>
+            <line x1="236" y1="10" x2="236" y2="170"/>
+            <line x1="76" y1="10" x2="236" y2="10"/><line x1="76" y1="30" x2="236" y2="30"/>
+            <line x1="76" y1="50" x2="236" y2="50"/><line x1="76" y1="70" x2="236" y2="70"/>
+            <line x1="76" y1="90" x2="236" y2="90"/><line x1="76" y1="110" x2="236" y2="110"/>
+            <line x1="76" y1="130" x2="236" y2="130"/><line x1="76" y1="150" x2="236" y2="150"/>
+            <line x1="76" y1="170" x2="236" y2="170"/>
+          </g>
+          <g fill="#3b2a12">
+            <circle cx="116" cy="50" r="2.5"/><circle cx="196" cy="50" r="2.5"/><circle cx="156" cy="90" r="2.5"/>
+            <circle cx="116" cy="130" r="2.5"/><circle cx="196" cy="130" r="2.5"/>
+          </g>
+          <g fill="url(#goBlk)">
+            <circle cx="116" cy="50" r="9.5"/><circle cx="136" cy="70" r="9.5"/><circle cx="156" cy="90" r="9.5"/>
+            <circle cx="176" cy="90" r="9.5"/><circle cx="196" cy="130" r="9.5"/><circle cx="136" cy="110" r="9.5"/>
+            <circle cx="96" cy="90" r="9.5"/>
+          </g>
+          <g fill="url(#goWht)">
+            <circle cx="196" cy="50" r="9.5"/><circle cx="176" cy="70" r="9.5"/><circle cx="196" cy="90" r="9.5"/>
+            <circle cx="156" cy="70" r="9.5"/><circle cx="116" cy="130" r="9.5"/><circle cx="156" cy="130" r="9.5"/>
+          </g>
+          <circle cx="176" cy="90" r="3.5" fill="none" stroke="#fff" stroke-width="1.5"/>
+          <text x="30" y="96" font-family="serif" font-size="26" font-weight="bold" fill="#f5c518" text-anchor="middle">圍</text>
+          <text x="290" y="96" font-family="serif" font-size="26" font-weight="bold" fill="#f5c518" text-anchor="middle">棋</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <span class="new-badge">NEW</span>
+        <div class="card-tags">
+          <span class="tag tag-strategy">Strategy</span>
+          <span class="tag tag-classic">Classic</span>
+        </div>
+        <div class="card-title">Go · 圍棋</div>
+        <div class="card-desc">千年經典圍地遊戲，可與電腦或朋友對弈，支援 9／13／19 路，採台灣規則。The ancient game of territory — play the CPU or a friend.</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
 
     <!-- ── Bubble Bobble ── -->
     <a class="game-card" href="games/bubble-bobble/">
@@ -1007,7 +1073,7 @@
     });
 
     // ── Nav filter logic ──────────────────────────────
-    const NEW_HREFS = ['games/bubble-bobble/', 'games/pac-man/'];
+    const NEW_HREFS = ['games/go/', 'games/bubble-bobble/', 'games/pac-man/'];
     const TOP_HREFS = ['games/bubble-bobble/', 'games/pac-man/'];
 
     let activeFilter = null;
