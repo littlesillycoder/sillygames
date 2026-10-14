@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>中國跳棋 — GameZone</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a; --surface: #14142b; --card: #1c1c38; --border: #2a2a50;
+      --accent: #7c3aed; --accent2: #06b6d4; --text: #eef2f7; --muted: #aab4c5; --soft: #d3dae6;
+      --gold: #f5c518;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column; user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem; height: 54px; display: flex; align-items: center; gap: 1rem;
+    }
+    .topbar .brand { font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+    .topbar .brand a { color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+    .topbar .brand a:hover { color: var(--text); }
+    .topbar .sep { color: var(--muted); }
+    .topbar-actions { margin-left: auto; display: flex; gap: 0.6rem; align-items: center; }
+    .btn {
+      padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; color: var(--text);
+      font-family: inherit;
+    }
+    .btn:hover { opacity: 0.85; transform: scale(1.02); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #5b21b6); color: #fff; }
+    .btn-danger { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; }
+    .sound-toggle {
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+      padding: 0.4rem 0.7rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+    }
+    .sound-toggle.muted { opacity: 0.4; }
+    #game-avatar { display: flex; align-items: center; margin-left: 0.5rem; }
+
+    /* ── LANGUAGE SWITCH ── */
+    .lang-switch {
+      display: inline-flex; border: 1px solid var(--border); border-radius: 999px;
+      overflow: hidden; background: var(--bg); flex-shrink: 0;
+    }
+    .lang-switch button {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 0.35rem 0.75rem; font-size: 0.88rem; font-weight: 700; font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+    .lang-switch button.active { background: var(--accent2); color: #062a33; }
+
+    /* ── LAYOUT ── */
+    .game-wrapper {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 1.25rem; gap: 1.5rem;
+    }
+    .board-wrap { position: relative; }
+    canvas#board { display: block; touch-action: manipulation; cursor: pointer; }
+    .sidebar { display: flex; flex-direction: column; gap: 0.8rem; width: 290px; }
+
+    .players { display: flex; flex-direction: column; gap: 0.5rem; }
+    .player-row {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.6rem 0.8rem; display: flex; align-items: center; gap: 0.7rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .player-row.active { border-color: var(--pc); box-shadow: 0 0 16px color-mix(in srgb, var(--pc) 40%, transparent); }
+    .player-row .ball {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      background: radial-gradient(circle at 35% 30%, #fff 0%, var(--pc) 35%, color-mix(in srgb, var(--pc) 60%, #000) 100%);
+      box-shadow: 0 2px 4px rgba(0,0,0,.5);
+    }
+    .player-row .info { flex: 1; min-width: 0; }
+    .player-row .name { font-weight: 700; font-size: 1.02rem; display: flex; align-items: center; gap: 0.4rem; }
+    .player-row .bar { height: 6px; background: var(--bg); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .player-row .bar i { display: block; height: 100%; background: var(--pc); border-radius: 3px; transition: width .3s; }
+    .player-row .count { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--soft); }
+    .thinking { display: none; gap: 3px; }
+    .player-row.thinking-on .thinking { display: inline-flex; }
+    .thinking i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); animation: blink 1s infinite; }
+    .thinking i:nth-child(2) { animation-delay: .2s; } .thinking i:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%,100% { opacity: .2 } 50% { opacity: 1 } }
+
+    .status-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.8rem 0.95rem; font-size: 1rem; line-height: 1.5; min-height: 3.4rem;
+    }
+    .status-box .meta { color: var(--muted); font-size: 0.85rem; margin-top: 0.35rem; }
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .action-grid .btn { width: 100%; padding: 0.65rem 0.4rem; font-size: 0.95rem; }
+    .record { font-size: 0.88rem; color: var(--muted); text-align: center; }
+
+    .toast {
+      position: absolute; left: 50%; top: 10px; transform: translate(-50%, -10px);
+      background: rgba(10,10,25,0.9); border: 1px solid var(--border); color: #fff;
+      padding: 0.5rem 1.1rem; border-radius: 999px; font-size: 0.95rem; font-weight: 600;
+      opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ── OVERLAYS ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.25s; padding: 1rem;
+    }
+    .overlay.active { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 1.8rem 2rem; max-width: 540px; width: 100%;
+      text-align: center; max-height: 92vh; overflow-y: auto; position: relative;
+    }
+    .modal .lang-switch { position: absolute; top: 1rem; right: 1rem; }
+    .modal-icon { font-size: 2.6rem; margin-bottom: 0.5rem; }
+    .modal h2 { font-size: 1.7rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .modal p { color: var(--soft); font-size: 1.05rem; line-height: 1.7; margin-bottom: 1.2rem; }
+    .opt-label {
+      font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); margin: 0.3rem 0 0.5rem;
+    }
+    .pills { display: flex; gap: 0.45rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .pill {
+      padding: 0.45rem 1rem; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--soft); font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pill:hover { border-color: var(--accent); color: var(--text); }
+    .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .seats { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 1rem; }
+    .seat-row {
+      display: flex; align-items: center; gap: 0.7rem; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 12px; padding: 0.45rem 0.7rem;
+    }
+    .seat-row .ball { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      background: radial-gradient(circle at 35% 30%, #fff 0%, var(--pc) 35%, color-mix(in srgb, var(--pc) 60%, #000) 100%); }
+    .seat-row .seat-name { font-weight: 700; font-size: 1rem; flex: 1; text-align: left; }
+    .seat-row .pills { margin: 0; flex-wrap: nowrap; }
+    .seat-row .pill { padding: 0.3rem 0.8rem; font-size: 0.9rem; }
+    .modal-btns { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; margin-top: 0.4rem; }
+    .modal-btns .btn { min-width: 130px; font-size: 1.05rem; padding: 0.7rem 1.3rem; }
+    .rules { text-align: left; color: var(--soft); font-size: 1.05rem; line-height: 1.75; margin: 0 0 1.3rem 1.2rem; }
+    .rules li { margin-bottom: 0.7rem; padding-left: 0.2rem; }
+    .rules li::marker { color: var(--accent2); }
+    .rules b { color: #fff; }
+    .shortcuts { font-size: 0.95rem !important; color: var(--muted) !important; }
+    .shortcuts b { color: var(--accent2); }
+
+    @media (max-width: 860px) {
+      .game-wrapper { flex-direction: column; padding: 0.6rem; gap: 0.6rem; }
+      .sidebar { width: 100%; max-width: 560px; }
+      .players { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+      .player-row { padding: 0.45rem 0.6rem; gap: 0.5rem; }
+      .player-row .name { font-size: 0.9rem; }
+      .player-row .ball { width: 22px; height: 22px; }
+      .topbar { padding: 0 0.75rem; gap: 0.5rem; }
+      .topbar .btn { padding: 0.4rem 0.6rem; }
+      .topbar .sep { display: none; }
+      .topbar-actions { gap: 0.35rem; }
+      .topbar .lang-switch button { padding: 0.3rem 0.5rem; font-size: 0.8rem; }
+      .sound-toggle { padding: 0.35rem 0.5rem; }
+      #game-avatar { margin-left: 0.2rem; }
+      .hide-sm { display: none; }
+      .modal { padding: 3.2rem 1.1rem 1.5rem; }
+      .modal .lang-switch { top: 0.7rem; right: 0.7rem; }
+      .rules { font-size: 1rem; }
+      .seat-row .pill { padding: 0.3rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="../../">🏠</a>
+    <span class="sep">/</span>
+    <span data-i18n="brand"></span>
+  </div>
+  <div class="topbar-actions">
+    <div class="lang-switch"><button data-lang="zh">中</button><button data-lang="en">EN</button></div>
+    <button class="sound-toggle" id="soundBtn" title="Sound">🔊</button>
+    <button class="btn btn-ghost" id="howToPlayBtn">❓<span class="hide-sm" data-i18n="rules"></span></button>
+    <button class="btn btn-ghost" id="newGameBtn">↺<span class="hide-sm" data-i18n="newGame"></span></button>
+    <button class="btn btn-danger" id="exitBtn">✕<span class="hide-sm" data-i18n="exit"></span></button>
+  </div>
+  <div id="game-avatar"></div>
+</div>
+
+<div class="game-wrapper">
+  <div class="board-wrap">
+    <canvas id="board" width="300" height="300"></canvas>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="players" id="players"></div>
+    <div class="status-box">
+      <div id="statusText"></div>
+      <div class="meta" id="statusMeta"></div>
+    </div>
+    <div class="action-grid">
+      <button class="btn btn-ghost" id="undoBtn" title="U" data-i18n="undo"></button>
+      <button class="btn btn-ghost" id="hintBtn" title="H" data-i18n="hint"></button>
+    </div>
+    <div class="record" id="recordText"></div>
+  </div>
+</div>
+
+<!-- Setup -->
+<div class="overlay active" id="setupOverlay">
+  <div class="modal">
+    <div class="lang-switch"><button data-lang="zh">中文</button><button data-lang="en">English</button></div>
+    <div class="modal-icon">🔴🔵🟢</div>
+    <h2 data-i18n="setupTitle"></h2>
+    <p data-i18n-html="setupIntro"></p>
+
+    <div class="opt-label" data-i18n="numPlayers"></div>
+    <div class="pills" data-group="n">
+      <div class="pill active" data-val="2">2</div>
+      <div class="pill" data-val="3">3</div>
+      <div class="pill" data-val="4">4</div>
+      <div class="pill" data-val="6">6</div>
+    </div>
+
+    <div class="opt-label" data-i18n="seatsLabel"></div>
+    <div class="seats" id="seats"></div>
+
+    <div id="levelOpt">
+      <div class="opt-label" data-i18n="cpuLevel"></div>
+      <div class="pills" data-group="level">
+        <div class="pill" data-val="easy" data-i18n="easy"></div>
+        <div class="pill active" data-val="medium" data-i18n="medium"></div>
+        <div class="pill" data-val="hard" data-i18n="hard"></div>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="startBtn" data-i18n="start"></button>
+      <button class="btn btn-ghost" id="continueBtn" style="display:none" data-i18n="continue"></button>
+      <button class="btn btn-ghost" id="cancelSetupBtn" style="display:none" data-i18n="cancel"></button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" data-i18n="exitBtn"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Rules -->
+<div class="overlay" id="helpOverlay">
+  <div class="modal">
+    <div class="lang-switch"><button data-lang="zh">中文</button><button data-lang="en">English</button></div>
+    <div class="modal-icon">📖</div>
+    <h2 data-i18n="helpTitle"></h2>
+    <ul class="rules" data-i18n-html="rulesList"></ul>
+    <p class="shortcuts" data-i18n-html="shortcuts"></p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="helpCloseBtn" data-i18n="gotIt"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Result -->
+<div class="overlay" id="resultOverlay">
+  <div class="modal">
+    <div class="modal-icon" id="resultIcon">🏆</div>
+    <h2 id="resultTitle"></h2>
+    <p id="resultSubtitle"></p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="playAgainBtn" data-i18n="playAgain"></button>
+      <button class="btn btn-ghost" id="reviewBtn" data-i18n="viewBoard"></button>
+      <button class="btn btn-danger" id="resultExitBtn" data-i18n="exitBtn"></button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  CONSTANTS & STATE
+// ═══════════════════════════════════════════════
+const CC = ChineseCheckers;
+const { cells, N, corners, SEATS, opposite } = CC;
+const COLORS = ['#ef4444', '#a855f7', '#22c55e', '#3b82f6', '#facc15', '#f97316'];
+const GAME_KEY = 'cc_game', STATS_KEY = 'cc_save', LANG_KEY = 'cc_lang';
+const MAX_PLIES = 2000;
+
+let settings = { n: 2, level: 'medium', seats: { 0: 'human', 1: 'cpu', 2: 'cpu', 3: 'cpu', 4: 'cpu', 5: 'cpu' } };
+let board = CC.newBoard(2);
+let order = SEATS[2];       // corner ids in turn order
+let turn = 0;               // index into order
+let ply = 0;
+let lastMove = {};          // per player — for highlighting and AI anti-oscillation
+let history = [];           // snapshots for undo
+let phase = 'setup';        // setup | play | over
+let selected = -1, dests = [];
+let hover = -1, hint = null;
+let anim = null;            // { player, path, start, segMs }
+let cpuTimer = null, token = 0;
+let result = null;          // { winner }
+
+// ═══════════════════════════════════════════════
+//  LANGUAGE
+// ═══════════════════════════════════════════════
+let lang = 'zh';
+try {
+  const l = localStorage.getItem(LANG_KEY) || localStorage.getItem('go_lang');
+  if (l === 'zh' || l === 'en') lang = l;
+} catch (e) {}
+
+const I18N = {
+  zh: {
+    brand: '🔴 中國跳棋', rules: ' 規則', newGame: ' 新局', exit: ' 離開', exitBtn: '✕ 離開',
+    colors: ['紅', '紫', '綠', '藍', '黃', '橘'],
+    you: '你', player: '玩家', cpu: '電腦', cpuLv: l => `電腦（${l}）`,
+    lv_easy: '簡單', lv_medium: '中等', lv_hard: '困難',
+    seatName: (c, who) => `${c}・${who}`,
+    undo: '↶ 悔棋', hint: '💡 提示',
+    setupTitle: '中國跳棋',
+    setupIntro: '把你的 <b>10 顆棋子</b>全部移到<b>正對面</b>的三角區！<br>可以一步一步走，也可以連續跳過其他棋子。',
+    numPlayers: '人數', seatsLabel: '座位（點選切換玩家或電腦）', cpuLevel: '電腦難度',
+    easy: '簡單', medium: '中等', hard: '困難', human: '玩家',
+    start: '▶ 開始', continue: '⏯ 繼續上一局', cancel: '取消',
+    helpTitle: '中國跳棋規則',
+    rulesList: `
+      <li>每人有 <b>10 顆棋子</b>，從自己的三角區出發，目標是<b>正對面的三角區</b>。</li>
+      <li><b>走一步：</b>移到旁邊相鄰的空位。</li>
+      <li><b>跳：</b>隔著一顆棋子（自己或別人的都可以）跳到後面的空位，而且可以<b>連續跳</b>。被跳過的棋子不會被吃掉。</li>
+      <li>每回合只能選一種：走一步，或是一連串的跳。</li>
+      <li>最先把 10 顆棋子全部移進對面三角區的人<b>獲勝</b>。</li>
+      <li><b>防堵規則：</b>如果對面三角區已經被填滿、裡面有你的棋子，而佔位的是別人停進來的棋子，也算你贏。</li>`,
+    shortcuts: '快捷鍵：<b>U</b> 悔棋　<b>H</b> 提示　<b>Esc</b> 取消選取<br>點選自己的棋子，再點選綠色圈圈落子。',
+    gotIt: '知道了',
+    playAgain: '▶ 再來一局', viewBoard: '👁 看棋盤',
+    chooseSettings: '請選擇人數和座位，開始對局。',
+    yourTurn: (n, you) => you ? '輪到你了，點選你的棋子。' : `輪到${n}，點選棋子。`,
+    pickDest: '點選綠色圈圈落子，或點別的棋子換一顆。',
+    thinking: n => `${n} 思考中…`,
+    noMove: '這顆棋子走不動，換一顆試試',
+    notYours: '這不是你的棋子',
+    hintShow: '💡 試試看這一步',
+    meta: (p, n, lv) => `第 ${p} 手・${n} 人局` + (lv ? `・電腦${lv}` : ''),
+    youWin: '你贏了！', youLose: '你輸了', wins: n => `${n} 獲勝！`,
+    winDetail: (n, k) => `${n} 最先把棋子全部移進對面三角區。`,
+    lossDetail: n => `${n} 搶先抵達了。再挑戰一次吧！`,
+    timeUp: '回合數已達上限，由最接近終點的人獲勝。',
+    gameOver: '對局結束。',
+    record: (w, l) => `對電腦戰績：${w} 勝 ${l} 敗`, noRecord: '多位玩家對局（不計戰績）',
+  },
+  en: {
+    brand: '🔴 Chinese Checkers', rules: ' Rules', newGame: ' New Game', exit: ' Exit', exitBtn: '✕ Exit',
+    colors: ['Red', 'Purple', 'Green', 'Blue', 'Yellow', 'Orange'],
+    you: 'You', player: 'Player', cpu: 'CPU', cpuLv: l => `CPU (${l})`,
+    lv_easy: 'Easy', lv_medium: 'Medium', lv_hard: 'Hard',
+    seatName: (c, who) => `${c} · ${who}`,
+    undo: '↶ Undo', hint: '💡 Hint',
+    setupTitle: 'Chinese Checkers',
+    setupIntro: 'Move all <b>10 marbles</b> into the triangle <b>directly opposite</b> you!<br>Step one hole at a time, or jump over other marbles — again and again.',
+    numPlayers: 'Players', seatsLabel: 'Seats (tap to switch player / CPU)', cpuLevel: 'CPU difficulty',
+    easy: 'Easy', medium: 'Medium', hard: 'Hard', human: 'Player',
+    start: '▶ Start', continue: '⏯ Continue last game', cancel: 'Cancel',
+    helpTitle: 'How to Play',
+    rulesList: `
+      <li>Each player has <b>10 marbles</b> starting in their own triangle. The goal is the <b>triangle directly opposite</b>.</li>
+      <li><b>Step:</b> move to an empty neighbouring hole.</li>
+      <li><b>Jump:</b> hop over one adjacent marble (anyone's) into the empty hole behind it. You can <b>chain jumps</b>. Jumped marbles are not captured.</li>
+      <li>Each turn is either one step or one chain of jumps.</li>
+      <li>The first player to fill the opposite triangle with all 10 marbles <b>wins</b>.</li>
+      <li><b>Anti-blocking:</b> if the opposite triangle is full, contains at least one of your marbles, and the rest were parked there by other players, you win too.</li>`,
+    shortcuts: 'Shortcuts: <b>U</b> undo　<b>H</b> hint　<b>Esc</b> deselect<br>Tap one of your marbles, then tap a green ring to move.',
+    gotIt: 'Got it',
+    playAgain: '▶ Play Again', viewBoard: '👁 View Board',
+    chooseSettings: 'Choose players and seats to start.',
+    yourTurn: (n, you) => you ? 'Your turn — pick one of your marbles.' : `${n}'s turn — pick a marble.`,
+    pickDest: 'Tap a green ring to move, or pick another marble.',
+    thinking: n => `${n} is thinking…`,
+    noMove: "That marble can't move — try another",
+    notYours: "That's not your marble",
+    hintShow: '💡 Try this move',
+    meta: (p, n, lv) => `Move ${p} · ${n} players` + (lv ? ` · CPU ${lv.toLowerCase()}` : ''),
+    youWin: 'You Win!', youLose: 'You Lose', wins: n => `${n} Wins!`,
+    winDetail: n => `${n} got every marble home first.`,
+    lossDetail: n => `${n} got there first. Try again!`,
+    timeUp: 'Move limit reached — the player closest to home wins.',
+    gameOver: 'Game over.',
+    record: (w, l) => `Record vs CPU: ${w} W · ${l} L`, noRecord: 'Multiple human players (not recorded)',
+  },
+};
+function t(key, ...args) {
+  const v = (I18N[lang] && I18N[lang][key]) ?? I18N.zh[key] ?? key;
+  return typeof v === 'function' ? v(...args) : v;
+}
+function applyLang() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-Hant-TW' : 'en';
+  document.title = lang === 'zh' ? '中國跳棋 — GameZone' : 'Chinese Checkers — GameZone';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('.lang-switch button').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+}
+function setLang(l) {
+  lang = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch (e) {}
+  applyLang();
+  renderSeats();
+  if (result) renderResult();
+  refresh();
+}
+
+// ═══════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════
+const isHuman = p => settings.seats[p] === 'human';
+const humans = () => order.filter(isHuman);
+const current = () => order[turn];
+function seatName(p) {
+  const color = t('colors')[p];
+  let who;
+  if (isHuman(p)) who = humans().length === 1 ? t('you') : t('player');
+  else who = t('cpu');
+  return t('seatName', color, who);
+}
+
+// ═══════════════════════════════════════════════
+//  SOUND
+// ═══════════════════════════════════════════════
+let soundEnabled = true;
+const Sound = (() => {
+  let _ac = null;
+  function ac() {
+    if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ac.state === 'suspended') _ac.resume();
+    return _ac;
+  }
+  function tone(freq, type, when, dur, vol = 0.14) {
+    if (!soundEnabled) return;
+    const c = ac(), o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type = type; o.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0.001, when);
+    g.gain.linearRampToValueAtTime(vol, when + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, when + dur);
+    o.start(when); o.stop(when + dur + 0.02);
+  }
+  return {
+    click()   { if (!soundEnabled) return; tone(900, 'sine', ac().currentTime, 0.06, 0.1); },
+    step()    { if (!soundEnabled) return; const t0 = ac().currentTime; tone(420, 'triangle', t0, 0.09); },
+    hop(i)    { if (!soundEnabled) return; const t0 = ac().currentTime; tone(520 + i * 70, 'triangle', t0, 0.1); },
+    bad()     { if (!soundEnabled) return; tone(160, 'square', ac().currentTime, 0.12, 0.07); },
+    win()     { if (!soundEnabled) return; const t0 = ac().currentTime; [523, 659, 784, 1047].forEach((f, i) => tone(f, 'triangle', t0 + i * 0.12, 0.3)); },
+    lose()    { if (!soundEnabled) return; const t0 = ac().currentTime; [392, 330, 262].forEach((f, i) => tone(f, 'triangle', t0 + i * 0.16, 0.35)); },
+  };
+})();
+
+// ═══════════════════════════════════════════════
+//  GAME FLOW
+// ═══════════════════════════════════════════════
+function cancelCpu() { token++; if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; } }
+
+function startGame(saved) {
+  cancelCpu();
+  anim = null; selected = -1; dests = []; hint = null; result = null;
+  order = SEATS[settings.n];
+  if (saved) {
+    board = Int8Array.from(saved.board);
+    turn = saved.turn; ply = saved.ply; lastMove = saved.lastMove || {};
+  } else {
+    board = CC.newBoard(settings.n);
+    turn = 0; ply = 0; lastMove = {};
+  }
+  history = [];
+  phase = 'play';
+  closeOverlays();
+  resize();
+  renderPlayers();
+  saveGame();
+  nextTurn(true);
+}
+
+function snapshot() {
+  return { board: board.slice(), turn, ply, lastMove: JSON.parse(JSON.stringify(lastMove)) };
+}
+
+function nextTurn(first) {
+  if (first && anim) return;            // a move is still animating; it will call nextTurn itself
+  if (!first) turn = (turn + 1) % order.length;
+  selected = -1; dests = []; hint = null;
+  refresh();
+  const p = current();
+  if (phase !== 'play') return;
+  if (!isHuman(p)) {
+    const my = ++token;
+    cpuTimer = setTimeout(() => {
+      cpuTimer = null;
+      if (my !== token || phase !== 'play' || anim) return;
+      const m = CC.chooseMove(board, p, settings.level, lastMove[p]);
+      if (!m) { nextTurn(); return; }
+      doMove(m);
+    }, humans().length ? 420 : 250);
+  }
+}
+
+function doMove(m) {
+  const p = board[m.from];
+  if (isHuman(p)) history.push(snapshot());
+  if (history.length > 200) history.shift();
+  board[m.from] = -1;
+  anim = { player: p, path: m.path, start: performance.now(), segMs: m.jump ? 170 : 150, jump: m.jump, lastSeg: -1 };
+  selected = -1; dests = []; hint = null;
+  refresh();
+  requestAnimationFrame(animate);
+  anim.onDone = () => {
+    board[m.to] = p;
+    lastMove[p] = { from: m.from, to: m.to, path: m.path };
+    ply++;
+    anim = null;
+    if (CC.hasWon(board, p)) { endGame(p, false); return; }
+    if (ply >= MAX_PLIES) {
+      let best = order[0];
+      for (const q of order) if (CC.cost(board, q) < CC.cost(board, best)) best = q;
+      endGame(best, true); return;
+    }
+    saveGame();
+    nextTurn();
+  };
+}
+
+function animate(now) {
+  if (!anim) return;
+  const segs = anim.path.length - 1;
+  const el = now - anim.start;
+  const seg = Math.floor(el / anim.segMs);
+  if (seg > anim.lastSeg && seg < segs) {
+    anim.lastSeg = seg;
+    anim.jump ? Sound.hop(seg) : Sound.step();
+  }
+  draw();
+  if (el >= segs * anim.segMs) { const done = anim.onDone; done(); return; }
+  requestAnimationFrame(animate);
+}
+
+function humanClick(i) {
+  if (phase !== 'play' || anim) return;
+  const p = current();
+  if (!isHuman(p)) return;
+  if (i < 0) { selected = -1; dests = []; draw(); return; }
+  if (selected >= 0) {
+    const m = dests.find(d => d.to === i);
+    if (m) { doMove(m); return; }
+  }
+  if (board[i] === p) {
+    selected = i;
+    dests = bestPaths(CC.movesFrom(board, i));
+    if (!dests.length) { Sound.bad(); toast(t('noMove')); selected = -1; }
+    else Sound.click();
+    refresh();
+    return;
+  }
+  if (board[i] >= 0) { Sound.bad(); toast(t('notYours')); }
+  selected = -1; dests = [];
+  refresh();
+}
+
+// keep one (shortest) path per destination
+function bestPaths(ms) {
+  const by = new Map();
+  for (const m of ms) { const o = by.get(m.to); if (!o || m.path.length < o.path.length) by.set(m.to, m); }
+  return [...by.values()];
+}
+
+function undo() {
+  if (phase !== 'play' || anim || !history.length) return;
+  cancelCpu();
+  const s = history.pop();
+  board = s.board; turn = s.turn; ply = s.ply; lastMove = s.lastMove;
+  selected = -1; dests = []; hint = null;
+  saveGame();
+  refresh();
+  nextTurn(true);
+}
+
+function showHint() {
+  if (phase !== 'play' || anim || !isHuman(current())) return;
+  const m = CC.chooseMove(board, current(), 'hard', lastMove[current()]);
+  if (!m) return;
+  hint = m;
+  selected = m.from;
+  dests = bestPaths(CC.movesFrom(board, m.from));
+  toast(t('hintShow'));
+  refresh();
+}
+
+function endGame(winner, timeUp) {
+  cancelCpu();
+  phase = 'over';
+  result = { winner, timeUp };
+  clearSavedGame();
+  const hs = humans();
+  if (hs.length === 1 && order.some(p => !isHuman(p))) {
+    const won = winner === hs[0];
+    recordResult(won);
+    won ? Sound.win() : Sound.lose();
+  } else Sound.win();
+  renderResult();
+  refresh();
+  setTimeout(() => document.getElementById('resultOverlay').classList.add('active'), 500);
+}
+
+function renderResult() {
+  const { winner, timeUp } = result;
+  const hs = humans();
+  let title, icon, sub;
+  if (hs.length === 1) {
+    const won = winner === hs[0];
+    title = won ? t('youWin') : t('youLose');
+    icon = won ? '🏆' : '😵';
+    sub = won ? t('winDetail', seatName(winner)) : t('lossDetail', seatName(winner) + (lang === 'zh' ? `（${t('lv_' + settings.level)}）` : ` (${t('lv_' + settings.level)})`));
+  } else {
+    title = t('wins', seatName(winner));
+    icon = '🏆';
+    sub = t('winDetail', seatName(winner));
+  }
+  if (timeUp) sub = t('timeUp') + '<br>' + sub;
+  document.getElementById('resultIcon').textContent = icon;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSubtitle').innerHTML = sub;
+}
+
+// ═══════════════════════════════════════════════
+//  SAVE / STATS
+// ═══════════════════════════════════════════════
+function saveGame() {
+  try {
+    localStorage.setItem(GAME_KEY, JSON.stringify({ settings, board: Array.from(board), turn, ply, lastMove }));
+  } catch (e) {}
+}
+function clearSavedGame() { try { localStorage.removeItem(GAME_KEY); } catch (e) {} }
+function loadSavedGame() {
+  try {
+    const s = JSON.parse(localStorage.getItem(GAME_KEY));
+    if (s && s.settings && SEATS[s.settings.n] && Array.isArray(s.board) && s.board.length === N) return s;
+  } catch (e) {}
+  return null;
+}
+function getStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { wins: 0, losses: 0 }; }
+  catch (e) { return { wins: 0, losses: 0 }; }
+}
+// SillyFirebase may be missing (blocked CDN / ad-blocker) — never let that break the game
+function sf() { try { return typeof SillyFirebase !== 'undefined' ? SillyFirebase : null; } catch (e) { return null; } }
+function recordResult(won) {
+  const s = getStats();
+  s.wins = (s.wins || 0) + (won ? 1 : 0);
+  s.losses = (s.losses || 0) + (won ? 0 : 1);
+  s.savedAt = Date.now();
+  const fb = sf();
+  if (fb && fb.currentUser) s.uid = fb.currentUser.uid;
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) {}
+  if (fb) fb.saveProgress('chineseCheckers', s);
+}
+
+// ═══════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════
+function renderPlayers() {
+  const box = document.getElementById('players');
+  box.innerHTML = order.map(p => `
+    <div class="player-row" id="pr${p}" style="--pc:${COLORS[p]}">
+      <div class="ball"></div>
+      <div class="info">
+        <div class="name"><span class="nm"></span><span class="thinking"><i></i><i></i><i></i></span></div>
+        <div class="bar"><i></i></div>
+      </div>
+      <div class="count"></div>
+    </div>`).join('');
+}
+
+function setStatus(text, meta) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusMeta').textContent = meta;
+}
+
+function refresh() {
+  if (document.getElementById('players').children.length !== order.length) renderPlayers();
+  const cur = current();
+  for (const p of order) {
+    const row = document.getElementById('pr' + p);
+    if (!row) continue;
+    const n = CC.inTarget(board, p) + (anim && anim.player === p && CC.cornerOf[anim.path[anim.path.length - 1]] === opposite(p) ? 1 : 0);
+    row.querySelector('.nm').textContent = seatName(p);
+    row.querySelector('.count').textContent = `${Math.min(10, n)}/10`;
+    row.querySelector('.bar i').style.width = Math.min(100, n * 10) + '%';
+    row.classList.toggle('active', phase === 'play' && p === cur);
+    row.classList.toggle('thinking-on', phase === 'play' && p === cur && !isHuman(p));
+  }
+  const meta = phase === 'setup' ? '' : t('meta', ply, settings.n, order.some(p => !isHuman(p)) ? t('lv_' + settings.level) : '');
+  if (phase === 'setup') setStatus(t('chooseSettings'), '');
+  else if (phase === 'over') setStatus(result ? t('wins', seatName(result.winner)) : t('gameOver'), meta);
+  else if (anim) {}
+  else if (isHuman(cur)) setStatus(selected >= 0 ? t('pickDest') : t('yourTurn', seatName(cur), humans().length === 1), meta);
+  else setStatus(t('thinking', seatName(cur)), meta);
+
+  const humanTurn = phase === 'play' && !anim && isHuman(cur);
+  document.getElementById('undoBtn').disabled = !(phase === 'play' && !anim && history.length);
+  document.getElementById('hintBtn').disabled = !humanTurn;
+
+  const hs = humans(), st = getStats();
+  document.getElementById('recordText').textContent =
+    hs.length === 1 && order.some(p => !isHuman(p)) ? t('record', st.wins || 0, st.losses || 0) :
+    hs.length > 1 ? t('noRecord') : '';
+  draw();
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+// ═══════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let cssSize = 600, unit = 40;
+const H = 8 * Math.sqrt(3) / 2;   // half height of the star in lattice units (tip y)
+
+function resize() {
+  const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
+  const narrow = vw <= 860;
+  const availW = narrow ? vw - 16 : vw - 290 - 24 * 2 - 40;
+  const availH = narrow ? window.innerHeight - 54 - 24 - 250 : window.innerHeight - 54 - 40;
+  cssSize = Math.max(280, Math.min(780, availW, Math.max(availH, narrow ? 320 : 280)));
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = cssSize + 'px';
+  canvas.style.height = cssSize + 'px';
+  canvas.width = Math.round(cssSize * dpr);
+  canvas.height = Math.round(cssSize * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  unit = cssSize / (2 * H + 1.6);
+  draw();
+}
+const X = i => cssSize / 2 + cells[i].x * unit;
+const Y = i => cssSize / 2 + cells[i].y * unit;
+
+function starPoints() {
+  // 6 tips + 6 inner hexagon corners, ordered by angle
+  const at = (q, r) => cells.findIndex(c => c.q === q && c.r === r);
+  const pts = corners.map(c => c.tip).concat([at(4, 0), at(0, 4), at(-4, 4), at(-4, 0), at(0, -4), at(4, -4)]);
+  return pts.map(i => [cells[i].x, cells[i].y]).sort((a, b) => Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0]));
+}
+const STAR = starPoints();
+
+function cornerTriangle(k) {
+  const c = corners[k];
+  const coord = i => c.axis === 'q' ? cells[i].q : c.axis === 'r' ? cells[i].r : cells[i].s;
+  const base = c.cells.filter(i => c.sign * coord(i) === 5);
+  let a = base[0], b = base[0], best = -1;
+  for (const i of base) for (const j of base) {
+    const d = Math.hypot(cells[i].x - cells[j].x, cells[i].y - cells[j].y);
+    if (d > best) { best = d; a = i; b = j; }
+  }
+  return [c.tip, a, b];
+}
+const TRIS = corners.map((_, k) => cornerTriangle(k));
+
+function poly(points, fill, stroke, lw) {
+  ctx.beginPath();
+  points.forEach(([x, y], k) => {
+    const px = cssSize / 2 + x * unit, py = cssSize / 2 + y * unit;
+    k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  });
+  ctx.closePath();
+  ctx.lineJoin = 'round';
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+}
+
+function drawMarble(x, y, color, r, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.beginPath(); ctx.arc(x + r * 0.08, y + r * 0.14, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();
+  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.08, x, y, r);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.28, color);
+  g.addColorStop(1, shade(color, -0.45));
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.restore();
+}
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const m = v => Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f);
+  return `rgb(${m(r)},${m(g)},${m(b)})`;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, cssSize, cssSize);
+  // star base (thick rounded stroke pads it out)
+  poly(STAR, '#1f1a3d', '#1f1a3d', unit * 1.5);
+  poly(STAR, null, '#3b3470', 2);
+  // tinted corner triangles
+  const active = new Set(order);
+  TRIS.forEach((tri, k) => {
+    const pts = tri.map(i => [cells[i].x, cells[i].y]);
+    const col = COLORS[k];
+    ctx.globalAlpha = active.has(k) ? 0.28 : 0.08;
+    poly(pts, col, col, unit * 1.1);
+    ctx.globalAlpha = 1;
+  });
+  // highlight the current player's target triangle
+  if (phase === 'play' && isHuman(current())) {
+    const tri = TRIS[opposite(current())].map(i => [cells[i].x, cells[i].y]);
+    ctx.setLineDash([6, 5]);
+    poly(tri, null, COLORS[current()], 2);
+    ctx.setLineDash([]);
+  }
+  // lattice lines
+  ctx.strokeStyle = 'rgba(160,150,230,0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < N; i++) for (const d of [0, 2, 4]) {
+    const j = CC.nb[i * 6 + d];
+    if (j >= 0) { ctx.moveTo(X(i), Y(i)); ctx.lineTo(X(j), Y(j)); }
+  }
+  ctx.stroke();
+  // holes
+  for (let i = 0; i < N; i++) {
+    ctx.beginPath(); ctx.arc(X(i), Y(i), unit * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = '#0b0a1c'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  // last move trail of the player who just moved
+  const prev = order[(turn - 1 + order.length) % order.length];
+  const lm = lastMove[prev];
+  if (lm && !anim && phase !== 'setup') {
+    ctx.strokeStyle = shade(COLORS[prev], 0.2); ctx.globalAlpha = 0.55; ctx.lineWidth = 2.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    lm.path.forEach((i, k) => k ? ctx.lineTo(X(i), Y(i)) : ctx.moveTo(X(i), Y(i)));
+    ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(X(lm.from), Y(lm.from), unit * 0.16, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS[prev]; ctx.globalAlpha = 0.6; ctx.fill(); ctx.globalAlpha = 1;
+  }
+  // marbles
+  const r = unit * 0.4;
+  for (let i = 0; i < N; i++) if (board[i] >= 0) drawMarble(X(i), Y(i), COLORS[board[i]], r);
+  // hover / selection
+  const cur = current();
+  if (phase === 'play' && !anim && isHuman(cur)) {
+    if (hover >= 0 && board[hover] === cur && hover !== selected) {
+      ctx.beginPath(); ctx.arc(X(hover), Y(hover), r + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    if (selected >= 0) {
+      ctx.beginPath(); ctx.arc(X(selected), Y(selected), r + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+      // path preview when hovering a destination
+      const hd = dests.find(d => d.to === hover);
+      if (hd && hd.path.length > 2) {
+        ctx.strokeStyle = 'rgba(74,222,128,0.8)'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); hd.path.forEach((i, k) => k ? ctx.lineTo(X(i), Y(i)) : ctx.moveTo(X(i), Y(i)));
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+      for (const d of dests) {
+        const isHint = hint && hint.to === d.to && hint.from === selected;
+        ctx.beginPath(); ctx.arc(X(d.to), Y(d.to), unit * (d.to === hover ? 0.32 : 0.24), 0, Math.PI * 2);
+        ctx.fillStyle = isHint ? 'rgba(245,197,24,0.55)' : 'rgba(74,222,128,0.35)'; ctx.fill();
+        ctx.strokeStyle = isHint ? '#f5c518' : '#4ade80'; ctx.lineWidth = isHint ? 3 : 2; ctx.stroke();
+      }
+    }
+  }
+  // animating marble
+  if (anim) {
+    const segs = anim.path.length - 1;
+    const el = Math.min(performance.now() - anim.start, segs * anim.segMs);
+    const k = Math.min(segs - 1, Math.floor(el / anim.segMs));
+    const f = (el - k * anim.segMs) / anim.segMs;
+    const a = anim.path[k], b = anim.path[k + 1];
+    const e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    const x = X(a) + (X(b) - X(a)) * e, y = Y(a) + (Y(b) - Y(a)) * e;
+    const lift = anim.jump ? Math.sin(f * Math.PI) * unit * 0.35 : 0;
+    drawMarble(x, y - lift, COLORS[anim.player], r * (1 + lift / unit * 0.25));
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════
+function cellAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  let best = -1, bd = unit * 0.55;
+  for (let i = 0; i < N; i++) {
+    const d = Math.hypot(X(i) - x, Y(i) - y);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse') return;
+  const c = cellAt(e);
+  if (c !== hover) { hover = c; if (!anim) draw(); }
+});
+canvas.addEventListener('pointerleave', () => { hover = -1; if (!anim) draw(); });
+canvas.addEventListener('pointerup', e => humanClick(cellAt(e)));
+
+document.addEventListener('keydown', e => {
+  if (document.querySelector('.overlay.active')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'u' || (k === 'z' && (e.ctrlKey || e.metaKey))) undo();
+  else if (k === 'h') showHint();
+  else if (k === 'escape') { selected = -1; dests = []; refresh(); }
+});
+
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('hintBtn').addEventListener('click', showHint);
+
+// ── setup
+function renderSeats() {
+  const box = document.getElementById('seats');
+  box.innerHTML = SEATS[settings.n].map(p => `
+    <div class="seat-row" style="--pc:${COLORS[p]}">
+      <div class="ball"></div>
+      <div class="seat-name">${t('colors')[p]}</div>
+      <div class="pills" data-seat="${p}">
+        <div class="pill ${settings.seats[p] === 'human' ? 'active' : ''}" data-val="human">${t('human')}</div>
+        <div class="pill ${settings.seats[p] === 'cpu' ? 'active' : ''}" data-val="cpu">${t('cpu')}</div>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.pills').forEach(g => g.addEventListener('click', e => {
+    const pill = e.target.closest('.pill'); if (!pill) return;
+    settings.seats[g.dataset.seat] = pill.dataset.val;
+    renderSeats();
+  }));
+  const anyCpu = SEATS[settings.n].some(p => settings.seats[p] === 'cpu');
+  document.getElementById('levelOpt').style.display = anyCpu ? '' : 'none';
+}
+document.querySelectorAll('.pills[data-group]').forEach(group => {
+  group.addEventListener('click', e => {
+    const pill = e.target.closest('.pill'); if (!pill) return;
+    group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    if (group.dataset.group === 'n') { settings.n = +pill.dataset.val; renderSeats(); previewBoard(); }
+    if (group.dataset.group === 'level') settings.level = pill.dataset.val;
+  });
+});
+function syncPills() {
+  const set = (g, v) => document.querySelectorAll(`.pills[data-group="${g}"] .pill`).forEach(p => p.classList.toggle('active', p.dataset.val === String(v)));
+  set('n', settings.n); set('level', settings.level);
+  renderSeats();
+}
+function previewBoard() {
+  if (phase !== 'setup') return;
+  order = SEATS[settings.n];
+  board = CC.newBoard(settings.n);
+  renderPlayers();
+  refresh();
+}
+
+function closeOverlays() { document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active')); }
+function openSetup() {
+  closeOverlays();
+  const saved = loadSavedGame();
+  document.getElementById('continueBtn').style.display = phase === 'setup' && saved ? '' : 'none';
+  document.getElementById('cancelSetupBtn').style.display = phase === 'setup' ? 'none' : '';
+  renderSeats();
+  document.getElementById('setupOverlay').classList.add('active');
+}
+document.getElementById('startBtn').addEventListener('click', () => {
+  Sound.click();
+  startGame(null);
+});
+document.getElementById('continueBtn').addEventListener('click', () => {
+  const s = loadSavedGame(); if (!s) return;
+  settings = Object.assign(settings, s.settings);
+  syncPills();
+  startGame(s);
+});
+document.getElementById('newGameBtn').addEventListener('click', () => { cancelCpu(); openSetup(); });
+document.getElementById('howToPlayBtn').addEventListener('click', () => {
+  closeOverlays(); document.getElementById('helpOverlay').classList.add('active');
+});
+document.getElementById('helpCloseBtn').addEventListener('click', () => {
+  closeOverlays();
+  if (phase === 'setup') openSetup();
+});
+document.getElementById('cancelSetupBtn').addEventListener('click', () => {
+  closeOverlays();
+  if (phase === 'play' && !cpuTimer) nextTurn(true);   // resume the CPU that "New Game" paused
+});
+document.getElementById('playAgainBtn').addEventListener('click', () => { phase = 'setup'; result = null; openSetup(); previewBoard(); });
+document.getElementById('reviewBtn').addEventListener('click', closeOverlays);
+document.getElementById('exitBtn').addEventListener('click', () => window.location.href = '../../');
+document.getElementById('resultExitBtn').addEventListener('click', () => window.location.href = '../../');
+document.getElementById('soundBtn').addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = soundEnabled ? '🔊' : '🔇';
+  btn.classList.toggle('muted', !soundEnabled);
+});
+document.querySelectorAll('.lang-switch button').forEach(b =>
+  b.addEventListener('click', e => { e.stopPropagation(); setLang(b.dataset.lang); }));
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════
+(function boot() {
+  const saved = loadSavedGame();
+  if (saved) settings = Object.assign(settings, saved.settings);
+  applyLang();
+  syncPills();
+  resize();
+  previewBoard();
+  openSetup();
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+if (sf()) {
+  SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+  SillyFirebase.onAuthChanged(user => {
+    SillyFirebase.renderAvatarDisplay('game-avatar', user);
+    if (user) SillyFirebase.syncProgress('chineseCheckers', STATS_KEY).then(() => refresh());
+  });
+}
+</script>
+</body>
+</html>
