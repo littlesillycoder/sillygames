@@ -11,12 +11,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   min-height: 100vh;
   font-family: 'Courier New', monospace;
 }
 #pac-topbar {
   width: 980px;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -51,7 +52,6 @@ canvas {
   color: #fff;
   line-height: 1.7;
   flex-shrink: 0;
-  margin-top: 32px;
 }
 .pac-side-panel h3 {
   color: #ffd700;
@@ -78,12 +78,12 @@ canvas {
 }
 .panel-word-slot { margin-top: 8px; }
 .panel-word-label {
-  font-size: 12px;
-  color: #888;
+  font-size: 13px;
+  color: #aab4c5;
   letter-spacing: 0.5px;
   margin-bottom: 3px;
 }
-.panel-word-label.active { color: #aaa; }
+.panel-word-label.active { color: #fff; }
 .panel-word-label.done   { color: #ffd700; }
 .panel-letter-row {
   display: flex;
@@ -1819,6 +1819,23 @@ SillyFirebase.onAuthChanged(async user => {
   if (!gameRunning) { drawMaze(); drawPac(); drawTray(); drawSoundIcon(); drawStartPrompt(); }
   SillyFirebase.renderAvatarDisplay('game-avatar', user);
 });
+</script>
+<script>
+// centre the game and scale the canvas to the window (click handling already accounts for CSS size)
+(function fitGame() {
+  const cv = document.getElementById('c');
+  function fit() {
+    const panels = window.innerWidth > 1050 ? 2 * 190 + 2 * 12 : 0;
+    const zW = (window.innerWidth - panels - 32) / cv.width;
+    const zH = (window.innerHeight - 70 - 24) / cv.height;
+    const z = Math.max(0.5, Math.min(2.2, zW, zH));
+    cv.style.width = Math.round(cv.width * z) + 'px';
+    cv.style.height = Math.round(cv.height * z) + 'px';
+    document.getElementById('pac-topbar').style.width = (Math.round(cv.width * z) + panels + (panels ? 24 : 0)) + 'px';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
 </script>
 </body>
 </html>
