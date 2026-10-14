@@ -22,7 +22,7 @@ body{background:#0a0a18;display:flex;justify-content:center;align-items:center;m
 #hud-btns{display:flex;gap:6px}
 canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none;image-rendering:pixelated}
 #lives-bar{width:312px;height:28px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-radius:0 0 4px 4px;display:flex;align-items:center;padding:0 8px;gap:4px}
-.gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;transition:background 0.15s,color 0.15s}
+.gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;white-space:nowrap;transition:background 0.15s,color 0.15s}
 .gbtn:hover{background:#2a2a55;color:#fff}
 .gbtn.pause-btn{color:#4ecdc4;border-color:#4ecdc4}
 .gbtn.exit-btn{background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;}
@@ -32,7 +32,94 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 <body>
 <div id="layout">
   <div id="sidebar-left">
-    <h2>Controls</h2>
+    <div style="margin-bottom:14px"><div data-lang-switch></div></div>
+    <div data-i18n-html="leftHelp"></div>
+    <br>
+    <div id="word-progress" style="text-align:center"></div>
+    <br>
+  </div>
+
+  <div id="game-col">
+    <div id="hud-bar">
+      <div id="hud-scores">
+        <div><span>1UP </span><span class="val" id="score-disp">000000</span></div>
+        <div><span data-i18n="hi"></span><span class="hival" id="hi-disp">000000</span></div>
+        <div><span data-i18n="lv"></span><span class="val" id="lv-disp">01</span></div>
+      </div>
+      <div id="hud-btns">
+        <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()" data-i18n="pause"></button>
+        <button class="gbtn exit-btn" onclick="exitToTitle()" data-i18n="exit"></button>
+        <div id="game-avatar"></div>
+      </div>
+    </div>
+    <canvas id="game" width="312" height="624"></canvas>
+    <div id="lives-bar"></div>
+  </div>
+
+  <div id="sidebar-right">
+    <div data-i18n-html="rightHelp"></div>
+  </div>
+</div>
+
+<script src="../shared/i18n.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '泡泡龍 — GameZone',
+    leftHelp: `<h2>操作</h2>
+    <div><span class="key">← →</span> 移動</div>
+    <div><span class="key">↑</span> / <span class="key">Z</span> 跳躍</div>
+    <div><span class="key">X</span> / <span class="key">Space</span> 吐泡泡</div>
+    <div><span class="key">Enter</span> 開始</div>
+    <div><span class="key">P</span> / <span class="key">Esc</span> 暫停</div>
+    <br>
+    <h2>玩法說明</h2>
+    <div>吐泡泡把敵人</div>
+    <div>包起來，</div>
+    <div>再跳上去把泡泡</div>
+    <div>踩破。</div>
+    <div>記得收集水果！</div>
+    <br>
+    <div style="color:#ff6b6b">⚠ 敵人 5 秒後</div>
+    <div>會生氣逃出泡泡，</div>
+    <div>而且變得更快！</div>`,
+    rightHelp: `<h2>水果分數</h2>
+    <div>🍌 香蕉 <span class="score-val">100</span></div>
+    <div>🍓 草莓 <span class="score-val">200</span></div>
+    <div>🍍 鳳梨 <span class="score-val">500</span></div>
+    <div>🍒 櫻桃 <span class="score-val">1000</span></div>
+    <br>
+    <h2>敵人</h2>
+    <div>第 1 關：4 🦕</div>
+    <div>第 2 關：6 🦕</div>
+    <div>第 3 關：8 🦕</div>
+    <br>
+    <h2>小提示</h2>
+    <div>泡泡撞到牆後</div>
+    <div>會往上飄。</div>
+    <div>快速連續踩破</div>
+    <div>有連鎖加分！</div>
+    <br>
+    <h2>額外生命</h2>
+    <div>最多 6 條命</div>
+    <div>拼出 3 個單字</div>
+    <div>→ 下一關出現</div>
+    <div>1UP 泡泡！</div>`,
+    hi: '最高 ', lv: '關 ', pause: '⏸ 暫停', resume: '▶ 繼續', exit: '✕ 離開',
+    bonus: '加分！', scoreCv: s => `分數：${s}`, playAgain: '按 ENTER 再玩一次',
+    youWin: '你贏了！', allClear: '50 關全部過關！',
+    zhTitle: '泡泡龍', cont: n => `繼續（第 ${n} 關）`, newGame: '新遊戲',
+    selectHelp: '↑ ↓ 選擇　Enter 確認', pressStart: '按 ENTER 開始',
+    keysHelp: '← → 移動　↑/Z 跳　X/空白 吐泡泡',
+    bonus500: '+500 加分！', spellIt: '拼出來！', letters: (a, b) => `${a}/${b} 個字母`,
+    extraLife: '額外生命', spell3: '拼出 3 個單字 → ♥', words: n => `${n}/3 個單字`,
+    collectFruits: '收集水果！', levelClear: '過關！', gameOver: '遊戲結束',
+    finalScore: s => `最後得分：${s}`, pressRestart: '按 ENTER 重新開始',
+    paused: '暫停中', pausedHelp: 'P / ESC / Enter 或 ▶ 繼續',
+  },
+  en: {
+    pageTitle: 'Bubble Bobble Classic',
+    leftHelp: `<h2>Controls</h2>
     <div><span class="key">← →</span> Move</div>
     <div><span class="key">↑</span> / <span class="key">Z</span> Jump</div>
     <div><span class="key">X</span> / <span class="key">Space</span> Shoot</div>
@@ -48,31 +135,8 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <br>
     <div style="color:#ff6b6b">⚠ Angry enemies</div>
     <div>escape after 5s</div>
-    <div>and speed up!</div>
-    <br>
-    <div id="word-progress" style="text-align:center"></div>
-    <br>
-  </div>
-
-  <div id="game-col">
-    <div id="hud-bar">
-      <div id="hud-scores">
-        <div><span>1UP </span><span class="val" id="score-disp">000000</span></div>
-        <div><span>HI </span><span class="hival" id="hi-disp">000000</span></div>
-        <div><span>LV </span><span class="val" id="lv-disp">01</span></div>
-      </div>
-      <div id="hud-btns">
-        <button class="gbtn pause-btn" id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
-        <button class="gbtn exit-btn" onclick="exitToTitle()">✕ EXIT</button>
-        <div id="game-avatar"></div>
-      </div>
-    </div>
-    <canvas id="game" width="312" height="624"></canvas>
-    <div id="lives-bar"></div>
-  </div>
-
-  <div id="sidebar-right">
-    <h2>Fruit Points</h2>
+    <div>and speed up!</div>`,
+    rightHelp: `<h2>Fruit Points</h2>
     <div>🍌 Banana <span class="score-val">100</span></div>
     <div>🍓 Strawberry <span class="score-val">200</span></div>
     <div>🍍 Pineapple <span class="score-val">500</span></div>
@@ -93,10 +157,21 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
     <div>Max 6 lives</div>
     <div>Spell 3 words</div>
     <div>→ 1UP bubble</div>
-    <div>next level!</div>
-  </div>
-</div>
-
+    <div>next level!</div>`,
+    hi: 'HI ', lv: 'LV ', pause: '⏸ PAUSE', resume: '▶ RESUME', exit: '✕ EXIT',
+    bonus: 'BONUS!', scoreCv: s => `Score: ${s}`, playAgain: 'Press ENTER to Play Again',
+    youWin: 'YOU WIN!', allClear: 'All 50 Levels Clear!',
+    zhTitle: '', cont: n => `Continue (Level ${n})`, newGame: 'New Game',
+    selectHelp: '↑ ↓ to select   Enter to confirm', pressStart: 'Press ENTER to Start',
+    keysHelp: '← → Move    ↑/Z Jump    X/Space Shoot',
+    bonus500: '+500 BONUS!', spellIt: 'Spell It!', letters: (a, b) => `${a}/${b} letters`,
+    extraLife: 'Extra Life', spell3: 'Spell 3 words → ♥', words: n => `${n}/3 words`,
+    collectFruits: 'COLLECT FRUITS!', levelClear: 'LEVEL CLEAR!', gameOver: 'GAME OVER',
+    finalScore: s => `Final Score: ${s}`, pressRestart: 'Press ENTER to Restart',
+    paused: 'PAUSED', pausedHelp: 'P / ESC / Enter or ▶ RESUME',
+  },
+});
+</script>
 <script src="../shared/words.js"></script>
 <script>
 // ─── Constants ───────────────────────────────────────────────
@@ -340,11 +415,16 @@ function addScore(n, x, y) {
 }
 
 let paused = false;
+SillyI18n.onChange(() => {
+  const btn = document.getElementById('pauseBtn');
+  if (btn) btn.textContent = paused ? SillyI18n.t('resume') : SillyI18n.t('pause');
+  try { if (typeof updateWordSidebar === 'function') updateWordSidebar(); } catch (e) {}
+});
 function togglePause() {
   if (gs.state !== 'playing' && gs.state !== 'harvest') return;
   paused = !paused;
   const btn = document.getElementById('pauseBtn');
-  if (btn) btn.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+  if (btn) btn.textContent = paused ? SillyI18n.t('resume') : SillyI18n.t('pause');
   // Clear stale inputs when resuming so held keys don't fire
   if (!paused) { pressed.clear(); keys.left=false; keys.right=false; }
 }
@@ -840,7 +920,7 @@ function drawGiantFruit(ctx, gf) {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#f5c518';
   ctx.font = 'bold 10px monospace';
-  ctx.fillText('BONUS!', x, y - r - 6);
+  ctx.fillText(SillyI18n.en('bonus'), x, y - r - 6);
   ctx.restore();
 }
 
@@ -851,13 +931,13 @@ function drawWin(ctx, frame) {
     ctx.fillRect(((i*79+frame)%CW), ((i*53+Math.floor(frame*0.7))%CH), 2, 2);
   }
   ctx.textAlign='center';
-  ctx.fillStyle='#f5c518'; ctx.font='bold 28px monospace'; ctx.fillText('YOU WIN!', CW/2, CH/2-54);
-  ctx.fillStyle='#4ecdc4'; ctx.font='bold 14px monospace'; ctx.fillText('All 50 Levels Clear!', CW/2, CH/2-22);
+  ctx.fillStyle='#f5c518'; ctx.font='bold 28px monospace'; ctx.fillText(SillyI18n.en('youWin'), CW/2, CH/2-54);
+  ctx.fillStyle='#4ecdc4'; ctx.font='bold 14px monospace'; ctx.fillText(SillyI18n.en('allClear'), CW/2, CH/2-22);
   ctx.fillStyle='white'; ctx.font='12px monospace';
-  ctx.fillText('Score: '+String(gs.score).padStart(6,'0'), CW/2, CH/2+10);
+  ctx.fillText(SillyI18n.en('scoreCv', String(gs.score).padStart(6,'0')), CW/2, CH/2+10);
   if(Math.floor(frame/30)%2===0){
     ctx.fillStyle='#aaa'; ctx.font='10px monospace';
-    ctx.fillText('Press ENTER to Play Again', CW/2, CH/2+40);
+    ctx.fillText(SillyI18n.en('playAgain'), CW/2, CH/2+40);
   }
 }
 
@@ -876,14 +956,15 @@ function drawTitle(ctx, frame) {
   ctx.textAlign='center';
   ctx.fillStyle='#f5c518'; ctx.font='bold 36px monospace'; ctx.fillText('BUBBLE',CW/2,CH/2-50);
   ctx.fillStyle='#4ecdc4'; ctx.font='bold 36px monospace'; ctx.fillText('BOBBLE',CW/2,CH/2-10);
+  if (SillyI18n.en('zhTitle')) { ctx.fillStyle='#ffffff'; ctx.font='bold 15px sans-serif'; ctx.fillText(SillyI18n.en('zhTitle'),CW/2,CH/2+12); }
   const sv = loadSave();
   const _currentUid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
     ? SillyFirebase.currentUser.uid
     : _cachedUid;
   if(sv && sv.uid === _currentUid){
     const opts = [
-      { label:'Continue (Level '+String(sv.level).padStart(2,'0')+')', color:'#4ecdc4' },
-      { label:'New Game',                                               color:'#ff6b6b' }
+      { label:SillyI18n.en('cont', String(sv.level).padStart(2,'0')), color:'#4ecdc4' },
+      { label:SillyI18n.en('newGame'), color:'#ff6b6b' }
     ];
     opts.forEach((opt, i) => {
       const y = CH/2 + 34 + i * 28;
@@ -893,14 +974,14 @@ function drawTitle(ctx, frame) {
       ctx.fillText((selected ? '▶ ' : '  ') + opt.label, CW/2, y);
     });
     ctx.fillStyle='#555'; ctx.font='10px monospace';
-    ctx.fillText('↑ ↓ to select   Enter to confirm',CW/2,CH/2+98);
+    ctx.fillText(SillyI18n.en('selectHelp'),CW/2,CH/2+98);
   } else {
     if(Math.floor(frame/30)%2===0){
-      ctx.fillStyle='white'; ctx.font='14px monospace'; ctx.fillText('Press ENTER to Start',CW/2,CH/2+36);
+      ctx.fillStyle='white'; ctx.font='14px monospace'; ctx.fillText(SillyI18n.en('pressStart'),CW/2,CH/2+36);
     }
   }
   ctx.fillStyle='#667'; ctx.font='11px monospace';
-  ctx.fillText('← → Move    ↑/Z Jump    X/Space Shoot',CW/2,CH/2+118);
+  ctx.fillText(SillyI18n.en('keysHelp'),CW/2,CH/2+118);
 }
 
 function drawLetterBubble(ctx, lb) {
@@ -993,14 +1074,14 @@ function drawWordComplete(ctx) {
   }
   ctx.textAlign='center';
   ctx.fillStyle='#f5c518'; ctx.font='10px monospace';
-  ctx.fillText('+500 BONUS!',CW/2,by+r+14);
+  ctx.fillText(SillyI18n.en('bonus500'),CW/2,by+r+14);
   ctx.restore();
 }
 
 function updateWordSidebar() {
   const el=document.getElementById('word-progress');
   if(!el||!currentWord) return;
-  let html=`<h2 style="color:#f5c518">Spell It!</h2>`;
+  let html=`<h2 style="color:#f5c518">${SillyI18n.t('spellIt')}</h2>`;
   html+=`<div style="font-size:10px;color:#aaa;margin-bottom:6px;letter-spacing:2px">${currentWord}</div>`;
   html+='<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:6px">';
   for(let i=0;i<currentWord.length;i++){
@@ -1009,13 +1090,13 @@ function updateWordSidebar() {
   }
   html+='</div>';
   const done=collectedLetters.filter(Boolean).length;
-  html+=`<div style="font-size:10px;color:#aaa">${done}/${currentWord.length} letters</div>`;
+  html+=`<div style="font-size:10px;color:#aaa">${SillyI18n.t('letters', done, currentWord.length)}</div>`;
   // Word streak progress
-  html+=`<div style="margin-top:10px"><h2 style="color:#2ecc71;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Extra Life</h2>`;
-  html+=`<div style="font-size:10px;color:#aaa;margin-bottom:4px">Spell 3 words → ♥</div>`;
+  html+=`<div style="margin-top:10px"><h2 style="color:#2ecc71;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">${SillyI18n.t('extraLife')}</h2>`;
+  html+=`<div style="font-size:10px;color:#aaa;margin-bottom:4px">${SillyI18n.t('spell3')}</div>`;
   const bars = [0,1,2].map(i => `<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${i<gs.wordStreak?'#2ecc71':'#222'};border:2px solid ${i<gs.wordStreak?'#2ecc71':'#444'};margin:0 2px;font-size:11px;line-height:16px;text-align:center">${i<gs.wordStreak?'♥':''}</span>`).join('');
   html+=`<div style="display:flex;justify-content:center">${bars}</div>`;
-  html+=`<div style="font-size:10px;color:#aaa;margin-top:4px">${gs.wordStreak}/3 words</div></div>`;
+  html+=`<div style="font-size:10px;color:#aaa;margin-top:4px">${SillyI18n.t('words', gs.wordStreak)}</div></div>`;
   el.innerHTML=html;
 }
 
@@ -1046,7 +1127,7 @@ function drawHarvest(ctx) {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#4ecdc4';
   ctx.font = 'bold 15px monospace';
-  ctx.fillText('COLLECT FRUITS!', CW/2, CH/2 - 10);
+  ctx.fillText(SillyI18n.en('collectFruits'), CW/2, CH/2 - 10);
   ctx.fillStyle = '#f5c518';
   ctx.font = 'bold 22px monospace';
   ctx.fillText(sec, CW/2, CH/2 + 18);
@@ -1056,17 +1137,17 @@ function drawHarvest(ctx) {
 function drawClear(ctx) {
   ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,CW,CH);
   ctx.textAlign='center';
-  ctx.fillStyle='#f5c518'; ctx.font='bold 26px monospace'; ctx.fillText('LEVEL CLEAR!',CW/2,CH/2-14);
-  ctx.fillStyle='white';  ctx.font='14px monospace'; ctx.fillText('Score: '+String(gs.score).padStart(6,'0'),CW/2,CH/2+18);
+  ctx.fillStyle='#f5c518'; ctx.font='bold 26px monospace'; ctx.fillText(SillyI18n.en('levelClear'),CW/2,CH/2-14);
+  ctx.fillStyle='white';  ctx.font='14px monospace'; ctx.fillText(SillyI18n.en('scoreCv', String(gs.score).padStart(6,'0')),CW/2,CH/2+18);
 }
 
 function drawGameOver(ctx, frame) {
   ctx.fillStyle='rgba(0,0,0,0.72)'; ctx.fillRect(0,0,CW,CH);
   ctx.textAlign='center';
-  ctx.fillStyle='#e74c3c'; ctx.font='bold 28px monospace'; ctx.fillText('GAME OVER',CW/2,CH/2-20);
-  ctx.fillStyle='white';  ctx.font='14px monospace'; ctx.fillText('Final Score: '+String(gs.score).padStart(6,'0'),CW/2,CH/2+12);
+  ctx.fillStyle='#e74c3c'; ctx.font='bold 28px monospace'; ctx.fillText(SillyI18n.en('gameOver'),CW/2,CH/2-20);
+  ctx.fillStyle='white';  ctx.font='14px monospace'; ctx.fillText(SillyI18n.en('finalScore', String(gs.score).padStart(6,'0')),CW/2,CH/2+12);
   if(Math.floor(frame/30)%2===0){
-    ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText('Press ENTER to Restart',CW/2,CH/2+40);
+    ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText(SillyI18n.en('pressRestart'),CW/2,CH/2+40);
   }
 }
 
@@ -1341,8 +1422,8 @@ function render() {
 function drawPaused(ctx) {
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,CW,CH);
   ctx.textAlign='center';
-  ctx.fillStyle='#4ecdc4'; ctx.font='bold 28px monospace'; ctx.fillText('PAUSED',CW/2,CH/2-16);
-  ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText('P / ESC / Enter or ▶ RESUME',CW/2,CH/2+16);
+  ctx.fillStyle='#4ecdc4'; ctx.font='bold 28px monospace'; ctx.fillText(SillyI18n.en('paused'),CW/2,CH/2-16);
+  ctx.fillStyle='#aaa'; ctx.font='12px monospace'; ctx.fillText(SillyI18n.en('pausedHelp'),CW/2,CH/2+16);
 }
 
 // Init

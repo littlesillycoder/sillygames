@@ -204,14 +204,15 @@
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="brand">
-    <a href="/">🎮 GameZone</a>
+    <a href="../../">🎮 GameZone</a>
     <span class="sep">/</span>
-    <span>Bubble Shooter</span>
+    <span data-i18n="title"></span>
   </div>
   <div class="topbar-actions">
-    <button class="btn btn-ghost" id="howToPlayBtn">How to Play</button>
-    <button class="btn btn-ghost" id="restartBtn">↺ Restart</button>
-    <button class="btn btn-danger" id="exitBtn">✕ EXIT</button>
+    <div data-lang-switch></div>
+    <button class="btn btn-ghost" id="howToPlayBtn" data-i18n="howTo"></button>
+    <button class="btn btn-ghost" id="restartBtn" data-i18n="restart"></button>
+    <button class="btn btn-danger" id="exitBtn" data-i18n="exit"></button>
   </div>
   <div id="game-avatar"></div>
 </div>
@@ -220,20 +221,20 @@
 <div class="game-wrapper">
   <div class="sidebar">
     <div class="stat-box">
-      <div class="stat-label">Score</div>
+      <div class="stat-label" data-i18n="score"></div>
       <div class="stat-value" id="scoreDisplay">0</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Bubbles</div>
+      <div class="stat-label" data-i18n="bubbles"></div>
       <div class="stat-value" id="bubblesDisplay">0</div>
     </div>
     <div class="next-box">
-      <div class="stat-label">Next</div>
+      <div class="stat-label" data-i18n="next"></div>
       <canvas id="nextBubble" width="80" height="80"></canvas>
     </div>
     <div class="info-box">
-      <div class="stat-label">Tip</div>
-      <div style="font-size:0.75rem">Match <b style="color:var(--text)">3 or more</b> same-color bubbles to pop them!</div>
+      <div class="stat-label" data-i18n="tip"></div>
+      <div style="font-size:0.75rem" data-i18n-html="tipText"></div>
     </div>
   </div>
 
@@ -241,19 +242,12 @@
 
   <div class="sidebar">
     <div class="info-box">
-      <div class="stat-label">Controls</div>
-      <div style="font-size:0.75rem;line-height:1.8;color:var(--muted)">
-        🖱 <b style="color:var(--text)">Mouse</b> to aim<br>
-        🖱 <b style="color:var(--text)">Click</b> to shoot<br><br>
-        Bounce off walls to hit tricky spots!
-      </div>
+      <div class="stat-label" data-i18n="controls"></div>
+      <div style="font-size:0.75rem;line-height:1.8;color:var(--muted)" data-i18n-html="controlsText"></div>
     </div>
     <div class="info-box">
-      <div class="stat-label">Scoring</div>
-      <div style="font-size:0.75rem;line-height:1.8;color:var(--muted)">
-        Each pop: <b style="color:var(--accent2)">10 pts</b><br>
-        Hanging drop: <b style="color:var(--accent2)">20 pts</b>
-      </div>
+      <div class="stat-label" data-i18n="scoring"></div>
+      <div style="font-size:0.75rem;line-height:1.8;color:var(--muted)" data-i18n-html="scoringText"></div>
     </div>
   </div>
 </div>
@@ -261,25 +255,17 @@
 <!-- INSTRUCTION MODAL -->
 <div class="overlay active" id="startOverlay">
   <div class="modal">
-    <h2>🫧 Bubble Shooter</h2>
-    <p class="subtitle">Pop bubbles, clear the board</p>
+    <div style="display:flex;justify-content:flex-end;margin:-0.4rem -0.4rem 0.3rem 0"><div data-lang-switch="full"></div></div>
+    <h2 data-i18n="gameTitle"></h2>
+    <p class="subtitle" data-i18n="subtitle"></p>
     <div class="instructions">
-      <h3>How to Play</h3>
-      <ul>
-        <li><span class="icon">🖱</span> Move your mouse to aim the shooter cannon at the bottom</li>
-        <li><span class="icon">🖱</span> Click to fire a bubble in that direction</li>
-        <li><span class="icon">🎯</span> Match 3 or more same-color bubbles to pop them</li>
-        <li><span class="icon">↔️</span> Bubbles bounce off the side walls</li>
-        <li><span class="icon">⚠️</span> Don't let bubbles reach the danger line!</li>
-      </ul>
+      <h3 data-i18n="howToH"></h3>
+      <ul data-i18n-html="rules"></ul>
     </div>
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.2rem">
-      After every 5 shots, a new row appears at the top.<br>
-      Clear all bubbles to win!
-    </p>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.2rem" data-i18n-html="rowNote"></p>
     <div class="modal-buttons">
-      <button class="btn btn-primary" id="startBtn" style="min-width:150px;font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
-      <button class="btn btn-danger" onclick="window.location.href='../../'">✕ EXIT</button>
+      <button class="btn btn-primary" id="startBtn" style="min-width:150px;font-size:1rem;padding:0.7rem 1.5rem" data-i18n="startGame"></button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" data-i18n="exit"></button>
     </div>
   </div>
 </div>
@@ -287,17 +273,62 @@
 <!-- RESULT MODAL -->
 <div class="overlay" id="resultOverlay">
   <div class="modal">
-    <h2 id="resultTitle">🎉 You Win!</h2>
-    <p class="subtitle" id="resultSubtitle">All bubbles cleared!</p>
+    <h2 id="resultTitle" data-i18n="youWin"></h2>
+    <p class="subtitle" id="resultSubtitle" data-i18n="cleared"></p>
     <div class="modal-score" id="finalScore">0</div>
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.2rem" id="resultDetail"></p>
     <div class="modal-buttons">
-      <button class="btn btn-primary" id="resultRestartBtn">↺ Play Again</button>
-      <button class="btn btn-danger" id="resultExitBtn">✕ EXIT</button>
+      <button class="btn btn-primary" id="resultRestartBtn" data-i18n="playAgain"></button>
+      <button class="btn btn-danger" id="resultExitBtn" data-i18n="exit"></button>
     </div>
   </div>
 </div>
 
+<script src="../shared/i18n.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '泡泡射擊 — GameZone', title: '泡泡射擊', howTo: '玩法說明', restart: '↺ 重新開始', exit: '✕ 離開',
+    score: '分數', bubbles: '泡泡數', next: '下一顆', tip: '小提示',
+    tipText: '湊滿 <b style="color:var(--text)">3 顆以上</b>同色泡泡就會破掉！',
+    controls: '操作',
+    controlsText: '🖱 用<b style="color:var(--text)">滑鼠</b>瞄準<br>🖱 <b style="color:var(--text)">點擊</b>發射<br><br>利用牆壁反彈打到刁鑽的位置！',
+    scoring: '計分',
+    scoringText: '每顆泡泡破掉：<b style="color:var(--accent2)">10 分</b><br>懸空掉落：<b style="color:var(--accent2)">20 分</b>',
+    gameTitle: '🫧 泡泡射擊', subtitle: '射破泡泡，清空整個盤面',
+    howToH: '玩法說明',
+    rules: `<li><span class="icon">🖱</span> 移動滑鼠，瞄準底部的發射器方向</li>
+        <li><span class="icon">🖱</span> 點擊就會往那個方向射出泡泡</li>
+        <li><span class="icon">🎯</span> 湊滿 3 顆以上同色泡泡就會破掉</li>
+        <li><span class="icon">↔️</span> 泡泡碰到左右牆壁會反彈</li>
+        <li><span class="icon">⚠️</span> 別讓泡泡碰到危險線！</li>`,
+    rowNote: '每射 5 發，最上面就會多出一排泡泡。<br>清空所有泡泡就獲勝！',
+    startGame: '▶ 開始遊戲', resumeGame: '▶ 繼續遊戲', playAgain: '↺ 再玩一次',
+    youWin: '🎉 你贏了！', gameOver: '💥 遊戲結束', cleared: '所有泡泡都清光了！', reached: '泡泡碰到危險線了！',
+    finalScore: s => `最後得分：${s} 分`, dangerLine: '危險線', cascade: n => `+${n} 連鎖！`,
+  },
+  en: {
+    pageTitle: 'Bubble Shooter', title: 'Bubble Shooter', howTo: 'How to Play', restart: '↺ Restart', exit: '✕ EXIT',
+    score: 'Score', bubbles: 'Bubbles', next: 'Next', tip: 'Tip',
+    tipText: 'Match <b style="color:var(--text)">3 or more</b> same-color bubbles to pop them!',
+    controls: 'Controls',
+    controlsText: '🖱 <b style="color:var(--text)">Mouse</b> to aim<br>🖱 <b style="color:var(--text)">Click</b> to shoot<br><br>Bounce off walls to hit tricky spots!',
+    scoring: 'Scoring',
+    scoringText: 'Each pop: <b style="color:var(--accent2)">10 pts</b><br>Hanging drop: <b style="color:var(--accent2)">20 pts</b>',
+    gameTitle: '🫧 Bubble Shooter', subtitle: 'Pop bubbles, clear the board',
+    howToH: 'How to Play',
+    rules: `<li><span class="icon">🖱</span> Move your mouse to aim the shooter cannon at the bottom</li>
+        <li><span class="icon">🖱</span> Click to fire a bubble in that direction</li>
+        <li><span class="icon">🎯</span> Match 3 or more same-color bubbles to pop them</li>
+        <li><span class="icon">↔️</span> Bubbles bounce off the side walls</li>
+        <li><span class="icon">⚠️</span> Don't let bubbles reach the danger line!</li>`,
+    rowNote: 'After every 5 shots, a new row appears at the top.<br>Clear all bubbles to win!',
+    startGame: '▶ Start Game', resumeGame: '▶ Resume Game', playAgain: '↺ Play Again',
+    youWin: '🎉 You Win!', gameOver: '💥 Game Over', cleared: 'All bubbles cleared!', reached: 'Bubbles reached the danger line!',
+    finalScore: s => `Final Score: ${s} points`, dangerLine: 'DANGER LINE', cascade: n => `+${n} cascade!`,
+  },
+});
+</script>
 <script>
 // ─────────────────────────────────────────────
 //  CONSTANTS
@@ -677,7 +708,7 @@ function checkMatches(row, col) {
       const hangPts = hanging * 20;
       score += hangPts;
       playHangingPop(hanging);
-      scoreFloats.push({ x: CANVAS_W / 2, y: CANVAS_H / 2, text: `+${hangPts} cascade!`, color: '#fbbf24', life: 1 });
+      scoreFloats.push({ x: CANVAS_W / 2, y: CANVAS_H / 2, text: SillyI18n.en('cascade', hangPts), color: '#fbbf24', life: 1 });
     }
   }
 }
@@ -716,14 +747,26 @@ function checkWin() {
   }
 }
 
+let lastWon = null;
+function renderResultText() {
+  if (lastWon === null) return;
+  const t = SillyI18n.t;
+  document.getElementById('resultTitle').textContent = lastWon ? t('youWin') : t('gameOver');
+  document.getElementById('resultSubtitle').textContent = lastWon ? t('cleared') : t('reached');
+  document.getElementById('finalScore').textContent = score.toLocaleString();
+  document.getElementById('resultDetail').textContent = t('finalScore', score.toLocaleString());
+}
+SillyI18n.onChange(() => {
+  renderResultText();
+  document.getElementById('startBtn').textContent = gameRunning ? SillyI18n.t('resumeGame') : SillyI18n.t('startGame');
+});
+
 function endGame(won) {
   gameRunning = false;
   gamePaused = false;
   won ? playWin() : playLose();
-  document.getElementById('resultTitle').textContent = won ? '🎉 You Win!' : '💥 Game Over';
-  document.getElementById('resultSubtitle').textContent = won ? 'All bubbles cleared!' : 'Bubbles reached the danger line!';
-  document.getElementById('finalScore').textContent = score.toLocaleString();
-  document.getElementById('resultDetail').textContent = `Final Score: ${score.toLocaleString()} points`;
+  lastWon = won;
+  renderResultText();
   document.getElementById('resultOverlay').classList.add('active');
 }
 
@@ -865,7 +908,7 @@ function drawDangerLine() {
   ctx.fillStyle = 'rgba(239,68,68,0.5)';
   ctx.font = '10px monospace';
   ctx.textAlign = 'right';
-  ctx.fillText('DANGER LINE', CANVAS_W - 8, DANGER_Y - 4);
+  ctx.fillText(SillyI18n.en('dangerLine'), CANVAS_W - 8, DANGER_Y - 4);
 }
 
 function draw() {
@@ -985,7 +1028,7 @@ document.getElementById('howToPlayBtn').addEventListener('click', () => {
   if (gameRunning) {
     gamePaused = true; // loop stops after current frame
   }
-  document.getElementById('startBtn').textContent = gameRunning ? '▶ Resume Game' : '▶ Start Game';
+  document.getElementById('startBtn').textContent = gameRunning ? SillyI18n.t('resumeGame') : SillyI18n.t('startGame');
   document.getElementById('startOverlay').classList.add('active');
 });
 document.getElementById('startBtn').addEventListener('click', () => {

@@ -121,16 +121,17 @@
 <body>
 <div class="topbar">
   <div class="brand">
-    <a href="/">🏠</a>
+    <a href="../../">🏠</a>
     <span class="sep">/</span>
-    🏓 Ping Pong
+    <span data-i18n="title"></span>
   </div>
   <div class="topbar-actions">
-    <button class="sound-toggle" id="soundBtn" title="Toggle sound">🔊</button>
-    <button class="btn btn-ghost" id="pauseBtn">⏸ Pause</button>
-    <button class="btn btn-ghost" id="howToPlayBtn">❓ How to Play</button>
-    <button class="btn btn-ghost" id="restartBtn">↺ Restart</button>
-    <button class="btn btn-danger" id="exitBtn">✕ EXIT</button>
+    <div data-lang-switch></div>
+    <button class="sound-toggle" id="soundBtn" data-i18n-title="sound">🔊</button>
+    <button class="btn btn-ghost" id="pauseBtn" data-i18n="pause"></button>
+    <button class="btn btn-ghost" id="howToPlayBtn" data-i18n="howTo"></button>
+    <button class="btn btn-ghost" id="restartBtn" data-i18n="restart"></button>
+    <button class="btn btn-danger" id="exitBtn" data-i18n="exit"></button>
   </div>
   <div id="game-avatar"></div>
 </div>
@@ -138,48 +139,49 @@
 <div class="game-wrapper">
   <div class="sidebar">
     <div class="stat-box">
-      <div class="stat-label">You</div>
+      <div class="stat-label" data-i18n="you"></div>
       <div class="stat-value" id="playerScore">0</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">CPU</div>
+      <div class="stat-label" data-i18n="cpu"></div>
       <div class="stat-value red" id="aiScore">0</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Set</div>
+      <div class="stat-label" data-i18n="set"></div>
       <div class="stat-value" id="setDisplay">1</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Rally</div>
+      <div class="stat-label" data-i18n="rally"></div>
       <div class="stat-value" id="rallyDisplay">0</div>
     </div>
   </div>
 
   <div class="canvas-wrap">
     <canvas id="gameCanvas" width="420" height="580"></canvas>
-    <div class="pause-badge" id="pauseBadge">⏸ PAUSED</div>
+    <div class="pause-badge" id="pauseBadge" data-i18n="paused"></div>
   </div>
 </div>
 
 <!-- How to Play / Start Overlay -->
 <div class="overlay active" id="startOverlay">
   <div class="modal">
+    <div style="display:flex;justify-content:flex-end;margin:-0.4rem -0.4rem 0.3rem 0"><div data-lang-switch="full"></div></div>
     <div class="modal-icon">🏓</div>
-    <h2>Ping Pong</h2>
-    <p>Classic table tennis against a smart AI. First to 7 points wins the set. Win 2 sets to win the match!</p>
+    <h2 data-i18n="gameName"></h2>
+    <p data-i18n="intro"></p>
     <div class="diff-pills">
-      <div class="diff-pill active" data-diff="easy">Easy</div>
-      <div class="diff-pill" data-diff="medium">Medium</div>
-      <div class="diff-pill" data-diff="hard">Hard</div>
+      <div class="diff-pill active" data-diff="easy" data-i18n="easy"></div>
+      <div class="diff-pill" data-diff="medium" data-i18n="medium"></div>
+      <div class="diff-pill" data-diff="hard" data-i18n="hard"></div>
     </div>
     <div class="controls-grid">
-      <span class="key">Mouse / Touch</span><span class="desc">Move your paddle</span>
-      <span class="key">↑ ↓ W S</span><span class="desc">Keyboard paddle control</span>
-      <span class="key">P / Space</span><span class="desc">Pause / Resume</span>
+      <span class="key" data-i18n="kMouse"></span><span class="desc" data-i18n="dMouse"></span>
+      <span class="key">↑ ↓ W S</span><span class="desc" data-i18n="dKeys"></span>
+      <span class="key" data-i18n="kPause"></span><span class="desc" data-i18n="dPause"></span>
     </div>
     <div class="modal-btns">
-      <button class="btn btn-primary" id="startBtn" style="font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
-      <button class="btn btn-danger" onclick="window.location.href='../../'" style="font-size:1rem;padding:0.7rem 1.5rem">✕ EXIT</button>
+      <button class="btn btn-primary" id="startBtn" style="font-size:1rem;padding:0.7rem 1.5rem" data-i18n="startGame"></button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" style="font-size:1rem;padding:0.7rem 1.5rem" data-i18n="exit"></button>
     </div>
   </div>
 </div>
@@ -188,15 +190,48 @@
 <div class="overlay" id="resultOverlay">
   <div class="modal">
     <div class="modal-icon" id="resultIcon">🏆</div>
-    <h2 id="resultTitle">You Win!</h2>
-    <p id="resultSubtitle">Amazing performance!</p>
+    <h2 id="resultTitle" data-i18n="youWin"></h2>
+    <p id="resultSubtitle" data-i18n="resultSub"></p>
     <div class="modal-btns">
-      <button class="btn btn-primary" id="playAgainBtn">▶ Play Again</button>
-      <button class="btn btn-danger" id="resultExitBtn">✕ EXIT</button>
+      <button class="btn btn-primary" id="playAgainBtn" data-i18n="playAgain"></button>
+      <button class="btn btn-danger" id="resultExitBtn" data-i18n="exit"></button>
     </div>
   </div>
 </div>
 
+<script src="../shared/i18n.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '乒乓球 — GameZone', title: '🏓 乒乓球', sound: '音效開關',
+    pause: '⏸ 暫停', resume: '▶ 繼續', howTo: '❓ 玩法說明', restart: '↺ 重新開始', exit: '✕ 離開',
+    you: '你', cpu: '電腦', set: '局數', rally: '連續對打', paused: '⏸ 暫停中',
+    gameName: '乒乓球',
+    intro: '和聰明的電腦打桌球！先得 7 分贏一局，先贏 2 局就贏得整場比賽！',
+    easy: '簡單', medium: '中等', hard: '困難',
+    kMouse: '滑鼠／觸控', dMouse: '移動你的球拍', dKeys: '用鍵盤控制球拍', kPause: 'P／空白鍵', dPause: '暫停／繼續',
+    startGame: '▶ 開始遊戲', resumeGame: '▶ 繼續遊戲', playAgain: '▶ 再玩一次',
+    youWin: '你贏了！', resultSub: '表現太棒了！',
+    youWinMatch: '你贏得比賽！', cpuWins: '電腦獲勝！',
+    wonSub: (a, b) => `你以 ${a}–${b} 獲勝，球技一流！`, lostSub: (a, b) => `電腦以 ${a}–${b} 獲勝，下次再加油！`,
+    rallyX: n => `連續對打 × ${n}`,
+  },
+  en: {
+    pageTitle: 'Ping Pong', title: '🏓 Ping Pong', sound: 'Toggle sound',
+    pause: '⏸ Pause', resume: '▶ Resume', howTo: '❓ How to Play', restart: '↺ Restart', exit: '✕ EXIT',
+    you: 'You', cpu: 'CPU', set: 'Set', rally: 'Rally', paused: '⏸ PAUSED',
+    gameName: 'Ping Pong',
+    intro: 'Classic table tennis against a smart AI. First to 7 points wins the set. Win 2 sets to win the match!',
+    easy: 'Easy', medium: 'Medium', hard: 'Hard',
+    kMouse: 'Mouse / Touch', dMouse: 'Move your paddle', dKeys: 'Keyboard paddle control', kPause: 'P / Space', dPause: 'Pause / Resume',
+    startGame: '▶ Start Game', resumeGame: '▶ Resume Game', playAgain: '▶ Play Again',
+    youWin: 'You Win!', resultSub: 'Amazing performance!',
+    youWinMatch: 'You Win the Match!', cpuWins: 'CPU Wins!',
+    wonSub: (a, b) => `You won ${a}–${b}. Excellent table tennis!`, lostSub: (a, b) => `CPU won ${a}–${b}. Better luck next time!`,
+    rallyX: n => `RALLY × ${n}`,
+  },
+});
+</script>
 <script>
 // ═══════════════════════════════════════════════
 //  CONSTANTS
@@ -464,14 +499,21 @@ function endSet(playerWon) {
   }
 }
 
+let matchResult = null;
+function renderMatchResult() {
+  if (matchResult === null) return;
+  const playerWon = matchResult;
+  const t = SillyI18n.t;
+  document.getElementById('resultIcon').textContent    = playerWon ? '🏆' : '😓';
+  document.getElementById('resultTitle').textContent   = playerWon ? t('youWinMatch') : t('cpuWins');
+  document.getElementById('resultSubtitle').textContent = playerWon ? t('wonSub', playerSets, aiSets) : t('lostSub', aiSets, playerSets);
+}
+
 function endMatch(playerWon) {
   gameState = 'matchOver';
   if (playerWon) playWin(); else playLose();
-  document.getElementById('resultIcon').textContent    = playerWon ? '🏆' : '😓';
-  document.getElementById('resultTitle').textContent   = playerWon ? 'You Win the Match!' : 'CPU Wins!';
-  document.getElementById('resultSubtitle').textContent = playerWon
-    ? `You won ${playerSets}–${aiSets}. Excellent table tennis!`
-    : `CPU won ${aiSets}–${playerSets}. Better luck next time!`;
+  matchResult = playerWon;
+  renderMatchResult();
   document.getElementById('resultOverlay').classList.add('active');
 }
 
@@ -598,7 +640,7 @@ function draw() {
     ctx.font = 'bold 11px Segoe UI, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillStyle = rallyCount >= 8 ? '#fbbf24' : 'rgba(255,255,255,0.4)';
-    ctx.fillText(`RALLY × ${rallyCount}`, CW / 2, 8);
+    ctx.fillText(SillyI18n.en('rallyX', rallyCount), CW / 2, 8);
   }
 
   // Sets display
@@ -671,8 +713,10 @@ document.addEventListener('keyup', e => { keys[e.code] = false; });
 // ═══════════════════════════════════════════════
 //  PAUSE
 // ═══════════════════════════════════════════════
+let pauseShown = false, startResumable = false;
 function setPauseBtnText(p) {
-  document.getElementById('pauseBtn').textContent = p ? '▶ Resume' : '⏸ Pause';
+  pauseShown = p;
+  document.getElementById('pauseBtn').textContent = p ? SillyI18n.t('resume') : SillyI18n.t('pause');
   document.getElementById('pauseBadge').classList.toggle('visible', p);
 }
 
@@ -752,7 +796,8 @@ document.getElementById('howToPlayBtn').addEventListener('click', () => {
     gameState = 'paused';
     setPauseBtnText(true);
   }
-  document.getElementById('startBtn').textContent = isResumable ? '▶ Resume Game' : '▶ Start Game';
+  startResumable = isResumable;
+  document.getElementById('startBtn').textContent = isResumable ? SillyI18n.t('resumeGame') : SillyI18n.t('startGame');
   document.getElementById('startOverlay').classList.add('active');
 });
 
@@ -781,6 +826,13 @@ document.getElementById('soundBtn').addEventListener('click', () => {
   aiY     = CH / 2 - PADDLE_H / 2;
   draw();
 })();
+</script>
+<script>
+SillyI18n.onChange(() => {
+  document.getElementById('pauseBtn').textContent = pauseShown ? SillyI18n.t('resume') : SillyI18n.t('pause');
+  document.getElementById('startBtn').textContent = startResumable ? SillyI18n.t('resumeGame') : SillyI18n.t('startGame');
+  renderMatchResult();
+});
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>

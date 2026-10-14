@@ -286,7 +286,7 @@
 const CC = ChineseCheckers;
 const { cells, N, corners, SEATS, opposite } = CC;
 const COLORS = ['#ef4444', '#a855f7', '#22c55e', '#3b82f6', '#facc15', '#f97316'];
-const GAME_KEY = 'cc_game', STATS_KEY = 'cc_save', LANG_KEY = 'cc_lang';
+const GAME_KEY = 'cc_game', STATS_KEY = 'cc_save', LANG_KEY = 'sg_lang', OLD_LANG_KEY = 'cc_lang';
 const MAX_PLIES = 2000;
 const PLAYER_COUNTS = [2, 3];
 
@@ -307,11 +307,13 @@ let result = null;          // { winner }
 // ═══════════════════════════════════════════════
 //  LANGUAGE
 // ═══════════════════════════════════════════════
-let lang = 'zh';
-try {
-  const l = localStorage.getItem(LANG_KEY) || localStorage.getItem('go_lang');
-  if (l === 'zh' || l === 'en') lang = l;
-} catch (e) {}
+let lang = (() => {   // shared site-wide preference (games/shared/i18n.js uses the same key)
+  try {
+    for (const k of ['sg_lang', OLD_LANG_KEY]) { const v = localStorage.getItem(k); if (v === 'zh' || v === 'en') return v; }
+  } catch (e) {}
+  const nav = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+  return nav.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+})();
 
 const I18N = {
   zh: {

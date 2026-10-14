@@ -123,21 +123,22 @@ canvas {
 </head>
 <body>
 <div id="pac-topbar">
-  <button id="pac-pause-btn">⏸ PAUSE</button>
-  <button id="pac-exit-btn">✕ EXIT</button>
+  <div data-lang-switch></div>
+  <button id="pac-pause-btn" data-i18n="pause"></button>
+  <button id="pac-exit-btn" data-i18n="exit"></button>
   <div id="game-avatar"></div>
 </div>
 <div class="pac-game-wrap">
   <div class="pac-side-panel" id="pac-panel-left">
-    <h3>Controls</h3>
-    <div class="tip"><span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span> Move</div>
-    <div class="tip"><span class="key">P</span> Pause / Resume</div>
-    <div class="tip">Collect letters to spell each word</div>
+    <h3 data-i18n="controls"></h3>
+    <div class="tip"><span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span> <span data-i18n="move"></span></div>
+    <div class="tip"><span class="key">P</span> <span data-i18n="pauseResume"></span></div>
+    <div class="tip" data-i18n="collectTip"></div>
     <div class="section">
-      <h3>Tips</h3>
-      <div class="tip">🟡 Power pellet → ghosts turn blue</div>
-      <div class="tip">👻 Eat blue ghost → bonus points</div>
-      <div class="tip">Spell 3 words → next level</div>
+      <h3 data-i18n="tips"></h3>
+      <div class="tip" data-i18n="tip1"></div>
+      <div class="tip" data-i18n="tip2"></div>
+      <div class="tip" data-i18n="tip3"></div>
     </div>
   </div>
 
@@ -146,16 +147,51 @@ canvas {
   </div>
 
   <div class="pac-side-panel" id="pac-panel-right">
-    <h3>Progress</h3>
-    <div id="panel-level" class="tip">Level —</div>
+    <h3 data-i18n="progress"></h3>
+    <div id="panel-level" class="tip" data-i18n="levelDash"></div>
     <div id="panel-word-slots"></div>
     <div class="section">
-      <h3>Score</h3>
+      <h3 data-i18n="score"></h3>
       <div id="panel-score" class="tip">0</div>
-      <div id="panel-hiscore" class="tip" style="color:#ffd700">HI 0</div>
+      <div id="panel-hiscore" class="tip" style="color:#ffd700" data-i18n="hi0"></div>
     </div>
   </div>
 </div>
+<script src="../shared/i18n.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '小精靈單字獵人 — GameZone', pause: '⏸ 暫停', resume: '▶ 繼續', exit: '✕ 離開',
+    controls: '操作', move: '移動', pauseResume: '暫停／繼續', collectTip: '收集字母，拼出每個單字',
+    tips: '小提示', tip1: '🟡 吃到能量豆 → 鬼會變藍', tip2: '👻 吃掉藍色的鬼 → 加分', tip3: '拼出 3 個單字 → 進入下一關',
+    progress: '進度', levelDash: '關卡 —', score: '分數',
+    level: n => `第 ${n} 關`, hi: n => `最高 ${n}`, word: n => `單字 ${n}`,
+    titleCv: '小精靈 單字獵人', hi0: '最高 0', highScore: n => `最高分：${n}`,
+    contCv: n => `繼續（第 ${n} 關）`, newGameCv: '新遊戲',
+    selectHelp: '↑ ↓ 選擇　ENTER 確認', pressStart: '按 ENTER 開始',
+    scoreHud: n => `分數：${n}`, hiHud: n => `最高：${n}`, levelHud: n => `關卡：${n}`,
+    finalClear: '最終關過關！', levelClear: '過關！', allDone: '50 關全部完成！', getReady: n => `準備進入第 ${n} 關…`,
+    gameOver: '遊戲結束', playAgain: '按 ENTER 再玩一次', youWin: '你贏了！', allComplete: '50 關全部完成！',
+    paused: '暫停中', pressResume: '按 ENTER 或 P 繼續',
+    trayHelp: n => `第 ${n} / 3 個單字 — 收集字母`, wordFlash: s => `單字：${s}`,
+  },
+  en: {
+    pageTitle: 'Pac-Man Word Hunt', pause: '⏸ PAUSE', resume: '▶ RESUME', exit: '✕ EXIT',
+    controls: 'Controls', move: 'Move', pauseResume: 'Pause / Resume', collectTip: 'Collect letters to spell each word',
+    tips: 'Tips', tip1: '🟡 Power pellet → ghosts turn blue', tip2: '👻 Eat blue ghost → bonus points', tip3: 'Spell 3 words → next level',
+    progress: 'Progress', levelDash: 'Level —', score: 'Score',
+    level: n => `Level ${n}`, hi: n => `HI ${n}`, word: n => `WORD ${n}`,
+    titleCv: 'PAC-MAN WORD HUNT', hi0: 'HI 0', highScore: n => `HIGH SCORE: ${n}`,
+    contCv: n => `Continue (Level ${n})`, newGameCv: 'New Game',
+    selectHelp: '↑ ↓ to select   ENTER to confirm', pressStart: 'Press ENTER to Start',
+    scoreHud: n => `SCORE: ${n}`, hiHud: n => `HI: ${n}`, levelHud: n => `LEVEL: ${n}`,
+    finalClear: 'FINAL LEVEL CLEAR!', levelClear: 'LEVEL CLEAR!', allDone: 'You completed all 50 levels!', getReady: n => `Get ready for level ${n}…`,
+    gameOver: 'GAME OVER', playAgain: 'Press ENTER to play again', youWin: 'YOU WIN!', allComplete: 'All 50 levels complete!',
+    paused: 'PAUSED', pressResume: 'Press ENTER or P to resume',
+    trayHelp: n => `WORD ${n} / 3 — COLLECT THE LETTERS`, wordFlash: s => `WORD: ${s}`,
+  },
+});
+</script>
 <script src="../shared/words.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -795,16 +831,16 @@ function drawStartPrompt() {
   // Title
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 28px "Courier New", monospace';
-  ctx.fillText('PAC-MAN WORD HUNT', CW / 2, CH / 2 - 28);
+  ctx.fillText(SillyI18n.en('titleCv'), CW / 2, CH / 2 - 28);
   // High score
   ctx.fillStyle = '#aaa';
   ctx.font = '14px "Courier New", monospace';
-  ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2);
+  ctx.fillText(SillyI18n.en('highScore', highScore), CW / 2, CH / 2);
   if (savedLevel > 1) {
     // Two-option menu
     const opts = [
-      `Continue (Level ${String(savedLevel).padStart(2, '0')})`,
-      'New Game'
+      SillyI18n.en('contCv', String(savedLevel).padStart(2, '0')),
+      SillyI18n.en('newGameCv')
     ];
     const colors = ['#4ecdc4', '#ff6b6b'];
     opts.forEach((label, i) => {
@@ -816,11 +852,11 @@ function drawStartPrompt() {
     });
     ctx.fillStyle = '#444';
     ctx.font = '10px "Courier New", monospace';
-    ctx.fillText('↑ ↓ to select   ENTER to confirm', CW / 2, CH / 2 + 90);
+    ctx.fillText(SillyI18n.en('selectHelp'), CW / 2, CH / 2 + 90);
   } else {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 18px "Courier New", monospace';
-    ctx.fillText('Press ENTER to Start', CW / 2, CH / 2 + 34);
+    ctx.fillText(SillyI18n.en('pressStart'), CW / 2, CH / 2 + 34);
   }
 }
 
@@ -828,13 +864,13 @@ function drawScore() {
   ctx.font = 'bold 14px "Courier New", monospace';
   ctx.fillStyle = '#FFD700';
   ctx.textAlign = 'left';
-  ctx.fillText('SCORE: ' + score, 8, 20);
+  ctx.fillText(SillyI18n.en('scoreHud', score), 8, 20);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#aaa';
-  ctx.fillText('HI: ' + highScore, CW / 2, 20);
+  ctx.fillText(SillyI18n.en('hiHud', highScore), CW / 2, 20);
   ctx.textAlign = 'right';
   ctx.fillStyle = '#FFD700';
-  ctx.fillText('LEVEL: ' + level, CW - 8, 20);
+  ctx.fillText(SillyI18n.en('levelHud', level), CW - 8, 20);
 }
 
 function drawLives() {
@@ -857,10 +893,10 @@ function drawLevelClear() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#aaff00';
   ctx.font = 'bold 26px "Courier New", monospace';
-  ctx.fillText(level >= 50 ? 'FINAL LEVEL CLEAR!' : 'LEVEL CLEAR!', CW / 2, CH / 2 - 6);
+  ctx.fillText(level >= 50 ? SillyI18n.en('finalClear') : SillyI18n.en('levelClear'), CW / 2, CH / 2 - 6);
   ctx.fillStyle = '#aaa';
   ctx.font = '14px "Courier New", monospace';
-  ctx.fillText(level >= 50 ? 'You completed all 50 levels!' : 'Get ready for level ' + (level + 1) + '…', CW / 2, CH / 2 + 20);
+  ctx.fillText(level >= 50 ? SillyI18n.en('allDone') : SillyI18n.en('getReady', level + 1), CW / 2, CH / 2 + 20);
 }
 
 function drawGameOver() {
@@ -869,16 +905,16 @@ function drawGameOver() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ff4444';
   ctx.font = 'bold 30px "Courier New", monospace';
-  ctx.fillText('GAME OVER', CW / 2, CH / 2 - 26);
+  ctx.fillText(SillyI18n.en('gameOver'), CW / 2, CH / 2 - 26);
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 16px "Courier New", monospace';
-  ctx.fillText('SCORE: ' + score, CW / 2, CH / 2 + 4);
+  ctx.fillText(SillyI18n.en('scoreHud', score), CW / 2, CH / 2 + 4);
   ctx.fillStyle = '#aaa';
   ctx.font = '13px "Courier New", monospace';
-  ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2 + 24);
+  ctx.fillText(SillyI18n.en('highScore', highScore), CW / 2, CH / 2 + 24);
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 15px "Courier New", monospace';
-  ctx.fillText('Press ENTER to play again', CW / 2, CH / 2 + 52);
+  ctx.fillText(SillyI18n.en('playAgain'), CW / 2, CH / 2 + 52);
 }
 
 function drawYouWin() {
@@ -887,26 +923,31 @@ function drawYouWin() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 32px "Courier New", monospace';
-  ctx.fillText('YOU WIN!', CW / 2, CH / 2 - 26);
+  ctx.fillText(SillyI18n.en('youWin'), CW / 2, CH / 2 - 26);
   ctx.fillStyle = '#aaff00';
   ctx.font = 'bold 16px "Courier New", monospace';
-  ctx.fillText('All 50 levels complete!', CW / 2, CH / 2 + 2);
+  ctx.fillText(SillyI18n.en('allComplete'), CW / 2, CH / 2 + 2);
   ctx.fillStyle = '#aaa';
   ctx.font = '13px "Courier New", monospace';
-  ctx.fillText('HIGH SCORE: ' + highScore, CW / 2, CH / 2 + 24);
+  ctx.fillText(SillyI18n.en('highScore', highScore), CW / 2, CH / 2 + 24);
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 15px "Courier New", monospace';
-  ctx.fillText('Press ENTER to play again', CW / 2, CH / 2 + 52);
+  ctx.fillText(SillyI18n.en('playAgain'), CW / 2, CH / 2 + 52);
 }
 
 // ── Game loop ─────────────────────────────────────────────
 let paused = false;
 
+SillyI18n.onChange(() => {
+  const btn = document.getElementById('pac-pause-btn');
+  if (btn) btn.textContent = (typeof paused !== 'undefined' && paused) ? SillyI18n.t('resume') : SillyI18n.t('pause');
+  try { if (typeof updateSidePanel === 'function') updateSidePanel(); } catch (e) {}
+});
 function togglePause() {
   if (!gameRunning || gameOver || dying) return;
   paused = !paused;
   const btn = document.getElementById('pac-pause-btn');
-  if (btn) btn.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+  if (btn) btn.textContent = paused ? SillyI18n.t('resume') : SillyI18n.t('pause');
 }
 
 document.getElementById('pac-pause-btn').addEventListener('click', togglePause);
@@ -917,10 +958,10 @@ function drawPaused() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 30px "Courier New", monospace';
-  ctx.fillText('PAUSED', CW / 2, CH / 2 - 4);
+  ctx.fillText(SillyI18n.en('paused'), CW / 2, CH / 2 - 4);
   ctx.fillStyle = '#aaa';
   ctx.font = '14px "Courier New", monospace';
-  ctx.fillText('Press ENTER or P to resume', CW / 2, CH / 2 + 24);
+  ctx.fillText(SillyI18n.en('pressResume'), CW / 2, CH / 2 + 24);
 }
 
 function loop(now) {
@@ -1403,9 +1444,9 @@ function updateSidePanel() {
   const elScore = document.getElementById('panel-score');
   const elHi    = document.getElementById('panel-hiscore');
   if (!elLevel) return;
-  elLevel.textContent = 'Level ' + level;
+  elLevel.textContent = SillyI18n.t('level', level);
   elScore.textContent = score.toLocaleString();
-  elHi.textContent    = 'HI ' + highScore.toLocaleString();
+  elHi.textContent    = SillyI18n.t('hi', highScore.toLocaleString());
 
   if (!elSlots) return;
   elSlots.innerHTML = '';
@@ -1420,7 +1461,7 @@ function updateSidePanel() {
 
     const label = document.createElement('div');
     label.className = 'panel-word-label' + (isDone ? ' done' : isActive ? ' active' : '');
-    label.textContent = isDone ? 'WORD ' + (wi + 1) + ' ✓' : 'WORD ' + (wi + 1);
+    label.textContent = isDone ? SillyI18n.t('word', wi + 1) + ' ✓' : SillyI18n.t('word', wi + 1);
     slot.appendChild(label);
 
     const row = document.createElement('div');
@@ -1509,7 +1550,7 @@ function drawTray() {
   ctx.fillStyle = '#555';
   ctx.font = '11px "Courier New", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(`WORD ${wordsThisLevel + 1} / 3 — COLLECT THE LETTERS`, CW / 2, CH + 54);
+  ctx.fillText(SillyI18n.en('trayHelp', wordsThisLevel + 1), CW / 2, CH + 54);
 }
 
 // ── Word flash overlay ─────────────────────────────────────
@@ -1523,7 +1564,7 @@ function drawWordFlash(dt) {
   ctx.fillStyle = `rgba(170,255,0,${alpha})`;
   ctx.font = 'bold 26px "Courier New", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('WORD: ' + wordFlash.text, CW / 2, CH / 2 + 10);
+  ctx.fillText(SillyI18n.en('wordFlash', wordFlash.text), CW / 2, CH / 2 + 10);
 }
 
 // ═══════════════════════════════════════════════════════════

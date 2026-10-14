@@ -303,7 +303,7 @@
 //  CONSTANTS & STATE
 // ═══════════════════════════════════════════════
 const { Position, WHITE, BLACK, P, N, B, R, Q, K, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_CAP, F_CASTLE } = Chess;
-const GAME_KEY = 'chess_game', STATS_KEY = 'chess_save', LANG_KEY = 'chess_lang';
+const GAME_KEY = 'chess_game', STATS_KEY = 'chess_save', LANG_KEY = 'sg_lang', OLD_LANG_KEY = 'chess_lang';
 const TYPE_CH = ' pnbrqk';
 
 let settings = { opp: 'medium', color: 'w' };
@@ -324,11 +324,13 @@ let lastSan = '';
 // ═══════════════════════════════════════════════
 //  LANGUAGE
 // ═══════════════════════════════════════════════
-let lang = 'zh';
-try {
-  const l = localStorage.getItem(LANG_KEY) || localStorage.getItem('go_lang');
-  if (l === 'zh' || l === 'en') lang = l;
-} catch (e) {}
+let lang = (() => {   // shared site-wide preference (games/shared/i18n.js uses the same key)
+  try {
+    for (const k of ['sg_lang', OLD_LANG_KEY]) { const v = localStorage.getItem(k); if (v === 'zh' || v === 'en') return v; }
+  } catch (e) {}
+  const nav = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+  return nav.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+})();
 
 const I18N = {
   zh: {

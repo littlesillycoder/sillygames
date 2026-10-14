@@ -162,47 +162,48 @@
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="brand">
-    <a href="/">🎮 GameZone</a>
+    <a href="../../">🎮 GameZone</a>
     <span class="sep">/</span>
-    <span>Count Masters</span>
+    <span data-i18n="title"></span>
   </div>
   <div class="topbar-actions">
-    <button class="btn btn-ghost" id="howToPlayBtn">How to Play</button>
-    <button class="btn btn-ghost" id="pauseBtn">⏸ Pause</button>
-    <button class="btn btn-ghost" id="restartBtn">↺ Restart</button>
-    <button class="btn btn-danger" id="exitBtn">✕ EXIT</button>
+    <div data-lang-switch></div>
+    <button class="btn btn-ghost" id="howToPlayBtn" data-i18n="howTo"></button>
+    <button class="btn btn-ghost" id="pauseBtn" data-i18n="pause"></button>
+    <button class="btn btn-ghost" id="restartBtn" data-i18n="restart"></button>
+    <button class="btn btn-danger" id="exitBtn" data-i18n="exit"></button>
   </div>
   <div id="game-avatar"></div>
 </div>
 
-<div class="pause-badge" id="pauseBadge">⏸ PAUSED — click Resume to continue</div>
+<div class="pause-badge" id="pauseBadge" data-i18n="paused"></div>
 
 <!-- GAME AREA -->
 <div class="game-wrapper">
 
   <div class="sidebar">
     <div class="stat-box">
-      <div class="stat-label">Level</div>
+      <div class="stat-label" data-i18n="level"></div>
       <div class="stat-value" id="levelDisplay">1</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Score</div>
+      <div class="stat-label" data-i18n="score"></div>
       <div class="stat-value" id="scoreDisplay">0</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Your Army</div>
+      <div class="stat-label" data-i18n="army"></div>
       <div class="stat-value green" id="countDisplay">10</div>
     </div>
     <div class="tip-box">
-      <div class="stat-label">Gates</div>
+      <div class="stat-label" data-i18n="gates"></div>
       <div style="display:flex;flex-direction:column;gap:0.35rem;margin-top:0.3rem">
         <div style="display:flex;align-items:center;gap:0.4rem">
           <div style="width:10px;height:10px;background:#22c55e;border-radius:2px;flex-shrink:0"></div>
-          <span>Grow your army</span>
+          <span data-i18n="grow"></span>
         </div>
         <div style="display:flex;align-items:center;gap:0.4rem">
           <div style="width:10px;height:10px;background:#ef4444;border-radius:2px;flex-shrink:0"></div>
-          <span>Shrink your army</span>
+          <span data-i18n="shrink"></span>
         </div>
       </div>
     </div>
@@ -212,22 +213,16 @@
 
   <div class="sidebar">
     <div class="stat-box">
-      <div class="stat-label">Enemy</div>
+      <div class="stat-label" data-i18n="enemy"></div>
       <div class="stat-value red" id="enemyDisplay">—</div>
     </div>
     <div class="tip-box">
-      <div class="stat-label">Controls</div>
-      <div style="font-size:0.75rem;line-height:1.8;color:var(--muted)">
-        🖱 <b style="color:var(--text)">Mouse</b> left/right<br>
-        ⬅➡ <b style="color:var(--text)">Arrow keys</b><br><br>
-        Navigate through the best gate to grow your army!
-      </div>
+      <div class="stat-label" data-i18n="controls"></div>
+      <div style="font-size:0.75rem;line-height:1.8;color:var(--muted)" data-i18n-html="controlsText"></div>
     </div>
     <div class="tip-box">
-      <div class="stat-label">Tip</div>
-      <div style="font-size:0.75rem;color:var(--muted);line-height:1.6">
-        Beat the enemy army at the end of each level. The bigger your crowd, the easier the fight!
-      </div>
+      <div class="stat-label" data-i18n="tip"></div>
+      <div style="font-size:0.75rem;color:var(--muted);line-height:1.6" data-i18n="tipText"></div>
     </div>
   </div>
 
@@ -236,27 +231,21 @@
 <!-- INSTRUCTION MODAL -->
 <div class="overlay active" id="startOverlay">
   <div class="modal">
-    <h2>🏃 Count Masters</h2>
-    <p class="subtitle">Build the biggest stickman army!</p>
+    <div style="display:flex;justify-content:flex-end;margin:-0.4rem -0.4rem 0.3rem 0"><div data-lang-switch="full"></div></div>
+    <h2 data-i18n="gameTitle"></h2>
+    <p class="subtitle" data-i18n="subtitle"></p>
     <div class="instructions">
-      <h3>How to Play</h3>
-      <ul>
-        <li><span class="icon">🖱</span> Move your mouse left and right to steer your army</li>
-        <li><span class="icon">⬅➡</span> Or use arrow keys to move the crowd</li>
-        <li><span class="icon">🟢</span> Go through <b style="color:#4ade80">green gates</b> to multiply or add stickmen</li>
-        <li><span class="icon">🔴</span> Avoid <b style="color:#f87171">red gates</b> — they shrink your army!</li>
-        <li><span class="icon">⚔️</span> At the end, your army battles the enemy crowd</li>
-        <li><span class="icon">🏆</span> Bring more stickmen than the enemy to win!</li>
-      </ul>
+      <h3 data-i18n="howToH"></h3>
+      <ul data-i18n-html="rules"></ul>
     </div>
     <div class="gate-legend">
       <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> ×2, ×3, +10, +20</div>
       <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> ÷2, −5, −10</div>
     </div>
     <div class="modal-buttons">
-      <button class="btn btn-secondary" id="continueBtn" style="display:none;font-size:1rem;padding:0.7rem 1.5rem">▶ Continue</button>
-      <button class="btn btn-primary" id="startBtn" style="font-size:1rem;padding:0.7rem 1.5rem">▶ Start Game</button>
-      <button class="btn btn-danger" onclick="window.location.href='../../'" style="font-size:1rem;padding:0.7rem 1.5rem">✕ EXIT</button>
+      <button class="btn btn-secondary" id="continueBtn" style="display:none;font-size:1rem;padding:0.7rem 1.5rem"></button>
+      <button class="btn btn-primary" id="startBtn" style="font-size:1rem;padding:0.7rem 1.5rem" data-i18n="startGame"></button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" style="font-size:1rem;padding:0.7rem 1.5rem" data-i18n="exit"></button>
     </div>
   </div>
 </div>
@@ -264,18 +253,63 @@
 <!-- RESULT MODAL -->
 <div class="overlay" id="resultOverlay">
   <div class="modal">
-    <h2 id="resultTitle">🎉 Victory!</h2>
+    <h2 id="resultTitle" data-i18n="victory"></h2>
     <p class="subtitle" id="resultSubtitle"></p>
     <div class="modal-score" id="finalScore">0</div>
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem" id="resultDetail"></p>
     <div class="modal-buttons">
-      <button class="btn btn-primary" id="resultContinueBtn" style="display:none">Next Level ▶</button>
-      <button class="btn btn-primary" id="resultRestartBtn">↺ Play Again</button>
-      <button class="btn btn-danger" id="resultExitBtn">✕ EXIT</button>
+      <button class="btn btn-primary" id="resultContinueBtn" style="display:none" data-i18n="nextLevel"></button>
+      <button class="btn btn-primary" id="resultRestartBtn" data-i18n="playAgain"></button>
+      <button class="btn btn-danger" id="resultExitBtn" data-i18n="exit"></button>
     </div>
   </div>
 </div>
 
+<script src="../shared/i18n.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '人海大作戰 — GameZone', title: '人海大作戰', howTo: '玩法說明', pause: '⏸ 暫停', resume: '▶ 繼續',
+    restart: '↺ 重新開始', exit: '✕ 離開', paused: '⏸ 暫停中 — 按「繼續」接著玩',
+    level: '關卡', score: '分數', army: '你的軍隊', gates: '關卡門', grow: '軍隊變多', shrink: '軍隊變少',
+    enemy: '敵軍', controls: '操作',
+    controlsText: '🖱 <b style="color:var(--text)">滑鼠</b>左右移動<br>⬅➡ <b style="color:var(--text)">方向鍵</b><br><br>穿過最好的門，讓你的軍隊變大！',
+    tip: '小提示', tipText: '每關最後要打敗敵軍。人越多，打起來越輕鬆！',
+    gameTitle: '🏃 人海大作戰', subtitle: '組出最龐大的火柴人軍隊！', howToH: '玩法說明',
+    rules: `<li><span class="icon">🖱</span> 左右移動滑鼠來控制軍隊方向</li>
+        <li><span class="icon">⬅➡</span> 也可以用方向鍵移動</li>
+        <li><span class="icon">🟢</span> 穿過<b style="color:#4ade80">綠色的門</b>，火柴人會變多或倍增</li>
+        <li><span class="icon">🔴</span> 避開<b style="color:#f87171">紅色的門</b>，它會讓軍隊變少！</li>
+        <li><span class="icon">⚔️</span> 最後你的軍隊會和敵軍決戰</li>
+        <li><span class="icon">🏆</span> 火柴人比敵人多就獲勝！</li>`,
+    cont: n => `▶ 繼續（第 ${n} 關）`, startGame: '▶ 開始遊戲', newGame: '↺ 新遊戲', resumeGame: '▶ 繼續遊戲',
+    victory: '🎉 勝利！', nextLevel: '下一關 ▶', playAgain: '↺ 再玩一次',
+    levelClear: '🏆 過關！', defeatedWith: n => `你打敗了敵軍，還剩 ${n} 個火柴人！`, levelDone: n => `第 ${n} 關完成！`,
+    defeated: '💀 戰敗！', outnumbered: '你的軍隊人數不夠！', reached: (n, s) => `你到達第 ${n} 關，得分 ${s}`,
+    safe: '安全', battleZone: '決戰區', enemyCv: '敵軍', yourArmyCv: '你的軍隊', lvl: n => `第 ${n} 關`,
+  },
+  en: {
+    pageTitle: 'Count Masters', title: 'Count Masters', howTo: 'How to Play', pause: '⏸ Pause', resume: '▶ Resume',
+    restart: '↺ Restart', exit: '✕ EXIT', paused: '⏸ PAUSED — click Resume to continue',
+    level: 'Level', score: 'Score', army: 'Your Army', gates: 'Gates', grow: 'Grow your army', shrink: 'Shrink your army',
+    enemy: 'Enemy', controls: 'Controls',
+    controlsText: '🖱 <b style="color:var(--text)">Mouse</b> left/right<br>⬅➡ <b style="color:var(--text)">Arrow keys</b><br><br>Navigate through the best gate to grow your army!',
+    tip: 'Tip', tipText: 'Beat the enemy army at the end of each level. The bigger your crowd, the easier the fight!',
+    gameTitle: '🏃 Count Masters', subtitle: 'Build the biggest stickman army!', howToH: 'How to Play',
+    rules: `<li><span class="icon">🖱</span> Move your mouse left and right to steer your army</li>
+        <li><span class="icon">⬅➡</span> Or use arrow keys to move the crowd</li>
+        <li><span class="icon">🟢</span> Go through <b style="color:#4ade80">green gates</b> to multiply or add stickmen</li>
+        <li><span class="icon">🔴</span> Avoid <b style="color:#f87171">red gates</b> — they shrink your army!</li>
+        <li><span class="icon">⚔️</span> At the end, your army battles the enemy crowd</li>
+        <li><span class="icon">🏆</span> Bring more stickmen than the enemy to win!</li>`,
+    cont: n => `▶ Continue (Level ${n})`, startGame: '▶ Start Game', newGame: '↺ New Game', resumeGame: '▶ Resume Game',
+    victory: '🎉 Victory!', nextLevel: 'Next Level ▶', playAgain: '↺ Play Again',
+    levelClear: '🏆 Level Clear!', defeatedWith: n => `You defeated the enemy with ${n} stickmen remaining!`, levelDone: n => `Level ${n} complete!`,
+    defeated: '💀 Defeated!', outnumbered: 'Your army was outnumbered!', reached: (n, s) => `You reached Level ${n} with a score of ${s}`,
+    safe: 'SAFE', battleZone: 'BATTLE ZONE', enemyCv: 'ENEMY', yourArmyCv: 'YOUR ARMY', lvl: n => `LVL ${n}`,
+  },
+});
+</script>
 <script>
 // ═══════════════════════════════════════════════
 //  CONSTANTS
@@ -515,11 +549,11 @@ function updateStartPanel() {
   const startBtn    = document.getElementById('startBtn');
   if (savedLevel > 1) {
     continueBtn.style.display = '';
-    continueBtn.textContent   = `▶ Continue (Level ${savedLevel})`;
-    startBtn.textContent      = '↺ New Game';
+    continueBtn.textContent   = SillyI18n.t('cont', savedLevel);
+    startBtn.textContent      = SillyI18n.t('newGame');
   } else {
     continueBtn.style.display = 'none';
-    startBtn.textContent      = '▶ Start Game';
+    startBtn.textContent      = SillyI18n.t('startGame');
   }
 }
 
@@ -979,7 +1013,7 @@ function drawObstacle(obj, distAhead) {
   ctx.font = `bold ${fs}px Segoe UI, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('SAFE', gapX + gapW / 2, topY + oh / 2);
+  ctx.fillText(SillyI18n.en('safe'), gapX + gapW / 2, topY + oh / 2);
 }
 
 // ═══════════════════════════════════════════════
@@ -1029,7 +1063,7 @@ function drawFinish(distAhead) {
   ctx.font = `bold ${fs}px Segoe UI, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('BATTLE ZONE', VP_X, p.y - 20 * sc);
+  ctx.fillText(SillyI18n.en('battleZone'), VP_X, p.y - 20 * sc);
 }
 
 // ═══════════════════════════════════════════════
@@ -1087,11 +1121,11 @@ function drawBattle() {
 
   ctx.fillStyle = '#f87171';
   ctx.textAlign = 'left';
-  ctx.fillText('ENEMY', ROAD_L + 10, 12);
+  ctx.fillText(SillyI18n.en('enemyCv'), ROAD_L + 10, 12);
 
   ctx.fillStyle = '#4ade80';
   ctx.textAlign = 'left';
-  ctx.fillText('YOUR ARMY', ROAD_L + 10, CH / 2 + 12);
+  ctx.fillText(SillyI18n.en('yourArmyCv'), ROAD_L + 10, CH / 2 + 12);
 
   // Impact sparks
   if (t > 0.05 && t < 0.6) {
@@ -1203,13 +1237,28 @@ function updateBattle() {
   }
 }
 
+let lastResult = null;
+function renderResultText() {
+  if (!lastResult) return;
+  const t = SillyI18n.t, won = lastResult === 'won';
+  document.getElementById('resultTitle').textContent    = won ? t('levelClear') : t('defeated');
+  document.getElementById('resultSubtitle').textContent = won ? t('defeatedWith', count) : t('outnumbered');
+  document.getElementById('finalScore').textContent     = score.toLocaleString();
+  document.getElementById('resultDetail').textContent   = won ? t('levelDone', level) : t('reached', level, score.toLocaleString());
+}
+SillyI18n.onChange(() => {
+  renderResultText();
+  document.getElementById('pauseBtn').textContent = (typeof gameState !== 'undefined' && gameState === 'paused') ? SillyI18n.t('resume') : SillyI18n.t('pause');
+  if (document.getElementById('continueBtn').style.display === 'none' && typeof gameState !== 'undefined' && gameState === 'paused')
+    document.getElementById('startBtn').textContent = SillyI18n.t('resumeGame');
+  else try { updateStartPanel(); } catch (e) {}
+});
+
 function showLevelWon() {
   playVictory();
   gameState = 'levelWon';
-  document.getElementById('resultTitle').textContent   = '🏆 Level Clear!';
-  document.getElementById('resultSubtitle').textContent = `You defeated the enemy with ${count} stickmen remaining!`;
-  document.getElementById('finalScore').textContent = score.toLocaleString();
-  document.getElementById('resultDetail').textContent = `Level ${level} complete!`;
+  lastResult = 'won';
+  renderResultText();
 
   const hasNextLevel = true; // infinite levels
   document.getElementById('resultContinueBtn').style.display = hasNextLevel ? 'inline-flex' : 'none';
@@ -1220,10 +1269,8 @@ function showLevelWon() {
 function showGameOver() {
   playDefeat();
   gameState = 'gameOver';
-  document.getElementById('resultTitle').textContent    = '💀 Defeated!';
-  document.getElementById('resultSubtitle').textContent = 'Your army was outnumbered!';
-  document.getElementById('finalScore').textContent = score.toLocaleString();
-  document.getElementById('resultDetail').textContent   = `You reached Level ${level} with a score of ${score.toLocaleString()}`;
+  lastResult = 'lost';
+  renderResultText();
   document.getElementById('resultContinueBtn').style.display = 'none';
   document.getElementById('resultOverlay').classList.add('active');
 }
@@ -1308,7 +1355,7 @@ function drawRunning() {
   ctx.font = '10px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText(`LVL ${level}`, VP_X, CH - 14);
+  ctx.fillText(SillyI18n.en('lvl', level), VP_X, CH - 14);
 }
 
 // ═══════════════════════════════════════════════
@@ -1350,7 +1397,7 @@ document.addEventListener('keyup',   e => { keys[e.code] = false; });
 //  PAUSE
 // ═══════════════════════════════════════════════
 function setPauseBtnText(paused) {
-  document.getElementById('pauseBtn').textContent = paused ? '▶ Resume' : '⏸ Pause';
+  document.getElementById('pauseBtn').textContent = paused ? SillyI18n.t('resume') : SillyI18n.t('pause');
   document.getElementById('pauseBadge').classList.toggle('visible', paused);
 }
 
@@ -1413,7 +1460,7 @@ document.getElementById('howToPlayBtn').addEventListener('click', () => {
   }
   if (isResumable) {
     document.getElementById('continueBtn').style.display = 'none';
-    document.getElementById('startBtn').textContent = '▶ Resume Game';
+    document.getElementById('startBtn').textContent = SillyI18n.t('resumeGame');
   } else {
     updateStartPanel();
   }

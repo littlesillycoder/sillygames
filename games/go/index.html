@@ -357,9 +357,14 @@ const allowSuicide = () => false;
 // ═══════════════════════════════════════════════
 //  LANGUAGE（中文 / English 切換）
 // ═══════════════════════════════════════════════
-const LANG_KEY = 'go_lang';
-let lang = 'zh';
-try { const l = localStorage.getItem(LANG_KEY); if (l === 'zh' || l === 'en') lang = l; } catch (e) {}
+const LANG_KEY = 'sg_lang', OLD_LANG_KEY = 'go_lang';
+let lang = (() => {   // shared site-wide preference (games/shared/i18n.js uses the same key)
+  try {
+    for (const k of ['sg_lang', OLD_LANG_KEY]) { const v = localStorage.getItem(k); if (v === 'zh' || v === 'en') return v; }
+  } catch (e) {}
+  const nav = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+  return nav.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+})();
 
 const I18N = {
   zh: {

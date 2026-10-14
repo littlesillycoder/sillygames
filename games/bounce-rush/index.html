@@ -112,30 +112,31 @@
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-title">🟡 Bounce Rush</div>
+  <div class="topbar-title" data-i18n="title"></div>
+  <div data-lang-switch></div>
   <button class="topbar-btn" id="soundBtn">🔊</button>
-  <button class="topbar-btn" id="exitBtn" onclick="window.location.href='../../'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;">✕ EXIT</button>
+  <button class="topbar-btn" id="exitBtn" onclick="window.location.href='../../'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;" data-i18n="exit"></button>
   <div id="game-avatar"></div>
 </div>
 
 <div class="game-area">
   <div class="sidebar">
     <div class="stat-box">
-      <div class="stat-label">Level</div>
+      <div class="stat-label" data-i18n="level"></div>
       <div class="stat-value" id="sLevel">1</div>
-      <div class="stat-sub"  id="sLevelName">Meadow</div>
+      <div class="stat-sub"  id="sLevelName"></div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Boosts</div>
+      <div class="stat-label" data-i18n="boosts"></div>
       <div class="stat-value" id="sBoosts">0</div>
-      <div class="stat-sub"  id="sPar">Par: 4</div>
+      <div class="stat-sub"  id="sPar"></div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">Stars</div>
+      <div class="stat-label" data-i18n="stars"></div>
       <div class="stars-row" id="sStars">☆☆☆</div>
     </div>
-    <button class="how-btn"     id="howBtn">❓ How to Play</button>
-    <button class="restart-btn" id="restartBtn">↺ Restart</button>
+    <button class="how-btn"     id="howBtn" data-i18n="howTo"></button>
+    <button class="restart-btn" id="restartBtn" data-i18n="restart"></button>
   </div>
   <canvas id="c" width="460" height="540"></canvas>
 </div>
@@ -143,23 +144,58 @@
 <!-- Instructions / Title Modal -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
-    <h2>🟡 Bounce Rush</h2>
-    <p>Bounce your way to the glowing star on each level!</p>
-    <ul>
-      <li><strong>Click</strong> anywhere to boost the ball toward that spot</li>
-      <li>The ball bounces off <strong>walls, floor</strong> and <strong>platforms</strong></li>
-      <li>Guide it through the <strong>gaps</strong> to reach the ⭐ star</li>
-      <li>Fewer boosts = more stars</li>
-    </ul>
-    <p style="color:#64748b; font-size:0.78rem;">Tip: Click near the ball for a gentle redirect, far away for full power.</p>
+    <div style="display:flex;justify-content:flex-end;margin:-0.4rem -0.4rem 0.3rem 0"><div data-lang-switch="full"></div></div>
+    <h2 data-i18n="title"></h2>
+    <p data-i18n="intro"></p>
+    <ul data-i18n-html="rules"></ul>
+    <p style="color:#64748b; font-size:0.78rem;" data-i18n="tip"></p>
     <div class="modal-btns" id="modalBtns">
-      <button class="modal-continue" id="modalContinueBtn" style="display:none">▶ Continue</button>
-      <button class="modal-start" id="modalStartBtn">▶ Start Game</button>
-      <button class="modal-exit" id="modalExitBtn" onclick="window.location.href='../../'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;border-radius:10px;padding:0.75rem 1.5rem;font-size:1rem;font-weight:700;cursor:pointer;margin-top:0.4rem;">✕ EXIT</button>
+      <button class="modal-continue" id="modalContinueBtn" style="display:none"></button>
+      <button class="modal-start" id="modalStartBtn" data-i18n="startGame"></button>
+      <button class="modal-exit" id="modalExitBtn" onclick="window.location.href='../../'" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;border-radius:10px;padding:0.75rem 1.5rem;font-size:1rem;font-weight:700;cursor:pointer;margin-top:0.4rem;" data-i18n="exit"></button>
     </div>
   </div>
 </div>
 
+<script src="../shared/i18n.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '彈跳衝刺 — GameZone', title: '🟡 彈跳衝刺', exit: '✕ 離開',
+    level: '關卡', boosts: '推進次數', stars: '星星', par: n => `標準：${n}`,
+    howTo: '❓ 玩法說明', restart: '↺ 重新開始',
+    intro: '每一關都要把球彈到發光的星星那裡！',
+    rules: `<li><strong>點擊</strong>任何地方，球就會往那個方向推進</li>
+      <li>球碰到<strong>牆壁、地板</strong>和<strong>平台</strong>都會反彈</li>
+      <li>引導球穿過<strong>縫隙</strong>，碰到 ⭐ 星星就過關</li>
+      <li>推進次數越少，拿到的星星越多</li>`,
+    tip: '小技巧：點在球附近是輕輕改變方向，點遠一點力道最大。',
+    cont: n => `▶ 繼續（第 ${n} 關）`, startGame: '▶ 開始遊戲', newGame: '▶ 新遊戲', resumeGame: '▶ 繼續遊戲',
+    lvlHud: (n, name) => `第 ${n} 關：${name}`, boostsHud: n => `推進：${n}`,
+    clickToBoost: '點擊推進！', levelClear: '⭐ 過關！ ⭐', boostsN: n => `推進 ${n} 次`,
+    nextLevel: '▶ 下一關', youWin: '🏆 你贏了！',
+    'lv:Meadow': '草原', 'lv:Canyon': '峽谷', 'lv:Forest': '森林', 'lv:Stormy': '暴風',
+    'lv:Crystal': '水晶', 'lv:Sky High': '高空', 'lv:Maze': '迷宮', 'lv:Summit': '山頂',
+  },
+  en: {
+    pageTitle: 'Bounce Rush', title: '🟡 Bounce Rush', exit: '✕ EXIT',
+    level: 'Level', boosts: 'Boosts', stars: 'Stars', par: n => `Par: ${n}`,
+    howTo: '❓ How to Play', restart: '↺ Restart',
+    intro: 'Bounce your way to the glowing star on each level!',
+    rules: `<li><strong>Click</strong> anywhere to boost the ball toward that spot</li>
+      <li>The ball bounces off <strong>walls, floor</strong> and <strong>platforms</strong></li>
+      <li>Guide it through the <strong>gaps</strong> to reach the ⭐ star</li>
+      <li>Fewer boosts = more stars</li>`,
+    tip: 'Tip: Click near the ball for a gentle redirect, far away for full power.',
+    cont: n => `▶ Continue (Level ${n})`, startGame: '▶ Start Game', newGame: '▶ New Game', resumeGame: '▶ Resume Game',
+    lvlHud: (n, name) => `Lvl ${n}: ${name}`, boostsHud: n => `Boosts: ${n}`,
+    clickToBoost: 'Click to boost!', levelClear: '⭐ Level Clear! ⭐', boostsN: n => `${n} boost${n !== 1 ? 's' : ''}`,
+    nextLevel: '▶ Next Level', youWin: '🏆 You Win!',
+    'lv:Meadow': 'Meadow', 'lv:Canyon': 'Canyon', 'lv:Forest': 'Forest', 'lv:Stormy': 'Stormy',
+    'lv:Crystal': 'Crystal', 'lv:Sky High': 'Sky High', 'lv:Maze': 'Maze', 'lv:Summit': 'Summit',
+  },
+});
+</script>
 <script>
 'use strict';
 
@@ -410,9 +446,9 @@ function loadLevel(idx) {
 function updateSidebar() {
   const lv = LEVELS[currentLevel];
   document.getElementById('sLevel').textContent     = currentLevel + 1;
-  document.getElementById('sLevelName').textContent = lv.name;
+  document.getElementById('sLevelName').textContent = SillyI18n.t('lv:' + lv.name);
   document.getElementById('sBoosts').textContent    = boosts;
-  document.getElementById('sPar').textContent       = 'Par: ' + lv.par;
+  document.getElementById('sPar').textContent       = SillyI18n.t('par', lv.par);
   const s = levelStars[currentLevel];
   document.getElementById('sStars').textContent =
     (s>=1?'⭐':'☆') + (s>=2?'⭐':'☆') + (s>=3?'⭐':'☆');
@@ -838,13 +874,13 @@ function drawHUD() {
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   rrect(ctx, 8, 8, 110, 24, 7); ctx.fill();
   ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillText(`Lvl ${currentLevel+1}: ${lv.name}`, 14, 24);
+  ctx.fillText(SillyI18n.en('lvlHud', currentLevel + 1, lv.name), 14, 24);
 
   // Boosts — top-right pill
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   rrect(ctx, CW - 94, 8, 86, 24, 7); ctx.fill();
   ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'right';
-  ctx.fillText(`Boosts: ${boosts}`, CW - 10, 24);
+  ctx.fillText(SillyI18n.en('boostsHud', boosts), CW - 10, 24);
 }
 
 function drawIdleHint() {
@@ -854,7 +890,7 @@ function drawIdleHint() {
   const p = (Math.sin(Date.now() * 0.0028) + 1) / 2;
   ctx.fillStyle = `rgba(251,191,36,${0.4 + p * 0.45})`;
   ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center';
-  ctx.fillText('Click to boost!', ball.x, ball.y - BALL_R - 14);
+  ctx.fillText(SillyI18n.en('clickToBoost'), ball.x, ball.y - BALL_R - 14);
 }
 
 function drawWinOverlay() {
@@ -873,7 +909,7 @@ function drawWinOverlay() {
   ctx.fillStyle = '#ffd700';
   ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 28;
   ctx.font = 'bold 40px Segoe UI'; ctx.textAlign = 'center';
-  ctx.fillText('⭐ Level Clear! ⭐', 0, 0);
+  ctx.fillText(SillyI18n.en('levelClear'), 0, 0);
   ctx.shadowBlur = 0;
 
   const stars = levelStars[currentLevel];
@@ -882,7 +918,7 @@ function drawWinOverlay() {
 
   ctx.font = '17px Segoe UI';
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(`${boosts} boost${boosts !== 1 ? 's' : ''}`, 0, 84);
+  ctx.fillText(SillyI18n.en('boostsN', boosts), 0, 84);
   ctx.restore();
 
   // Next-level button (appears after brief delay)
@@ -893,7 +929,7 @@ function drawWinOverlay() {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
     ctx.fillText(
-      currentLevel < LEVELS.length - 1 ? '▶ Next Level' : '🏆 You Win!',
+      currentLevel < LEVELS.length - 1 ? SillyI18n.en('nextLevel') : SillyI18n.en('youWin'),
       CW/2, by + 28
     );
   }
@@ -999,6 +1035,12 @@ canvas.addEventListener('touchstart', e => {
 // ═══════════════════════════════════════════════════════
 //  MODAL (Title / How-to-Play)
 // ═══════════════════════════════════════════════════════
+let modalLabel = 'startGame';
+SillyI18n.onChange(() => {
+  document.getElementById('modalStartBtn').textContent = SillyI18n.t(modalLabel);
+  if (typeof savedLevel !== 'undefined') document.getElementById('modalContinueBtn').textContent = SillyI18n.t('cont', savedLevel + 1);
+  if (typeof updateSidebar === 'function') try { updateSidebar(); } catch (e) {}
+});
 function openModal(isResume) {
   const continueBtn = document.getElementById('modalContinueBtn');
   const startBtn    = document.getElementById('modalStartBtn');
@@ -1008,20 +1050,20 @@ function openModal(isResume) {
     // Opened via How to Play during gameplay — hide Exit
     continueBtn.style.display = 'none';
     if (exitBtn) exitBtn.style.display = 'none';
-    startBtn.textContent = '▶ Resume Game';
+    startBtn.textContent = SillyI18n.t('resumeGame'); modalLabel = 'resumeGame';
     startBtn.onclick = closeModal;
   } else {
     if (exitBtn) exitBtn.style.display = '';
     // Title screen
     if (savedLevel > 0) {
       continueBtn.style.display = '';
-      continueBtn.textContent = `▶ Continue (Level ${savedLevel + 1})`;
+      continueBtn.textContent = SillyI18n.t('cont', savedLevel + 1);
       continueBtn.onclick = () => {
         document.getElementById('modalOverlay').classList.add('hidden');
         loadLevel(savedLevel);
         startMusic();
       };
-      startBtn.textContent = '▶ New Game';
+      startBtn.textContent = SillyI18n.t('newGame'); modalLabel = 'newGame';
       startBtn.onclick = () => {
         savedLevel = 0;
         clearSaveProgress();
@@ -1031,7 +1073,7 @@ function openModal(isResume) {
       };
     } else {
       continueBtn.style.display = 'none';
-      startBtn.textContent = '▶ Start Game';
+      startBtn.textContent = SillyI18n.t('startGame'); modalLabel = 'startGame';
       startBtn.onclick = closeModal;
     }
   }
