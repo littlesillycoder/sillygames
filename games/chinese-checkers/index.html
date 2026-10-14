@@ -744,7 +744,8 @@ function resize() {
   canvas.width = Math.round(cssSize * dpr);
   canvas.height = Math.round(cssSize * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  unit = cssSize / (2 * H + 1.6);
+  unit = cssSize / (2 * H + 2.7);
+  woodFill = null;
   draw();
 }
 const X = i => cssSize / 2 + cells[i].x * unit;
@@ -771,6 +772,31 @@ function cornerTriangle(k) {
 }
 const TRIS = corners.map((_, k) => cornerTriangle(k));
 
+let woodFill = null;
+function makeWood() {
+  const off = document.createElement('canvas');
+  const sz = Math.ceil(cssSize * (window.devicePixelRatio || 1));
+  off.width = off.height = sz;
+  const g = off.getContext('2d');
+  const k = sz / cssSize;
+  const grad = g.createLinearGradient(0, 0, sz, sz);
+  grad.addColorStop(0, '#ecc985'); grad.addColorStop(0.5, '#ddb36a'); grad.addColorStop(1, '#cf9f55');
+  g.fillStyle = grad; g.fillRect(0, 0, sz, sz);
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 80; i++) {
+    const y = rnd() * sz, amp = (2 + rnd() * 6) * k, freq = (0.004 + rnd() * 0.01) / k;
+    g.strokeStyle = `rgba(120,75,25,${0.04 + rnd() * 0.08})`;
+    g.lineWidth = (0.6 + rnd() * 1.6) * k;
+    g.beginPath();
+    for (let x = 0; x <= sz; x += 6) { const yy = y + Math.sin(x * freq + i) * amp; x ? g.lineTo(x, yy) : g.moveTo(x, yy); }
+    g.stroke();
+  }
+  const pat = ctx.createPattern(off, 'no-repeat');
+  pat.setTransform(new DOMMatrix().scale(1 / k));
+  return pat;
+}
+
 function poly(points, fill, stroke, lw) {
   ctx.beginPath();
   points.forEach(([x, y], k) => {
@@ -794,6 +820,7 @@ function drawMarble(x, y, color, r, alpha = 1) {
   g.addColorStop(1, shade(color, -0.45));
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = Math.max(1, r * 0.09); ctx.strokeStyle = shade(color, -0.65); ctx.stroke();
   ctx.restore();
 }
 function shade(hex, f) {
@@ -805,15 +832,25 @@ function shade(hex, f) {
 
 function draw() {
   ctx.clearRect(0, 0, cssSize, cssSize);
-  // star base (thick rounded stroke pads it out)
-  poly(STAR, '#1f1a3d', '#1f1a3d', unit * 1.5);
-  poly(STAR, null, '#3b3470', 2);
+  // wooden star board: dark rim + glow, then light wood (thick rounded strokes pad the star out)
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = unit * 0.9; ctx.shadowOffsetY = unit * 0.25;
+  poly(STAR, '#6b4420', '#6b4420', unit * 1.95);
+  ctx.restore();
+  poly(STAR, null, 'rgba(245,197,24,0.25)', unit * 2.05);   // soft gold edge so the board stands off the dark page
+  poly(STAR, '#6b4420', '#6b4420', unit * 1.95);
+  if (!woodFill) woodFill = makeWood();
+  ctx.save();
+  poly(STAR, null, null, 0);
+  ctx.lineWidth = unit * 1.55; ctx.strokeStyle = woodFill; ctx.stroke();
+  ctx.fillStyle = woodFill; ctx.fill();
+  ctx.restore();
   // tinted corner triangles
   const active = new Set(order);
   TRIS.forEach((tri, k) => {
     const pts = tri.map(i => [cells[i].x, cells[i].y]);
     const col = COLORS[k];
-    ctx.globalAlpha = active.has(k) ? 0.28 : 0.08;
+    ctx.globalAlpha = active.has(k) ? 0.5 : 0.18;
     poly(pts, col, col, unit * 1.1);
     ctx.globalAlpha = 1;
   });
@@ -825,7 +862,7 @@ function draw() {
     ctx.setLineDash([]);
   }
   // lattice lines
-  ctx.strokeStyle = 'rgba(160,150,230,0.18)';
+  ctx.strokeStyle = 'rgba(70,40,10,0.35)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let i = 0; i < N; i++) for (const d of [0, 2, 4]) {
@@ -835,15 +872,17 @@ function draw() {
   ctx.stroke();
   // holes
   for (let i = 0; i < N; i++) {
-    ctx.beginPath(); ctx.arc(X(i), Y(i), unit * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = '#0b0a1c'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
+    const hg = ctx.createRadialGradient(X(i) - unit * 0.06, Y(i) - unit * 0.08, unit * 0.02, X(i), Y(i), unit * 0.3);
+    hg.addColorStop(0, '#2a1606'); hg.addColorStop(1, '#4a2c10');
+    ctx.beginPath(); ctx.arc(X(i), Y(i), unit * 0.29, 0, Math.PI * 2);
+    ctx.fillStyle = hg; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,235,200,0.45)'; ctx.lineWidth = 1; ctx.stroke();
   }
   // last move trail of the player who just moved
   const prev = order[(turn - 1 + order.length) % order.length];
   const lm = lastMove[prev];
   if (lm && !anim && phase !== 'setup') {
-    ctx.strokeStyle = shade(COLORS[prev], 0.2); ctx.globalAlpha = 0.55; ctx.lineWidth = 2.5;
+    ctx.strokeStyle = shade(COLORS[prev], -0.35); ctx.globalAlpha = 0.75; ctx.lineWidth = 3;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
     lm.path.forEach((i, k) => k ? ctx.lineTo(X(i), Y(i)) : ctx.moveTo(X(i), Y(i)));
@@ -859,23 +898,25 @@ function draw() {
   if (phase === 'play' && !anim && isHuman(cur)) {
     if (hover >= 0 && board[hover] === cur && hover !== selected) {
       ctx.beginPath(); ctx.arc(X(hover), Y(hover), r + 3, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = 'rgba(60,30,5,0.7)'; ctx.lineWidth = 2.5; ctx.stroke();
     }
     if (selected >= 0) {
       ctx.beginPath(); ctx.arc(X(selected), Y(selected), r + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(X(selected), Y(selected), r + 6.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(40,20,0,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
       // path preview when hovering a destination
       const hd = dests.find(d => d.to === hover);
       if (hd && hd.path.length > 2) {
-        ctx.strokeStyle = 'rgba(74,222,128,0.8)'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = '#15803d'; ctx.lineWidth = 3.5; ctx.setLineDash([5, 4]);
         ctx.beginPath(); hd.path.forEach((i, k) => k ? ctx.lineTo(X(i), Y(i)) : ctx.moveTo(X(i), Y(i)));
         ctx.stroke(); ctx.setLineDash([]);
       }
       for (const d of dests) {
         const isHint = hint && hint.to === d.to && hint.from === selected;
         ctx.beginPath(); ctx.arc(X(d.to), Y(d.to), unit * (d.to === hover ? 0.32 : 0.24), 0, Math.PI * 2);
-        ctx.fillStyle = isHint ? 'rgba(245,197,24,0.55)' : 'rgba(74,222,128,0.35)'; ctx.fill();
-        ctx.strokeStyle = isHint ? '#f5c518' : '#4ade80'; ctx.lineWidth = isHint ? 3 : 2; ctx.stroke();
+        ctx.fillStyle = isHint ? 'rgba(245,197,24,0.75)' : 'rgba(74,222,128,0.6)'; ctx.fill();
+        ctx.strokeStyle = isHint ? '#a16207' : '#15803d'; ctx.lineWidth = 3; ctx.stroke();
       }
     }
   }
