@@ -32,3 +32,16 @@
 }
 .info-box b, .tip-box b { color: #fff !important; }
 .controls-box kbd { font-size: 0.85rem !important; }
+
+/* how-to-play / start dialogs: bigger, brighter text */
+.modal p, .modal li, .modal ul, .modal .subtitle {
+  font-size: 1.02rem !important;
+  color: #d3dae6 !important;
+  line-height: 1.7 !important;
+}
+.modal .instructions h3 { font-size: 0.95rem !important; color: #22d3ee !important; }
+.modal .instructions li { margin-bottom: 0.25rem; }
+.modal b, .modal strong { color: #fff; }
+.modal .controls-grid .desc { font-size: 1rem !important; color: #d3dae6 !important; }
+.modal .controls-grid .key, .modal kbd { font-size: 0.9rem !important; }
+.modal .legend-item { font-size: 0.95rem !important; color: #d3dae6 !important; }
