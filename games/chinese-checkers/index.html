@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>中國跳棋 — GameZone</title>
+  <title>跳棋 — GameZone</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -227,8 +227,6 @@
     <div class="pills" data-group="n">
       <div class="pill active" data-val="2">2</div>
       <div class="pill" data-val="3">3</div>
-      <div class="pill" data-val="4">4</div>
-      <div class="pill" data-val="6">6</div>
     </div>
 
     <div class="opt-label" data-i18n="seatsLabel"></div>
@@ -290,6 +288,7 @@ const { cells, N, corners, SEATS, opposite } = CC;
 const COLORS = ['#ef4444', '#a855f7', '#22c55e', '#3b82f6', '#facc15', '#f97316'];
 const GAME_KEY = 'cc_game', STATS_KEY = 'cc_save', LANG_KEY = 'cc_lang';
 const MAX_PLIES = 2000;
+const PLAYER_COUNTS = [2, 3];
 
 let settings = { n: 2, level: 'medium', seats: { 0: 'human', 1: 'cpu', 2: 'cpu', 3: 'cpu', 4: 'cpu', 5: 'cpu' } };
 let board = CC.newBoard(2);
@@ -316,18 +315,18 @@ try {
 
 const I18N = {
   zh: {
-    brand: '🔴 中國跳棋', rules: ' 規則', newGame: ' 新局', exit: ' 離開', exitBtn: '✕ 離開',
+    brand: '🔴 跳棋', rules: ' 規則', newGame: ' 新局', exit: ' 離開', exitBtn: '✕ 離開',
     colors: ['紅', '紫', '綠', '藍', '黃', '橘'],
     you: '你', player: '玩家', cpu: '電腦', cpuLv: l => `電腦（${l}）`,
     lv_easy: '簡單', lv_medium: '中等', lv_hard: '困難',
     seatName: (c, who) => `${c}・${who}`,
     undo: '↶ 悔棋', hint: '💡 提示',
-    setupTitle: '中國跳棋',
+    setupTitle: '跳棋',
     setupIntro: '把你的 <b>10 顆棋子</b>全部移到<b>正對面</b>的三角區！<br>可以一步一步走，也可以連續跳過其他棋子。',
     numPlayers: '人數', seatsLabel: '座位（點選切換玩家或電腦）', cpuLevel: '電腦難度',
     easy: '簡單', medium: '中等', hard: '困難', human: '玩家',
     start: '▶ 開始', continue: '⏯ 繼續上一局', cancel: '取消',
-    helpTitle: '中國跳棋規則',
+    helpTitle: '跳棋規則',
     rulesList: `
       <li>每人有 <b>10 顆棋子</b>，從自己的三角區出發，目標是<b>正對面的三角區</b>。</li>
       <li><b>走一步：</b>移到旁邊相鄰的空位。</li>
@@ -398,7 +397,7 @@ function t(key, ...args) {
 }
 function applyLang() {
   document.documentElement.lang = lang === 'zh' ? 'zh-Hant-TW' : 'en';
-  document.title = lang === 'zh' ? '中國跳棋 — GameZone' : 'Chinese Checkers — GameZone';
+  document.title = lang === 'zh' ? '跳棋 — GameZone' : 'Chinese Checkers — GameZone';
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   document.querySelectorAll('.lang-switch button').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
@@ -643,7 +642,7 @@ function clearSavedGame() { try { localStorage.removeItem(GAME_KEY); } catch (e)
 function loadSavedGame() {
   try {
     const s = JSON.parse(localStorage.getItem(GAME_KEY));
-    if (s && s.settings && SEATS[s.settings.n] && Array.isArray(s.board) && s.board.length === N) return s;
+    if (s && s.settings && PLAYER_COUNTS.includes(s.settings.n) && Array.isArray(s.board) && s.board.length === N) return s;
   } catch (e) {}
   return null;
 }
@@ -942,6 +941,7 @@ function renderSeats() {
     const pill = e.target.closest('.pill'); if (!pill) return;
     settings.seats[g.dataset.seat] = pill.dataset.val;
     renderSeats();
+    if (phase === 'setup') refresh();
   }));
   const anyCpu = SEATS[settings.n].some(p => settings.seats[p] === 'cpu');
   document.getElementById('levelOpt').style.display = anyCpu ? '' : 'none';
@@ -1019,6 +1019,7 @@ window.addEventListener('resize', resize);
 (function boot() {
   const saved = loadSavedGame();
   if (saved) settings = Object.assign(settings, saved.settings);
+  if (!PLAYER_COUNTS.includes(settings.n)) settings.n = 2;
   applyLang();
   syncPills();
   resize();
