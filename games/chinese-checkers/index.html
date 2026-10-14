@@ -62,7 +62,7 @@
     /* ── LAYOUT ── */
     .game-wrapper {
       flex: 1; display: flex; align-items: center; justify-content: center;
-      padding: 1.25rem; gap: 1.5rem;
+      padding: 0.5rem 1rem; gap: 1.25rem;
     }
     .board-wrap { position: relative; }
     canvas#board { display: block; touch-action: manipulation; cursor: pointer; }
@@ -735,16 +735,16 @@ const H = 8 * Math.sqrt(3) / 2;   // half height of the star in lattice units (t
 function resize() {
   const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
   const narrow = vw <= 860;
-  const availW = narrow ? vw - 16 : vw - 290 - 24 * 2 - 40;
-  const availH = narrow ? window.innerHeight - 54 - 24 - 250 : window.innerHeight - 54 - 40;
-  cssSize = Math.max(280, Math.min(780, availW, Math.max(availH, narrow ? 320 : 280)));
+  const availW = narrow ? vw - 8 : vw - 290 - 20 - 32;
+  const availH = narrow ? window.innerHeight - 54 - 16 - 240 : window.innerHeight - 54 - 16;
+  cssSize = Math.max(300, Math.min(980, availW, Math.max(availH, narrow ? 340 : 300)));
   const dpr = window.devicePixelRatio || 1;
   canvas.style.width = cssSize + 'px';
   canvas.style.height = cssSize + 'px';
   canvas.width = Math.round(cssSize * dpr);
   canvas.height = Math.round(cssSize * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  unit = cssSize / (2 * H + 2.7);
+  unit = cssSize / (2 * H + 2.25);
   woodFill = null;
   draw();
 }
@@ -780,14 +780,14 @@ function makeWood() {
   const g = off.getContext('2d');
   const k = sz / cssSize;
   const grad = g.createLinearGradient(0, 0, sz, sz);
-  grad.addColorStop(0, '#ecc985'); grad.addColorStop(0.5, '#ddb36a'); grad.addColorStop(1, '#cf9f55');
+  grad.addColorStop(0, '#e8c88a'); grad.addColorStop(1, '#dcb676');
   g.fillStyle = grad; g.fillRect(0, 0, sz, sz);
   let seed = 11;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 80; i++) {
-    const y = rnd() * sz, amp = (2 + rnd() * 6) * k, freq = (0.004 + rnd() * 0.01) / k;
-    g.strokeStyle = `rgba(120,75,25,${0.04 + rnd() * 0.08})`;
-    g.lineWidth = (0.6 + rnd() * 1.6) * k;
+  for (let i = 0; i < 28; i++) {
+    const y = rnd() * sz, amp = (1.5 + rnd() * 3) * k, freq = (0.002 + rnd() * 0.004) / k;
+    g.strokeStyle = `rgba(140,95,40,${0.03 + rnd() * 0.04})`;
+    g.lineWidth = (1 + rnd() * 2.5) * k;
     g.beginPath();
     for (let x = 0; x <= sz; x += 6) { const yy = y + Math.sin(x * freq + i) * amp; x ? g.lineTo(x, yy) : g.moveTo(x, yy); }
     g.stroke();
@@ -834,7 +834,7 @@ function draw() {
   ctx.clearRect(0, 0, cssSize, cssSize);
   // wooden star board: dark rim + glow, then light wood (thick rounded strokes pad the star out)
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = unit * 0.9; ctx.shadowOffsetY = unit * 0.25;
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = unit * 0.5; ctx.shadowOffsetY = unit * 0.12;
   poly(STAR, '#6b4420', '#6b4420', unit * 1.95);
   ctx.restore();
   poly(STAR, null, 'rgba(245,197,24,0.25)', unit * 2.05);   // soft gold edge so the board stands off the dark page
@@ -862,7 +862,7 @@ function draw() {
     ctx.setLineDash([]);
   }
   // lattice lines
-  ctx.strokeStyle = 'rgba(70,40,10,0.35)';
+  ctx.strokeStyle = 'rgba(90,55,20,0.22)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let i = 0; i < N; i++) for (const d of [0, 2, 4]) {
