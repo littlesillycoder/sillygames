@@ -139,12 +139,29 @@
 
     /* ── HERO ── */
     .hero {
-      padding: 3.5rem 2rem 2rem;
+      padding: 2rem 2rem 0.5rem;
       max-width: 1280px;
       margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .hero-text { flex: 1; min-width: 0; }
+    /* hand-drawn paper plane: right edge lines up with the right edge of the last card */
+    .hero-art {
+      flex-shrink: 0;
+      margin-left: auto;
+      width: clamp(120px, 17vw, 220px);
+      height: auto;
+      border-radius: 14px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    @media (max-width: 600px) {
+      .hero { padding: 1.5rem 2rem 0.5rem; gap: 0.9rem; align-items: flex-start; }
+      .hero-art { width: 92px; border-radius: 10px; }
     }
     .hero h1 {
-      font-size: clamp(1.5rem, 3.2vw, 2.4rem);
+      font-size: clamp(1.3rem, 2.9vw, 2.4rem);
       font-weight: 800;
       line-height: 1.2;
       margin-bottom: 0.6rem;
@@ -158,7 +175,6 @@
     .hero p {
       color: var(--muted);
       font-size: 1.05rem;
-      white-space: nowrap;
     }
 
     /* ── SECTION ── */
@@ -375,8 +391,11 @@
 </header>
 
 <div class="hero">
-  <h1>Play <span class="highlight">free online games</span>, no download needed</h1>
-  <p>Jump straight into hundreds of browser games — no sign-up, no installs. Just click and play.</p>
+  <div class="hero-text">
+    <h1>Play <span class="highlight">free online games</span>, no download needed</h1>
+    <p>Jump straight into hundreds of browser games — no sign-up, no installs. Just click and play.</p>
+  </div>
+  <img class="hero-art" src="images/paper-plane.gif" width="400" height="300" alt="A little person flying on a paper plane">
 </div>
 
 <div class="section">
