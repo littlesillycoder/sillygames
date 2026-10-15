@@ -153,13 +153,23 @@
     .tile.fresh { box-shadow: 0 0 0 3px #4ade80, 0 3px 6px rgba(0,0,0,0.35); }
     .tile.last { box-shadow: 0 0 0 3px #facc15, 0 3px 6px rgba(0,0,0,0.35); }
     .tile.locked { cursor: not-allowed; }
+    .tile.hint { animation: hintPulse 1s ease-in-out infinite; }
+    .meld.hint-meld { border-color: #facc15; background: rgba(250,204,21,0.14); }
+    @keyframes hintPulse { 0%,100% { box-shadow: 0 0 0 3px #facc15, 0 3px 6px rgba(0,0,0,0.35); transform: translateY(0); }
+      50% { box-shadow: 0 0 0 4px #fde047, 0 0 16px 4px rgba(250,204,21,0.7); transform: translateY(-4px); } }
+    .hint-box { margin-top: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 10px; background: rgba(250,204,21,0.12);
+      border: 1px solid rgba(250,204,21,0.45); color: #fde68a; font-size: 0.95rem; line-height: 1.55; text-wrap: pretty; }
+    .hint-box b { color: #fff; } .hint-box .hint-title { font-weight: 800; color: #facc15; margin-bottom: 0.2rem; }
+    .hint-box .hint-note { color: #aab4c5; font-size: 0.85rem; margin-top: 0.25rem; }
+    .btn-hint { background: linear-gradient(135deg, #f59e0b, #eab308); color: #2a1a00; border: none; font-weight: 800; }
+    .btn-hint:disabled { opacity: 0.4; cursor: not-allowed; }
     .tile.ghost { position: fixed; z-index: 1000; pointer-events: none; transform: rotate(-4deg) scale(1.08); opacity: 0.95; }
     .tile.dragging-src { opacity: 0.3; }
 
     .toast {
       position: fixed; left: 50%; top: 70px; transform: translate(-50%, -10px);
       background: rgba(10,10,25,0.95); border: 1px solid var(--border); color: #fff;
-      padding: 0.55rem 1.2rem; border-radius: 999px; font-size: 1rem; font-weight: 600;
+      padding: 0.6rem 1.2rem; border-radius: 16px; font-size: 1rem; line-height: 1.5; font-weight: 600;
       opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60; max-width: 92vw; text-align: center;
     }
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -218,6 +228,8 @@
       :root { --tw: 32px; --th: 46px; --tf: 1.2rem; }
       .game-wrapper { padding: 0.5rem; gap: 0.5rem; }
       .side { width: 100%; }
+      .side-right { order: -1; }
+      .main { order: -2; }
       .topbar { padding: 0 0.6rem; gap: 0.4rem; }
       .topbar .btn { padding: 0.4rem 0.55rem; }
       .topbar .sep { display: none; }
@@ -270,16 +282,18 @@
       <button class="btn btn-ghost" id="sortNumBtn" data-i18n="sortNum"></button>
       <button class="btn btn-ghost" id="sortColBtn" data-i18n="sortCol"></button>
       <button class="btn btn-ghost" id="resetBtn" data-i18n="reset"></button>
+      <button class="btn btn-hint" id="hintBtn" data-i18n="hint"></button>
       <button class="btn btn-primary" id="drawBtn"></button>
       <button class="btn btn-green" id="doneBtn" data-i18n="done"></button>
     </div>
   </div>
 
   <!-- right: status -->
-  <div class="side">
+  <div class="side side-right">
     <div class="card">
       <div class="status-text" id="statusText"></div>
       <div class="status-meta" id="statusMeta"></div>
+      <div class="hint-box" id="hintBox" style="display:none"></div>
       <div class="open-meter" id="openMeter" style="display:none">
         <span id="openText"></span>
         <div class="bar"><i id="openBar"></i></div>
@@ -372,7 +386,9 @@ SillyI18n.add({
     colors: ['紅', '藍', '黃', '黑'], you: '你', player: n => `玩家 ${n}`, cpu: '電腦',
     cpuName: (n, lv) => `電腦 ${n}（${lv}）`, easy: '簡單', medium: '中等', hard: '困難', human: '玩家',
     tiles: '張', opened: '✓ 已破冰', notOpened: '尚未破冰',
-    pool: '牌庫剩餘', sortNum: '🔢 依數字排', sortCol: '🎨 依顏色排', reset: '↺ 還原',
+    pool: '牌庫剩餘', sortNum: '🔢 依數字排', sortCol: '🎨 依顏色排', reset: '↺ 還原', hint: '💡 提示',
+    hintNone: '找不到可以出的牌，建議按「摸一張牌」', hintNew: '新牌組', hintAdd: '接到桌上', hintRe: '拆開重組',
+    hintJoker: '鬼牌', hintStale: '（提示以這回合開始時的牌面計算）',
     draw: '🂠 摸一張牌', pass: '⏭ 跳過', done: '✓ 完成',
     miniRules: '<div><b>群組</b>　3～4 張<br>同數字、不同顏色</div><div><b>順組</b>　3 張以上<br>同顏色、數字連續</div><div><b>破冰</b>　第一次出牌<br>合計 ≥ 30 點</div>',
     howToMove: '怎麼出牌',
@@ -389,6 +405,7 @@ SillyI18n.add({
       <li><b>鬼牌</b>可以代替任何一張牌。</li>
       <li><b>破冰</b>：第一次出牌時，只能用自己手上的牌組成新牌組，數字總和要 <b>≥ 30 點</b>。破冰之前不能動桌上的牌。</li>
       <li>破冰後，可以把手牌接到桌上的牌組，也可以<b>拆開、重新組合</b>桌上的牌；但回合結束時，桌上每一組都必須合法。</li>
+      <li>想不到怎麼出？按 <b>💡 提示</b>（或按 H 鍵），會標出建議打出的牌和要放的位置。</li>
       <li>每回合至少要打出一張牌；不想出或出不了，就<b>摸一張牌</b>結束回合。</li>
       <li>最先出完手牌的人<b>獲勝</b>。其他人扣掉手上剩下的點數（鬼牌算 30 點），贏家得到所有扣掉的點數。</li>`,
     gotIt: '知道了',
@@ -417,7 +434,9 @@ SillyI18n.add({
     colors: ['Red', 'Blue', 'Yellow', 'Black'], you: 'You', player: n => `Player ${n}`, cpu: 'CPU',
     cpuName: (n, lv) => `CPU ${n} (${lv})`, easy: 'Easy', medium: 'Medium', hard: 'Hard', human: 'Player',
     tiles: 'tiles', opened: '✓ Opened', notOpened: 'Not opened yet',
-    pool: 'Tiles left', sortNum: '🔢 Sort 7-7-7', sortCol: '🎨 Sort 7-8-9', reset: '↺ Reset',
+    pool: 'Tiles left', sortNum: '🔢 Sort 7-7-7', sortCol: '🎨 Sort 7-8-9', reset: '↺ Reset', hint: '💡 Hint',
+    hintNone: 'No play found — try pressing Draw', hintNew: 'new set', hintAdd: 'add to table', hintRe: 'rearrange',
+    hintJoker: 'Joker', hintStale: '(hint is based on the start of this turn)',
     draw: '🂠 Draw a tile', pass: '⏭ Pass', done: '✓ Done',
     miniRules: '<div><b>Group</b>: 3–4 tiles, same number, different colours</div><div><b>Run</b>: 3+ tiles, same colour, consecutive numbers</div><div><b>Initial meld</b>: first play must total ≥ 30</div>',
     howToMove: 'How to play tiles',
@@ -434,6 +453,7 @@ SillyI18n.add({
       <li>A <b>joker</b> can stand in for any tile.</li>
       <li><b>Initial meld</b>: your first play must be new sets made only from your own tiles, totalling <b>at least 30</b>. Until then you may not touch the table.</li>
       <li>After that you may add tiles to sets on the table and <b>split or rearrange</b> them — but when your turn ends, every set on the table must be valid.</li>
+      <li>Stuck? Press <b>💡 Hint</b> (or the H key) to highlight a suggested play and where it goes.</li>
       <li>Play at least one tile each turn; if you can't or won't, <b>draw a tile</b> and your turn ends.</li>
       <li>The first player to empty their rack <b>wins</b>. Everyone else loses the points left in their rack (joker = 30); the winner gains them all.</li>`,
     gotIt: 'Got it',
@@ -471,6 +491,7 @@ let settings = { n: 2, level: 'medium', seats: ['human', 'cpu', 'cpu', 'cpu'] };
 let S = null;              // { n, seats, level, racks, pool, table, opened, turn, round, passes, over, winner, lastPlayed }
 let turnStart = null;      // { table, rack } at the start of the current human turn
 let selected = new Set();
+let hintIds = new Set(), hintMelds = [], hintLines = null, hintStale = false;   // tiles / table sets highlighted by the hint
 let phase = 'setup';       // setup | play | over
 let busy = false, cpuTimer = null, token = 0;
 let lastMsg = null;        // { key, args } for the status line
@@ -534,7 +555,7 @@ function newGame() {
 }
 
 function beginTurn() {
-  selected.clear();
+  selected.clear(); clearHint();
   turnStart = { table: S.table.map(m => m.slice()), rack: S.racks[S.turn].slice() };
   save();
   if (isHuman(S.turn)) {
@@ -626,7 +647,7 @@ function resetTurn(silent) {
   if (!turnStart || phase !== 'play') return;
   S.table = turnStart.table.map(m => m.slice());
   S.racks[S.turn] = turnStart.rack.slice();
-  selected.clear();
+  selected.clear(); clearHint();
   if (!silent) { Sound.tap(); render(); }
 }
 
@@ -697,9 +718,41 @@ function moveTiles(ids, target) {
   // tidy: drop empty sets, show valid sets in order
   S.table = S.table.filter(m => m.length).map(m => { const info = R.meldInfo(m); return info.ok ? info.order : m; });
   selected.clear();
+  ids.forEach(id => hintIds.delete(id));
   Sound.place();
   render();
 }
+
+// ── hint: the hard CPU's move from the start of this turn ──
+function clearHint() { hintIds = new Set(); hintMelds = []; hintLines = null; }
+function tileName(id) {
+  if (R.isJ(id)) return t('hintJoker');
+  const T = R.TILES[id];
+  return t('colors')[T.c] + (SillyI18n.lang === 'en' ? ' ' : '') + T.n;
+}
+function showHint() {
+  if (busy || phase !== 'play' || !isHuman(S.turn)) return;
+  const p = S.turn;
+  const mv = R.cpuMove(turnStart.table, turnStart.rack, S.opened[p], 'hard');
+  Sound.tap();
+  if (!mv || !mv.played.length) { clearHint(); hintLines = []; render(); return; }
+  const played = new Set(mv.played);
+  const lines = [];
+  const sameSet = (a, b) => a.length === b.length && a.every(id => b.includes(id));
+  for (const m of mv.table) {
+    const mine = m.filter(id => played.has(id));
+    if (!mine.length) continue;
+    const base = m.filter(id => !played.has(id));
+    lines.push({ tiles: mine, kind: !base.length ? 'hintNew' : turnStart.table.some(o => sameSet(o, base)) ? 'hintAdd' : 'hintRe' });
+  }
+  // highlight: tiles still in the rack, and the current table sets that the hint adds to
+  hintIds = new Set(mv.played.filter(id => S.racks[p].includes(id)));
+  hintMelds = turnStart.table.filter(m => mv.table.some(n => n.some(id => played.has(id)) && m.some(id => n.includes(id)))).map(m => m.slice());
+  hintLines = lines;
+  hintStale = S.racks[p].length !== turnStart.rack.length || JSON.stringify(S.table) !== JSON.stringify(turnStart.table);
+  render();
+}
+document.getElementById('hintBtn').addEventListener('click', showHint);
 
 let rackSort = 'num';
 function sortRack(rack, mode) {
@@ -746,7 +799,7 @@ function render() {
   const playedSet = new Set(turnStart ? S.racks[S.turn] && turnStart.rack.filter(id => !S.racks[S.turn].includes(id)) : []);
   let html = S.table.map((m, i) => {
     const ok = R.meldInfo(m).ok;
-    return `<div class="meld ${ok ? '' : 'invalid'}" data-meld="${i}">` + m.map(id => {
+    return `<div class="meld ${ok ? '' : 'invalid'} ${myTurn && hintLines && hintMelds.some(h => m.some(id => h.includes(id))) ? 'hint-meld' : ''}" data-meld="${i}">` + m.map(id => {
       const locked = myTurn && !S.opened[S.turn] && !playedThisTurn(id);
       const extra = myTurn && playedSet.has(id) ? 'fresh' : lastSet.has(id) ? 'last' : '';
       return tileHTML(id, [extra, locked ? 'locked' : '', selected.has(id) ? 'selected' : ''].filter(Boolean).join(' '));
@@ -760,7 +813,7 @@ function render() {
   const v = viewer();
   const rk = document.getElementById('rack');
   if (v < 0) rk.innerHTML = `<div class="rack-hidden">${t('thinking', playerName(S.turn))}</div>`;
-  else rk.innerHTML = S.racks[v].map(id => tileHTML(id, selected.has(id) ? 'selected' : '')).join('');
+  else rk.innerHTML = S.racks[v].map(id => tileHTML(id, selected.has(id) ? 'selected' : hintIds.has(id) ? 'hint' : '')).join('');
 
   // status
   let text;
@@ -786,8 +839,17 @@ function render() {
   document.getElementById('drawBtn').disabled = !myTurn || changed;
   document.getElementById('doneBtn').disabled = !myTurn || !changed;
   document.getElementById('resetBtn').disabled = !changed;
+  document.getElementById('hintBtn').disabled = !myTurn;
   document.getElementById('sortNumBtn').disabled = v < 0;
   document.getElementById('sortColBtn').disabled = v < 0;
+  const hb = document.getElementById('hintBox');
+  if (myTurn && hintLines) {
+    const sep = SillyI18n.lang === 'en' ? ', ' : '、';
+    hb.innerHTML = `<div class="hint-title">${t('hint')}</div>` + (hintLines.length
+      ? hintLines.map(l => `<div><b>${l.tiles.map(tileName).join(sep)}</b> <span style="white-space:nowrap">→ ${t(l.kind)}</span></div>`).join('') + (hintStale ? `<div class="hint-note">${t('hintStale')}</div>` : '')
+      : `<div>${t('hintNone')}</div>`);
+    hb.style.display = '';
+  } else hb.style.display = 'none';
   const st = getStats(), hs = humans();
   document.getElementById('recordText').textContent = hs.length === 1 ? t('record', st.wins || 0, st.losses || 0) : hs.length > 1 ? t('noRecord') : '';
 }
@@ -799,15 +861,15 @@ function renderSetupPreview() {
   document.getElementById('statusText').textContent = t('chooseSettings');
   document.getElementById('statusMeta').textContent = '';
   document.getElementById('poolNum').textContent = 106;
-  ['drawBtn', 'doneBtn', 'resetBtn', 'sortNumBtn', 'sortColBtn'].forEach(id => document.getElementById(id).disabled = true);
+  ['drawBtn', 'doneBtn', 'resetBtn', 'hintBtn', 'sortNumBtn', 'sortColBtn'].forEach(id => document.getElementById(id).disabled = true);
   document.getElementById('drawBtn').textContent = t('draw');
 }
 
 let toastTimer = null;
-function toast(msg) {
+function toast(msg, ms = 2600) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
 // ═══════════════════════════════════════════════
@@ -895,6 +957,7 @@ document.addEventListener('keydown', e => {
   if (document.querySelector('.overlay.active')) return;
   if (e.key === 'Escape') { selected.clear(); render(); }
   if (e.key === 'Enter') humanDone();
+  if (e.key === 'h' || e.key === 'H') showHint();
 });
 
 // ═══════════════════════════════════════════════
