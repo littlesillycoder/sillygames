@@ -159,7 +159,7 @@
       50% { box-shadow: 0 0 0 4px #fde047, 0 0 16px 4px rgba(250,204,21,0.7); transform: translateY(-4px); } }
     .rack-row { display: flex; gap: 10px; align-items: stretch; }
     .rack-row .rack-wrap { flex: 1; min-width: 0; }
-    .hint-box { flex: 0 0 230px; align-self: stretch; padding: 0.6rem 0.75rem; border-radius: 14px; background: var(--card);
+    .hint-box { flex: none; padding: 0.6rem 0.75rem; border-radius: 14px; background: var(--card);
       border: 2px solid rgba(250,204,21,0.7); box-shadow: 0 6px 18px rgba(0,0,0,0.4); color: #fde68a; font-size: 0.9rem; line-height: 1.5; text-wrap: pretty; }
     .hint-box b { color: #fff; } .hint-box .hint-title { font-weight: 800; color: #facc15; margin-bottom: 0.2rem; }
     .hint-box .hint-note { color: #aab4c5; font-size: 0.85rem; margin-top: 0.25rem; }
@@ -229,12 +229,11 @@
       .side { width: calc(50% - 0.5rem); }
     }
     @media (max-width: 640px) {
-      .rack-row { flex-direction: column; }
-      .hint-box { flex: none; max-height: none; }
       :root { --tw: 32px; --th: 46px; --tf: 1.2rem; }
       .game-wrapper { padding: 0.5rem; gap: 0.5rem; }
       .side { width: 100%; }
       .side-right { order: -1; }
+      .side-right .hint-box { order: -1; }
       .main { order: -2; }
       .topbar { padding: 0 0.6rem; gap: 0.4rem; }
       .topbar .btn { padding: 0.4rem 0.55rem; }
@@ -285,7 +284,6 @@
       <div class="rack-wrap">
         <div id="rack"></div>
       </div>
-      <div class="hint-box" id="hintBox" style="display:none"></div>
     </div>
     <div class="actions">
       <button class="btn btn-ghost" id="sortNumBtn" data-i18n="sortNum"></button>
@@ -313,6 +311,7 @@
       <div class="rules-mini" data-i18n-html="moveHelp"></div>
     </div>
     <div class="record" id="recordText"></div>
+    <div class="hint-box" id="hintBox" style="display:none"></div>
   </div>
 </div>
 
@@ -899,9 +898,21 @@ function render() {
       : hintUnder ? `<div>${t('hintUnder', hintUnder.melds.map(m => m.map(tileName).join(sep)).join(' ／ '), hintUnder.value)}</div>` : `<div>${t('hintNone')}</div>`);
     hb.style.display = '';
   } else hb.style.display = 'none';
+  alignHint();
   const st = getStats(), hs = humans();
   document.getElementById('recordText').textContent = hs.length === 1 ? t('record', st.wins || 0, st.losses || 0) : hs.length > 1 ? t('noRecord') : '';
 }
+
+// line the hint card up with the rack (desktop layout only)
+function alignHint() {
+  const hb = document.getElementById('hintBox'), rw = document.querySelector('.rack-wrap');
+  hb.style.marginTop = ''; hb.style.minHeight = '';
+  if (hb.style.display === 'none' || window.innerWidth <= 860) return;
+  const gap = rw.getBoundingClientRect().top - hb.getBoundingClientRect().top;
+  if (gap > 0) hb.style.marginTop = gap + 'px';
+  hb.style.minHeight = rw.getBoundingClientRect().height + 'px';
+}
+window.addEventListener('resize', alignHint);
 
 function renderSetupPreview() {
   document.getElementById('players').innerHTML = '';
