@@ -124,8 +124,8 @@
     }
     #rack.drop-hover { background: rgba(253,224,71,0.15); }
     .rack-hidden { color: rgba(255,255,255,0.8); font-size: 1rem; margin: auto; }
-    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
-    .actions .btn { padding: 0.6rem 1rem; font-size: 0.98rem; }
+    .actions { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; }
+    .actions .btn { padding: 0.6rem 0.75rem; font-size: 0.95rem; white-space: nowrap; }
 
     /* ── TILE ── */
     .tile {
@@ -161,6 +161,8 @@
       border: 1px solid rgba(250,204,21,0.45); color: #fde68a; font-size: 0.95rem; line-height: 1.55; text-wrap: pretty; }
     .hint-box b { color: #fff; } .hint-box .hint-title { font-weight: 800; color: #facc15; margin-bottom: 0.2rem; }
     .hint-box .hint-note { color: #aab4c5; font-size: 0.85rem; margin-top: 0.25rem; }
+    .btn-play { background: linear-gradient(135deg, #0ea5e9, #06b6d4); color: #04222b; border: none; font-weight: 800; }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-hint { background: linear-gradient(135deg, #f59e0b, #eab308); color: #2a1a00; border: none; font-weight: 800; }
     .btn-hint:disabled { opacity: 0.4; cursor: not-allowed; }
     .tile.ghost { position: fixed; z-index: 1000; pointer-events: none; transform: rotate(-4deg) scale(1.08); opacity: 0.95; }
@@ -283,6 +285,7 @@
       <button class="btn btn-ghost" id="sortColBtn" data-i18n="sortCol"></button>
       <button class="btn btn-ghost" id="resetBtn" data-i18n="reset"></button>
       <button class="btn btn-hint" id="hintBtn" data-i18n="hint"></button>
+      <button class="btn btn-play" id="playBtn"></button>
       <button class="btn btn-primary" id="drawBtn"></button>
       <button class="btn btn-green" id="doneBtn" data-i18n="done"></button>
     </div>
@@ -386,13 +389,14 @@ SillyI18n.add({
     colors: ['紅', '藍', '黃', '黑'], you: '你', player: n => `玩家 ${n}`, cpu: '電腦',
     cpuName: (n, lv) => `電腦 ${n}（${lv}）`, easy: '簡單', medium: '中等', hard: '困難', human: '玩家',
     tiles: '張', opened: '✓ 已破冰', notOpened: '尚未破冰',
-    pool: '牌庫剩餘', sortNum: '🔢 依數字排', sortCol: '🎨 依顏色排', reset: '↺ 還原', hint: '💡 提示',
+    pool: '牌庫剩餘', sortNum: '🔢 依數字排', sortCol: '🎨 依顏色排', reset: '↺ 還原', hint: '💡 提示', playSel: n => `📤 出牌（${n}）`, playHint: '📤 照提示出牌', play: '📤 出牌',
+    playTip: '點選手牌後按「出牌」，會放成一組新牌組；有提示時直接按，會照提示把牌擺好。',
     hintNone: '找不到可以出的牌，建議按「摸一張牌」', hintNew: '新牌組', hintAdd: '接到桌上', hintRe: '拆開重組',
     hintJoker: '鬼牌', hintStale: '（提示以這回合開始時的牌面計算）',
     draw: '🂠 摸一張牌', pass: '⏭ 跳過', done: '✓ 完成',
     miniRules: '<div><b>群組</b>　3～4 張<br>同數字、不同顏色</div><div><b>順組</b>　3 張以上<br>同顏色、數字連續</div><div><b>破冰</b>　第一次出牌<br>合計 ≥ 30 點</div>',
     howToMove: '怎麼出牌',
-    moveHelp: '<div>把手牌<b>拖到桌上</b>的<br>牌組或虛線框。</div><div>也可以先<b>點選</b>牌，<br>再點要放的牌組。</div><div>破冰後，可以<br>重新組合桌上的牌。</div>',
+    moveHelp: '<div>把手牌<b>拖到桌上</b>的<br>牌組或虛線框。</div><div>也可以先<b>點選</b>牌，<br>再點要放的牌組，<br>或按「📤 出牌」放成新牌組。</div><div>破冰後，可以<br>重新組合桌上的牌。</div>',
     newMeld: '＋ 新牌組', tableEmpty: '桌上還沒有牌',
     title: '拉密', intro: '最先把手上的牌全部打出去就獲勝！<br>每人 14 張牌，用<b>群組</b>和<b>順組</b>出牌，<br>第一次出牌（破冰）合計要 <b>30 點</b>以上。',
     numPlayers: '人數', seatsLabel: '座位（點選切換玩家或電腦）', cpuLevel: '電腦難度',
@@ -405,7 +409,7 @@ SillyI18n.add({
       <li><b>鬼牌</b>可以代替任何一張牌。</li>
       <li><b>破冰</b>：第一次出牌時，只能用自己手上的牌組成新牌組，數字總和要 <b>≥ 30 點</b>。破冰之前不能動桌上的牌。</li>
       <li>破冰後，可以把手牌接到桌上的牌組，也可以<b>拆開、重新組合</b>桌上的牌；但回合結束時，桌上每一組都必須合法。</li>
-      <li>想不到怎麼出？按 <b>💡 提示</b>（或按 H 鍵），會標出建議打出的牌和要放的位置。</li>
+      <li>想不到怎麼出？按 <b>💡 提示</b>（或按 H 鍵），會標出建議打出的牌和要放的位置；再按 <b>📤 照提示出牌</b> 就會自動擺好。</li>
       <li>每回合至少要打出一張牌；不想出或出不了，就<b>摸一張牌</b>結束回合。</li>
       <li>最先出完手牌的人<b>獲勝</b>。其他人扣掉手上剩下的點數（鬼牌算 30 點），贏家得到所有扣掉的點數。</li>`,
     gotIt: '知道了',
@@ -434,13 +438,14 @@ SillyI18n.add({
     colors: ['Red', 'Blue', 'Yellow', 'Black'], you: 'You', player: n => `Player ${n}`, cpu: 'CPU',
     cpuName: (n, lv) => `CPU ${n} (${lv})`, easy: 'Easy', medium: 'Medium', hard: 'Hard', human: 'Player',
     tiles: 'tiles', opened: '✓ Opened', notOpened: 'Not opened yet',
-    pool: 'Tiles left', sortNum: '🔢 Sort 7-7-7', sortCol: '🎨 Sort 7-8-9', reset: '↺ Reset', hint: '💡 Hint',
+    pool: 'Tiles left', sortNum: '🔢 Sort 7-7-7', sortCol: '🎨 Sort 7-8-9', reset: '↺ Reset', hint: '💡 Hint', playSel: n => `📤 Play (${n})`, playHint: '📤 Play hint', play: '📤 Play',
+    playTip: 'Select tiles, then press Play to put them down as a new set. With a hint showing, Play lays the hint out for you.',
     hintNone: 'No play found — try pressing Draw', hintNew: 'new set', hintAdd: 'add to table', hintRe: 'rearrange',
     hintJoker: 'Joker', hintStale: '(hint is based on the start of this turn)',
     draw: '🂠 Draw a tile', pass: '⏭ Pass', done: '✓ Done',
     miniRules: '<div><b>Group</b>: 3–4 tiles, same number, different colours</div><div><b>Run</b>: 3+ tiles, same colour, consecutive numbers</div><div><b>Initial meld</b>: first play must total ≥ 30</div>',
     howToMove: 'How to play tiles',
-    moveHelp: '<div><b>Drag</b> tiles onto a set on the table or onto the dashed box.</div><div>Or <b>tap</b> tiles, then tap where they should go.</div><div>After your initial meld you may rearrange the table.</div>',
+    moveHelp: '<div><b>Drag</b> tiles onto a set on the table or onto the dashed box.</div><div>Or <b>tap</b> tiles, then tap where they should go — or press <b>📤 Play</b> to make them a new set.</div><div>After your initial meld you may rearrange the table.</div>',
     newMeld: '＋ New set', tableEmpty: 'The table is empty',
     title: 'Rummikub', intro: 'Be the first to play every tile in your rack!<br>Everyone gets 14 tiles. Play them as <b>groups</b> and <b>runs</b>; your first play (initial meld) must total at least <b>30 points</b>.',
     numPlayers: 'Players', seatsLabel: 'Seats (tap to switch player / CPU)', cpuLevel: 'CPU difficulty',
@@ -453,7 +458,7 @@ SillyI18n.add({
       <li>A <b>joker</b> can stand in for any tile.</li>
       <li><b>Initial meld</b>: your first play must be new sets made only from your own tiles, totalling <b>at least 30</b>. Until then you may not touch the table.</li>
       <li>After that you may add tiles to sets on the table and <b>split or rearrange</b> them — but when your turn ends, every set on the table must be valid.</li>
-      <li>Stuck? Press <b>💡 Hint</b> (or the H key) to highlight a suggested play and where it goes.</li>
+      <li>Stuck? Press <b>💡 Hint</b> (or the H key) to highlight a suggested play and where it goes; then <b>📤 Play hint</b> lays it out for you.</li>
       <li>Play at least one tile each turn; if you can't or won't, <b>draw a tile</b> and your turn ends.</li>
       <li>The first player to empty their rack <b>wins</b>. Everyone else loses the points left in their rack (joker = 30); the winner gains them all.</li>`,
     gotIt: 'Got it',
@@ -724,7 +729,8 @@ function moveTiles(ids, target) {
 }
 
 // ── hint: the hard CPU's move from the start of this turn ──
-function clearHint() { hintIds = new Set(); hintMelds = []; hintLines = null; }
+let hintMove = null;
+function clearHint() { hintIds = new Set(); hintMelds = []; hintLines = null; hintMove = null; }
 function tileName(id) {
   if (R.isJ(id)) return t('hintJoker');
   const T = R.TILES[id];
@@ -749,10 +755,32 @@ function showHint() {
   hintIds = new Set(mv.played.filter(id => S.racks[p].includes(id)));
   hintMelds = turnStart.table.filter(m => mv.table.some(n => n.some(id => played.has(id)) && m.some(id => n.includes(id)))).map(m => m.slice());
   hintLines = lines;
+  hintMove = mv;
   hintStale = S.racks[p].length !== turnStart.rack.length || JSON.stringify(S.table) !== JSON.stringify(turnStart.table);
   render();
 }
 document.getElementById('hintBtn').addEventListener('click', showHint);
+
+// 出牌: selected tiles → a new set; nothing selected but a hint showing → lay the hint out
+function playButton() {
+  if (busy || phase !== 'play' || !isHuman(S.turn)) return;
+  const p = S.turn;
+  if (selected.size) {
+    const sel = [...selected];
+    moveTiles(sel, { newMeld: true });
+    return;
+  }
+  if (hintMove) {
+    const played = new Set(hintMove.played);
+    S.table = hintMove.table.map(m => m.slice());
+    S.racks[p] = turnStart.rack.filter(id => !played.has(id));
+    sortRack(S.racks[p], rackSort);
+    hintIds = new Set(); hintStale = false;
+    Sound.place();
+    render();
+  }
+}
+document.getElementById('playBtn').addEventListener('click', playButton);
 
 let rackSort = 'num';
 function sortRack(rack, mode) {
@@ -840,6 +868,11 @@ function render() {
   document.getElementById('doneBtn').disabled = !myTurn || !changed;
   document.getElementById('resetBtn').disabled = !changed;
   document.getElementById('hintBtn').disabled = !myTurn;
+  const pb = document.getElementById('playBtn');
+  const hintPending = hintMove && hintIds.size > 0;
+  pb.textContent = selected.size ? t('playSel', selected.size) : hintPending ? t('playHint') : t('play');
+  pb.disabled = !myTurn || (!selected.size && !hintPending);
+  pb.title = t('playTip');
   document.getElementById('sortNumBtn').disabled = v < 0;
   document.getElementById('sortColBtn').disabled = v < 0;
   const hb = document.getElementById('hintBox');
@@ -861,8 +894,9 @@ function renderSetupPreview() {
   document.getElementById('statusText').textContent = t('chooseSettings');
   document.getElementById('statusMeta').textContent = '';
   document.getElementById('poolNum').textContent = 106;
-  ['drawBtn', 'doneBtn', 'resetBtn', 'hintBtn', 'sortNumBtn', 'sortColBtn'].forEach(id => document.getElementById(id).disabled = true);
+  ['drawBtn', 'doneBtn', 'resetBtn', 'hintBtn', 'playBtn', 'sortNumBtn', 'sortColBtn'].forEach(id => document.getElementById(id).disabled = true);
   document.getElementById('drawBtn').textContent = t('draw');
+  document.getElementById('playBtn').textContent = t('play');
 }
 
 let toastTimer = null;
