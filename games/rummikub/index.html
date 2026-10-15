@@ -157,8 +157,10 @@
     .meld.hint-meld { border-color: #facc15; background: rgba(250,204,21,0.14); }
     @keyframes hintPulse { 0%,100% { box-shadow: 0 0 0 3px #facc15, 0 3px 6px rgba(0,0,0,0.35); transform: translateY(0); }
       50% { box-shadow: 0 0 0 4px #fde047, 0 0 16px 4px rgba(250,204,21,0.7); transform: translateY(-4px); } }
-    .hint-box { margin-top: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 10px; background: rgba(250,204,21,0.12);
-      border: 1px solid rgba(250,204,21,0.45); color: #fde68a; font-size: 0.95rem; line-height: 1.55; text-wrap: pretty; }
+    .rack-wrap { display: flex; gap: 10px; align-items: stretch; }
+    #rack { flex: 1; min-width: 0; }
+    .hint-box { flex: 0 0 230px; align-self: stretch; padding: 0.6rem 0.75rem; border-radius: 10px; background: rgba(24,16,4,0.6);
+      border: 1px solid rgba(250,204,21,0.6); color: #fde68a; font-size: 0.9rem; line-height: 1.5; text-wrap: pretty; }
     .hint-box b { color: #fff; } .hint-box .hint-title { font-weight: 800; color: #facc15; margin-bottom: 0.2rem; }
     .hint-box .hint-note { color: #aab4c5; font-size: 0.85rem; margin-top: 0.25rem; }
     .btn-play { background: linear-gradient(135deg, #0ea5e9, #06b6d4); color: #04222b; border: none; font-weight: 800; }
@@ -227,6 +229,8 @@
       .side { width: calc(50% - 0.5rem); }
     }
     @media (max-width: 640px) {
+      .rack-wrap { flex-direction: column; }
+      .hint-box { flex: none; max-height: none; }
       :root { --tw: 32px; --th: 46px; --tf: 1.2rem; }
       .game-wrapper { padding: 0.5rem; gap: 0.5rem; }
       .side { width: 100%; }
@@ -279,6 +283,7 @@
     <div id="table"></div>
     <div class="rack-wrap">
       <div id="rack"></div>
+      <div class="hint-box" id="hintBox" style="display:none"></div>
     </div>
     <div class="actions">
       <button class="btn btn-ghost" id="sortNumBtn" data-i18n="sortNum"></button>
@@ -296,7 +301,6 @@
     <div class="card">
       <div class="status-text" id="statusText"></div>
       <div class="status-meta" id="statusMeta"></div>
-      <div class="hint-box" id="hintBox" style="display:none"></div>
       <div class="open-meter" id="openMeter" style="display:none">
         <span id="openText"></span>
         <div class="bar"><i id="openBar"></i></div>
@@ -393,6 +397,7 @@ SillyI18n.add({
     playTip: '點選手牌後按「出牌」，會放成一組新牌組；有提示時直接按，會照提示把牌擺好。',
     hintNone: '找不到可以出的牌，建議按「摸一張牌」', hintNew: '新牌組', hintAdd: '接到桌上', hintRe: '拆開重組',
     hintJoker: '鬼牌', hintStale: '（提示以這回合開始時的牌面計算）',
+    hintUnder: (sets, v) => `可組出 <b>${sets}</b>，但只有 ${v} 點，破冰要 30 點（還差 ${30 - v}）。破冰前不能接桌上的牌，建議先摸一張牌。`,
     draw: '🂠 摸一張牌', pass: '⏭ 跳過', done: '✓ 完成',
     miniRules: '<div><b>群組</b>　3～4 張<br>同數字、不同顏色</div><div><b>順組</b>　3 張以上<br>同顏色、數字連續</div><div><b>破冰</b>　第一次出牌<br>合計 ≥ 30 點</div>',
     howToMove: '怎麼出牌',
@@ -442,7 +447,8 @@ SillyI18n.add({
     playTip: 'Select tiles, then press Play to put them down as a new set. With a hint showing, Play lays the hint out for you.',
     hintNone: 'No play found — try pressing Draw', hintNew: 'new set', hintAdd: 'add to table', hintRe: 'rearrange',
     hintJoker: 'Joker', hintStale: '(hint is based on the start of this turn)',
-    draw: '🂠 Draw a tile', pass: '⏭ Pass', done: '✓ Done',
+    hintUnder: (sets, v) => `You can make <b>${sets}</b>, but that's only ${v} points — the initial meld needs 30 (${30 - v} short). Draw a tile for now.`,
+    draw: '🂠 Draw', pass: '⏭ Pass', done: '✓ Done',
     miniRules: '<div><b>Group</b>: 3–4 tiles, same number, different colours</div><div><b>Run</b>: 3+ tiles, same colour, consecutive numbers</div><div><b>Initial meld</b>: first play must total ≥ 30</div>',
     howToMove: 'How to play tiles',
     moveHelp: '<div><b>Drag</b> tiles onto a set on the table or onto the dashed box.</div><div>Or <b>tap</b> tiles, then tap where they should go — or press <b>📤 Play</b> to make them a new set.</div><div>After your initial meld you may rearrange the table.</div>',
@@ -729,8 +735,8 @@ function moveTiles(ids, target) {
 }
 
 // ── hint: the hard CPU's move from the start of this turn ──
-let hintMove = null;
-function clearHint() { hintIds = new Set(); hintMelds = []; hintLines = null; hintMove = null; }
+let hintMove = null, hintUnder = null;
+function clearHint() { hintIds = new Set(); hintMelds = []; hintLines = null; hintMove = null; hintUnder = null; }
 function tileName(id) {
   if (R.isJ(id)) return t('hintJoker');
   const T = R.TILES[id];
@@ -741,7 +747,15 @@ function showHint() {
   const p = S.turn;
   const mv = R.cpuMove(turnStart.table, turnStart.rack, S.opened[p], 'hard');
   Sound.tap();
-  if (!mv || !mv.played.length) { clearHint(); hintLines = []; render(); return; }
+  if (!mv || !mv.played.length) {
+    clearHint(); hintLines = [];
+    // not opened yet: show the sets they *can* make, and why it is not enough
+    if (!S.opened[p]) {
+      const best = R.bestMeldSet(turnStart.rack, { nodeLimit: 20000 });
+      if (best && best.melds.length) { hintUnder = { melds: best.melds, value: best.value }; hintIds = new Set(best.melds.flat().filter(id => S.racks[p].includes(id))); }
+    }
+    render(); return;
+  }
   const played = new Set(mv.played);
   const lines = [];
   const sameSet = (a, b) => a.length === b.length && a.every(id => b.includes(id));
@@ -880,7 +894,7 @@ function render() {
     const sep = SillyI18n.lang === 'en' ? ', ' : '、';
     hb.innerHTML = `<div class="hint-title">${t('hint')}</div>` + (hintLines.length
       ? hintLines.map(l => `<div><b>${l.tiles.map(tileName).join(sep)}</b> <span style="white-space:nowrap">→ ${t(l.kind)}</span></div>`).join('') + (hintStale ? `<div class="hint-note">${t('hintStale')}</div>` : '')
-      : `<div>${t('hintNone')}</div>`);
+      : hintUnder ? `<div>${t('hintUnder', hintUnder.melds.map(m => m.map(tileName).join(sep)).join(' ／ '), hintUnder.value)}</div>` : `<div>${t('hintNone')}</div>`);
     hb.style.display = '';
   } else hb.style.display = 'none';
   const st = getStats(), hs = humans();
