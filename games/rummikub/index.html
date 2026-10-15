@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>拉密 — GameZone</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a; --surface: #14142b; --card: #1c1c38; --border: #2a2a50;
+      --accent: #7c3aed; --accent2: #06b6d4; --text: #eef2f7; --muted: #aab4c5; --soft: #d3dae6;
+      --gold: #f5c518;
+      --tw: 46px; --th: 64px; --tf: 1.6rem;
+      --c0: #d62839; --c1: #1d5fd6; --c2: #e07800; --c3: #1a1a1a;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column; user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem; height: 54px; display: flex; align-items: center; gap: 1rem; flex-shrink: 0;
+    }
+    .topbar .brand { font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+    .topbar .brand a { color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+    .topbar .sep { color: var(--muted); }
+    .topbar-actions { margin-left: auto; display: flex; gap: 0.6rem; align-items: center; }
+    .btn {
+      padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; color: var(--text);
+      font-family: inherit; white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #5b21b6); color: #fff; }
+    .btn-green { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; }
+    .btn-danger { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; }
+    .sound-toggle { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.7rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+    .sound-toggle.muted { opacity: 0.4; }
+    #game-avatar { display: flex; align-items: center; margin-left: 0.5rem; }
+
+    /* ── LAYOUT: players | table + rack | status ── */
+    .game-wrapper {
+      flex: 1; display: flex; justify-content: center; align-items: stretch;
+      padding: 0.9rem 1rem; gap: 1rem; min-height: 0;
+    }
+    .rules-mini > div + div { margin-top: 0.45rem; }
+    .rules-mini, .modal p, .modal li, .status-text { text-wrap: pretty; }
+    .side { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+    .main { flex: 1; max-width: 900px; min-width: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.8rem 0.95rem;
+    }
+    .card-label { font-size: 0.95rem; font-weight: 700; color: var(--muted); margin-bottom: 0.4rem; }
+    .player-row {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.65rem 0.85rem; display: flex; align-items: center; gap: 0.6rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .player-row.active { border-color: var(--accent2); box-shadow: 0 0 16px rgba(6,182,212,0.3); }
+    .player-row .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    .player-row .info { flex: 1; min-width: 0; }
+    .player-row .name { font-weight: 700; font-size: 1.02rem; display: flex; align-items: center; gap: 0.35rem; }
+    .player-row .sub { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+    .player-row .sub .ok { color: #4ade80; }
+    .player-row .count { font-size: 1.35rem; font-weight: 800; color: var(--accent2); font-variant-numeric: tabular-nums; text-align: right; }
+    .player-row .count small { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+    .thinking { display: none; gap: 3px; }
+    .player-row.thinking-on .thinking { display: inline-flex; }
+    .thinking i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); animation: blink 1s infinite; }
+    .thinking i:nth-child(2) { animation-delay: .2s; } .thinking i:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%,100% { opacity: .2 } 50% { opacity: 1 } }
+    .pool-num { font-size: 1.85rem; font-weight: 800; color: var(--gold); }
+    .status-text { font-size: 1rem; line-height: 1.55; }
+    .status-meta { color: var(--muted); font-size: 0.88rem; margin-top: 0.35rem; }
+    .open-meter { margin-top: 0.5rem; font-size: 0.9rem; color: var(--soft); }
+    .open-meter .bar { height: 7px; background: var(--bg); border-radius: 4px; margin-top: 4px; overflow: hidden; }
+    .open-meter .bar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #4ade80); width: 0; transition: width .2s; }
+    .side .btn { width: 100%; }
+    .record { font-size: 0.88rem; color: var(--muted); text-align: center; }
+    .rules-mini { font-size: 0.9rem; color: var(--soft); line-height: 1.6; }
+    .rules-mini b { color: #fff; }
+
+    /* ── TABLE ── */
+    #table {
+      flex: 1; min-height: 280px; overflow-y: auto; border-radius: 14px; padding: 12px;
+      background: radial-gradient(ellipse at 50% 35%, #1b6b5c, #0f4038 75%);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.45), 0 6px 20px rgba(0,0,0,0.4);
+      display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px;
+      border: 2px solid #0b2f2a;
+    }
+    .meld {
+      display: inline-flex; gap: 3px; padding: 6px; border-radius: 10px;
+      background: rgba(0,0,0,0.18); border: 2px solid transparent; cursor: pointer;
+      min-height: calc(var(--th) + 16px);
+    }
+    .meld.invalid { border-color: #f87171; background: rgba(248,113,113,0.15); }
+    .meld.drop-hover, #newMeld.drop-hover { border-color: #fde047; background: rgba(253,224,71,0.15); }
+    #newMeld {
+      min-width: calc(var(--tw) * 3); min-height: calc(var(--th) + 16px); border-radius: 10px;
+      border: 2px dashed rgba(255,255,255,0.35); color: rgba(255,255,255,0.7);
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      font-size: 0.9rem; font-weight: 600; padding: 6px 12px; cursor: pointer;
+    }
+    .table-empty-hint { color: rgba(255,255,255,0.55); font-size: 1rem; align-self: center; margin: auto; }
+
+    /* ── RACK ── */
+    .rack-wrap {
+      background: linear-gradient(180deg, #8a5d36, #5c3b1e); border-radius: 14px; padding: 10px 12px 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.15);
+    }
+    #rack {
+      display: flex; flex-wrap: wrap; gap: 4px; min-height: calc(var(--th) * 2 + 12px); align-content: flex-start;
+      padding: 4px; border-radius: 8px; background: rgba(0,0,0,0.15);
+    }
+    #rack.drop-hover { background: rgba(253,224,71,0.15); }
+    .rack-hidden { color: rgba(255,255,255,0.8); font-size: 1rem; margin: auto; }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .actions .btn { padding: 0.6rem 1rem; font-size: 0.98rem; }
+
+    /* ── TILE ── */
+    .tile {
+      width: var(--tw); height: var(--th); border-radius: 7px; flex-shrink: 0; position: relative;
+      background: linear-gradient(180deg, #fffdf6, #ece3cc);
+      box-shadow: 0 2px 0 #b9ab8a, 0 3px 6px rgba(0,0,0,0.35);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; font-size: var(--tf); line-height: 1; cursor: grab; touch-action: none;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .tile::after { content: ''; width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; background: currentColor; opacity: 0.85; }
+    .tile.c0 { color: var(--c0); } .tile.c1 { color: var(--c1); } .tile.c2 { color: var(--c2); } .tile.c3 { color: var(--c3); }
+    .tile.joker { color: #d62839; font-size: calc(var(--tf) * 1.05); }
+    .tile.joker::after { background: linear-gradient(90deg, var(--c0), var(--c1), var(--c2), var(--c3)); }
+    .tile.selected { transform: translateY(-7px); box-shadow: 0 0 0 3px #22d3ee, 0 8px 14px rgba(0,0,0,0.4); }
+    .tile.fresh { box-shadow: 0 0 0 3px #4ade80, 0 3px 6px rgba(0,0,0,0.35); }
+    .tile.last { box-shadow: 0 0 0 3px #facc15, 0 3px 6px rgba(0,0,0,0.35); }
+    .tile.locked { cursor: not-allowed; }
+    .tile.ghost { position: fixed; z-index: 1000; pointer-events: none; transform: rotate(-4deg) scale(1.08); opacity: 0.95; }
+    .tile.dragging-src { opacity: 0.3; }
+
+    .toast {
+      position: fixed; left: 50%; top: 70px; transform: translate(-50%, -10px);
+      background: rgba(10,10,25,0.95); border: 1px solid var(--border); color: #fff;
+      padding: 0.55rem 1.2rem; border-radius: 999px; font-size: 1rem; font-weight: 600;
+      opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60; max-width: 92vw; text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ── OVERLAYS ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.25s; padding: 1rem;
+    }
+    .overlay.active { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 1.8rem 2rem; max-width: 560px; width: 100%;
+      text-align: center; max-height: 92vh; overflow-y: auto; position: relative;
+    }
+    .modal .lang-switch { position: absolute; top: 1rem; right: 1rem; }
+    .modal-icon { font-size: 2.4rem; margin-bottom: 0.4rem; display: flex; justify-content: center; gap: 4px; }
+    .modal-icon .tile { cursor: default; }
+    .modal h2 { font-size: 1.7rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .modal p { color: var(--soft); font-size: 1.05rem; line-height: 1.7; margin-bottom: 1.1rem; }
+    html[lang="en"] .modal p { text-align: left; }
+    .opt-label { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0.3rem 0 0.5rem; }
+    .pills { display: flex; gap: 0.45rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .pill {
+      padding: 0.45rem 1rem; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--soft); font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .pill:hover { border-color: var(--accent); color: var(--text); }
+    .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .seats { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 1rem; }
+    .seat-row { display: flex; align-items: center; gap: 0.7rem; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 0.45rem 0.7rem; }
+    .seat-row .dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+    .seat-row .seat-name { font-weight: 700; font-size: 1rem; flex: 1; text-align: left; }
+    .seat-row .pills { margin: 0; flex-wrap: nowrap; }
+    .seat-row .pill { padding: 0.3rem 0.8rem; font-size: 0.9rem; }
+    .modal-btns { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: nowrap; margin-top: 0.4rem; }
+    .modal-btns .btn { font-size: 1.05rem; padding: 0.7rem 1.2rem; }
+    .rules { text-align: left; color: var(--soft); font-size: 1.03rem; line-height: 1.7; margin: 0 0 1.2rem 1.2rem; }
+    .rules li { margin-bottom: 0.6rem; padding-left: 0.2rem; }
+    .rules li::marker { color: var(--accent2); }
+    .rules b { color: #fff; }
+    .result-table { width: 100%; border-collapse: collapse; margin: 0.4rem 0 1.2rem; font-size: 1rem; }
+    .result-table th { color: var(--muted); font-weight: 700; font-size: 0.85rem; padding: 0.4rem; text-align: left; }
+    .result-table td { padding: 0.5rem 0.4rem; border-top: 1px solid var(--border); text-align: left; }
+    .result-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .result-table th.num { text-align: right; }
+    .result-table .win td { color: #fde047; }
+
+    @media (max-width: 1100px) {
+      .game-wrapper { flex-wrap: wrap; }
+      .main { order: -1; flex-basis: 100%; max-width: none; }
+      .side { width: calc(50% - 0.5rem); }
+    }
+    @media (max-width: 640px) {
+      :root { --tw: 32px; --th: 46px; --tf: 1.1rem; }
+      .game-wrapper { padding: 0.5rem; gap: 0.5rem; }
+      .side { width: 100%; }
+      .tile::after { width: 6px; height: 6px; margin-top: 4px; }
+      .topbar { padding: 0 0.6rem; gap: 0.4rem; }
+      .topbar .btn { padding: 0.4rem 0.55rem; }
+      .topbar .sep { display: none; }
+      .topbar-actions { gap: 0.35rem; }
+      .hide-sm { display: none; }
+      .modal { padding: 3.2rem 1rem 1.4rem; }
+      .modal .lang-switch { top: 0.7rem; right: 0.7rem; }
+      .actions .btn { padding: 0.5rem 0.6rem; font-size: 0.88rem; }
+      .modal-btns { flex-wrap: wrap; }
+      #table { min-height: 220px; padding: 8px; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="../../">🏠</a>
+    <span class="sep">/</span>
+    <span data-i18n="brand"></span>
+  </div>
+  <div class="topbar-actions">
+    <div data-lang-switch></div>
+    <button class="sound-toggle" id="soundBtn" data-i18n-title="sound">🔊</button>
+    <button class="btn btn-ghost" id="howToPlayBtn">❓<span class="hide-sm" data-i18n="rulesBtn"></span></button>
+    <button class="btn btn-ghost" id="newGameBtn">↺<span class="hide-sm" data-i18n="newGame"></span></button>
+    <button class="btn btn-danger" id="exitBtn">✕<span class="hide-sm" data-i18n="exit"></span></button>
+  </div>
+  <div id="game-avatar"></div>
+</div>
+
+<div class="game-wrapper">
+  <!-- left: players -->
+  <div class="side">
+    <div id="players" style="display:flex;flex-direction:column;gap:0.6rem"></div>
+    <div class="card">
+      <div class="card-label" data-i18n="pool"></div>
+      <div class="pool-num" id="poolNum">0</div>
+    </div>
+    <div class="card rules-mini" data-i18n-html="miniRules"></div>
+  </div>
+
+  <!-- centre: table + rack -->
+  <div class="main">
+    <div id="table"></div>
+    <div class="rack-wrap">
+      <div id="rack"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" id="sortNumBtn" data-i18n="sortNum"></button>
+      <button class="btn btn-ghost" id="sortColBtn" data-i18n="sortCol"></button>
+      <button class="btn btn-ghost" id="resetBtn" data-i18n="reset"></button>
+      <button class="btn btn-primary" id="drawBtn"></button>
+      <button class="btn btn-green" id="doneBtn" data-i18n="done"></button>
+    </div>
+  </div>
+
+  <!-- right: status -->
+  <div class="side">
+    <div class="card">
+      <div class="status-text" id="statusText"></div>
+      <div class="status-meta" id="statusMeta"></div>
+      <div class="open-meter" id="openMeter" style="display:none">
+        <span id="openText"></span>
+        <div class="bar"><i id="openBar"></i></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label" data-i18n="howToMove"></div>
+      <div class="rules-mini" data-i18n-html="moveHelp"></div>
+    </div>
+    <div class="record" id="recordText"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Setup -->
+<div class="overlay active" id="setupOverlay">
+  <div class="modal">
+    <div data-lang-switch="full"></div>
+    <div class="modal-icon" id="setupTiles"></div>
+    <h2 data-i18n="title"></h2>
+    <p data-i18n-html="intro"></p>
+    <div class="opt-label" data-i18n="numPlayers"></div>
+    <div class="pills" data-group="n">
+      <div class="pill active" data-val="2">2</div>
+      <div class="pill" data-val="3">3</div>
+      <div class="pill" data-val="4">4</div>
+    </div>
+    <div class="opt-label" data-i18n="seatsLabel"></div>
+    <div class="seats" id="seats"></div>
+    <div id="levelOpt">
+      <div class="opt-label" data-i18n="cpuLevel"></div>
+      <div class="pills" data-group="level">
+        <div class="pill" data-val="easy" data-i18n="easy"></div>
+        <div class="pill active" data-val="medium" data-i18n="medium"></div>
+        <div class="pill" data-val="hard" data-i18n="hard"></div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="startBtn" data-i18n="start"></button>
+      <button class="btn btn-ghost" id="continueBtn" style="display:none" data-i18n="continue"></button>
+      <button class="btn btn-ghost" id="cancelSetupBtn" style="display:none" data-i18n="cancel"></button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" data-i18n="exitBtn"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Rules -->
+<div class="overlay" id="helpOverlay">
+  <div class="modal">
+    <div data-lang-switch="full"></div>
+    <div class="modal-icon">📖</div>
+    <h2 data-i18n="helpTitle"></h2>
+    <ul class="rules" data-i18n-html="rulesList"></ul>
+    <div class="modal-btns"><button class="btn btn-primary" id="helpCloseBtn" data-i18n="gotIt"></button></div>
+  </div>
+</div>
+
+<!-- Pass-the-device cover for several human players -->
+<div class="overlay" id="coverOverlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-icon">🙈</div>
+    <h2 id="coverTitle"></h2>
+    <p data-i18n="coverText" style="text-align:center"></p>
+    <div class="modal-btns"><button class="btn btn-primary" id="coverBtn" data-i18n="ready"></button></div>
+  </div>
+</div>
+
+<!-- Result -->
+<div class="overlay" id="resultOverlay">
+  <div class="modal">
+    <div class="modal-icon" id="resultIcon">🏆</div>
+    <h2 id="resultTitle"></h2>
+    <p id="resultSub"></p>
+    <table class="result-table" id="resultTable"></table>
+    <div class="modal-btns">
+      <button class="btn btn-primary" id="playAgainBtn" data-i18n="playAgain"></button>
+      <button class="btn btn-ghost" id="reviewBtn" data-i18n="viewBoard"></button>
+      <button class="btn btn-danger" id="resultExitBtn" data-i18n="exitBtn"></button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script src="../shared/i18n.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '拉密 — GameZone', brand: '🀄 拉密', sound: '音效開關', rulesBtn: ' 規則', newGame: ' 新局', exit: ' 離開', exitBtn: '✕ 離開',
+    colors: ['紅', '藍', '黃', '黑'], you: '你', player: n => `玩家 ${n}`, cpu: '電腦',
+    cpuName: (n, lv) => `電腦 ${n}（${lv}）`, easy: '簡單', medium: '中等', hard: '困難', human: '玩家',
+    tiles: '張', opened: '✓ 已破冰', notOpened: '尚未破冰',
+    pool: '牌庫剩餘', sortNum: '🔢 依數字排', sortCol: '🎨 依顏色排', reset: '↺ 還原',
+    draw: '🂠 摸一張牌', pass: '⏭ 跳過', done: '✓ 完成',
+    miniRules: '<div><b>群組</b>　3～4 張<br>同數字、不同顏色</div><div><b>順組</b>　3 張以上<br>同顏色、數字連續</div><div><b>破冰</b>　第一次出牌<br>合計 ≥ 30 點</div>',
+    howToMove: '怎麼出牌',
+    moveHelp: '<div>把手牌<b>拖到桌上</b>的<br>牌組或虛線框。</div><div>也可以先<b>點選</b>牌，<br>再點要放的牌組。</div><div>破冰後，可以<br>重新組合桌上的牌。</div>',
+    newMeld: '＋ 新牌組', tableEmpty: '桌上還沒有牌',
+    title: '拉密', intro: '最先把手上的牌全部打出去就獲勝！<br>每人 14 張牌，用<b>群組</b>和<b>順組</b>出牌，<br>第一次出牌（破冰）合計要 <b>30 點</b>以上。',
+    numPlayers: '人數', seatsLabel: '座位（點選切換玩家或電腦）', cpuLevel: '電腦難度',
+    start: '▶ 開始', continue: '⏯ 繼續', cancel: '取消',
+    helpTitle: '拉密規則',
+    rulesList: `
+      <li>共 <b>106 張牌</b>：紅、藍、黃、黑四色的 1～13 各兩組，加上 2 張<b>鬼牌</b>。每人先拿 <b>14 張</b>。</li>
+      <li><b>群組</b>：3 或 4 張<b>數字相同、顏色不同</b>的牌，例如 紅7 藍7 黑7。</li>
+      <li><b>順組</b>：3 張以上<b>同顏色、數字連續</b>的牌，例如 黃4 黃5 黃6 黃7（13 後面不能接 1）。</li>
+      <li><b>鬼牌</b>可以代替任何一張牌。</li>
+      <li><b>破冰</b>：第一次出牌時，只能用自己手上的牌組成新牌組，數字總和要 <b>≥ 30 點</b>。破冰之前不能動桌上的牌。</li>
+      <li>破冰後，可以把手牌接到桌上的牌組，也可以<b>拆開、重新組合</b>桌上的牌；但回合結束時，桌上每一組都必須合法。</li>
+      <li>每回合至少要打出一張牌；不想出或出不了，就<b>摸一張牌</b>結束回合。</li>
+      <li>最先出完手牌的人<b>獲勝</b>。其他人扣掉手上剩下的點數（鬼牌算 30 點），贏家得到所有扣掉的點數。</li>`,
+    gotIt: '知道了',
+    coverTitle: name => `輪到 ${name}`, coverText: '請把裝置交給下一位玩家，準備好再按下按鈕，其他人不要偷看喔！', ready: '我準備好了',
+    playAgain: '▶ 再來一局', viewBoard: '👁 看桌面',
+    chooseSettings: '請選擇人數和座位，開始對局。',
+    yourTurn: '輪到你了：出牌，或摸一張牌。', yourTurnName: n => `輪到${n}：出牌，或摸一張牌。`,
+    thinking: n => `${n} 思考中…`,
+    cpuPlayed: (n, k) => `${n} 打出了 ${k} 張牌`, cpuDrew: n => `${n} 摸了一張牌`, cpuPassed: n => `${n} 跳過`,
+    youDrew: '你摸了一張牌', meta: (turn) => `第 ${turn} 回合`,
+    openNeed: (v) => `破冰點數：${v} / 30`,
+    errInvalid: '桌上有不合法的牌組（紅框），請調整或按「還原」',
+    errUnder30: v => `破冰需要 30 點，目前只有 ${v} 點`,
+    errNotOpened: '破冰前只能用自己的牌組新牌組，不能動桌上的牌',
+    errNoTiles: '請至少打出一張牌，或按「摸一張牌」',
+    errTookFromTable: '桌上的牌不能拿回手上',
+    errLocked: '破冰前不能移動桌上的牌',
+    errBackToRack: '只有這回合從手上打出的牌，才能拿回手上',
+    youWin: '你贏了！', youLose: '你輸了', wins: n => `${n} 獲勝！`,
+    winOut: n => `${n} 最先出完手上的牌。`, winLow: n => `牌庫用完了，${n} 手上剩的點數最少。`,
+    colPlayer: '玩家', colLeft: '剩餘點數', colScore: '本局得分',
+    record: (w, l) => `對電腦戰績：${w} 勝 ${l} 敗`, noRecord: '多位玩家對局（不計戰績）',
+  },
+  en: {
+    pageTitle: 'Rummikub — GameZone', brand: '🀄 Rummikub', sound: 'Toggle sound', rulesBtn: ' Rules', newGame: ' New Game', exit: ' Exit', exitBtn: '✕ Exit',
+    colors: ['Red', 'Blue', 'Yellow', 'Black'], you: 'You', player: n => `Player ${n}`, cpu: 'CPU',
+    cpuName: (n, lv) => `CPU ${n} (${lv})`, easy: 'Easy', medium: 'Medium', hard: 'Hard', human: 'Player',
+    tiles: 'tiles', opened: '✓ Opened', notOpened: 'Not opened yet',
+    pool: 'Tiles left', sortNum: '🔢 Sort 7-7-7', sortCol: '🎨 Sort 7-8-9', reset: '↺ Reset',
+    draw: '🂠 Draw a tile', pass: '⏭ Pass', done: '✓ Done',
+    miniRules: '<div><b>Group</b>: 3–4 tiles, same number, different colours</div><div><b>Run</b>: 3+ tiles, same colour, consecutive numbers</div><div><b>Initial meld</b>: first play must total ≥ 30</div>',
+    howToMove: 'How to play tiles',
+    moveHelp: '<div><b>Drag</b> tiles onto a set on the table or onto the dashed box.</div><div>Or <b>tap</b> tiles, then tap where they should go.</div><div>After your initial meld you may rearrange the table.</div>',
+    newMeld: '＋ New set', tableEmpty: 'The table is empty',
+    title: 'Rummikub', intro: 'Be the first to play every tile in your rack!<br>Everyone gets 14 tiles. Play them as <b>groups</b> and <b>runs</b>; your first play (initial meld) must total at least <b>30 points</b>.',
+    numPlayers: 'Players', seatsLabel: 'Seats (tap to switch player / CPU)', cpuLevel: 'CPU difficulty',
+    start: '▶ Start', continue: '⏯ Continue', cancel: 'Cancel',
+    helpTitle: 'How to Play',
+    rulesList: `
+      <li><b>106 tiles</b>: numbers 1–13 in red, blue, yellow and black (two of each) plus 2 <b>jokers</b>. Everyone starts with <b>14 tiles</b>.</li>
+      <li><b>Group</b>: 3 or 4 tiles of the <b>same number in different colours</b>, e.g. red 7, blue 7, black 7.</li>
+      <li><b>Run</b>: 3 or more tiles of the <b>same colour in a row</b>, e.g. yellow 4-5-6-7 (13 does not wrap to 1).</li>
+      <li>A <b>joker</b> can stand in for any tile.</li>
+      <li><b>Initial meld</b>: your first play must be new sets made only from your own tiles, totalling <b>at least 30</b>. Until then you may not touch the table.</li>
+      <li>After that you may add tiles to sets on the table and <b>split or rearrange</b> them — but when your turn ends, every set on the table must be valid.</li>
+      <li>Play at least one tile each turn; if you can't or won't, <b>draw a tile</b> and your turn ends.</li>
+      <li>The first player to empty their rack <b>wins</b>. Everyone else loses the points left in their rack (joker = 30); the winner gains them all.</li>`,
+    gotIt: 'Got it',
+    coverTitle: name => `${name}'s turn`, coverText: 'Pass the device to the next player and press the button when ready — no peeking!', ready: "I'm ready",
+    playAgain: '▶ Play Again', viewBoard: '👁 View Table',
+    chooseSettings: 'Choose players and seats to start.',
+    yourTurn: 'Your turn: play tiles, or draw one.', yourTurnName: n => `${n}'s turn: play tiles, or draw one.`,
+    thinking: n => `${n} is thinking…`,
+    cpuPlayed: (n, k) => `${n} played ${k} tile${k === 1 ? '' : 's'}`, cpuDrew: n => `${n} drew a tile`, cpuPassed: n => `${n} passed`,
+    youDrew: 'You drew a tile', meta: (turn) => `Round ${turn}`,
+    openNeed: (v) => `Initial meld: ${v} / 30`,
+    errInvalid: 'Some sets on the table are not valid (red). Fix them or press Reset.',
+    errUnder30: v => `Your initial meld needs 30 points — you have ${v}`,
+    errNotOpened: 'Before your initial meld, only make new sets from your own tiles',
+    errNoTiles: 'Play at least one tile, or press Draw',
+    errTookFromTable: "Tiles from the table can't go back to your rack",
+    errLocked: "You can't move table tiles before your initial meld",
+    errBackToRack: 'Only tiles you played this turn can go back to your rack',
+    youWin: 'You Win!', youLose: 'You Lose', wins: n => n === 'You' ? 'You Win!' : `${n} Wins!`,
+    winOut: n => n === 'You' ? 'You played all your tiles first.' : `${n} played all their tiles first.`, winLow: n => `The pool ran out — ${n} ${n === 'You' ? 'have' : 'has'} the fewest points left.`,
+    colPlayer: 'Player', colLeft: 'Points left', colScore: 'Score',
+    record: (w, l) => `Record vs CPU: ${w} W · ${l} L`, noRecord: 'Several human players (not recorded)',
+  },
+});
+const t = SillyI18n.t;
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const R = Rummikub;
+const SEAT_COLORS = ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'];
+const GAME_KEY = 'rk_game', STATS_KEY = 'rk_save';
+
+let settings = { n: 2, level: 'medium', seats: ['human', 'cpu', 'cpu', 'cpu'] };
+let S = null;              // { n, seats, level, racks, pool, table, opened, turn, round, passes, over, winner, lastPlayed }
+let turnStart = null;      // { table, rack } at the start of the current human turn
+let selected = new Set();
+let phase = 'setup';       // setup | play | over
+let busy = false, cpuTimer = null, token = 0;
+let lastMsg = null;        // { key, args } for the status line
+
+const isHuman = p => S.seats[p] === 'human';
+const humans = () => S ? [...Array(S.n).keys()].filter(isHuman) : [];
+const curRack = () => S.racks[S.turn];
+function playerName(p) {
+  if (isHuman(p)) return humans().length === 1 ? t('you') : t('player', humans().indexOf(p) + 1);
+  const cpus = [...Array(S.n).keys()].filter(q => !isHuman(q));
+  return t('cpuName', cpus.indexOf(p) + 1, t(S.level));
+}
+// rack shown on screen: the current human's, or (single human) always that human's
+function viewer() {
+  const hs = humans();
+  if (isHuman(S.turn)) return S.turn;
+  return hs.length === 1 ? hs[0] : -1;
+}
+
+// ═══════════════════════════════════════════════
+//  SOUND
+// ═══════════════════════════════════════════════
+let soundOn = true;
+const Sound = (() => {
+  let ac = null;
+  const ctx = () => { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); return ac; };
+  function tone(f, type, when, dur, vol = 0.12) {
+    if (!soundOn) return;
+    const c = ctx(), o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination); o.type = type; o.frequency.setValueAtTime(f, when);
+    g.gain.setValueAtTime(0.001, when); g.gain.linearRampToValueAtTime(vol, when + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, when + dur); o.start(when); o.stop(when + dur + 0.02);
+  }
+  return {
+    tap()  { if (soundOn) tone(1200, 'triangle', ctx().currentTime, 0.05, 0.08); },
+    place(){ if (soundOn) { const t0 = ctx().currentTime; tone(520, 'square', t0, 0.04, 0.05); tone(260, 'triangle', t0, 0.08, 0.1); } },
+    draw() { if (soundOn) { const t0 = ctx().currentTime; tone(700, 'sine', t0, 0.08); tone(500, 'sine', t0 + 0.07, 0.1); } },
+    bad()  { if (soundOn) tone(160, 'square', ctx().currentTime, 0.14, 0.07); },
+    win()  { if (soundOn) { const t0 = ctx().currentTime; [523, 659, 784, 1047].forEach((f, i) => tone(f, 'triangle', t0 + i * 0.12, 0.3)); } },
+    lose() { if (soundOn) { const t0 = ctx().currentTime; [392, 330, 262].forEach((f, i) => tone(f, 'triangle', t0 + i * 0.16, 0.35)); } },
+  };
+})();
+
+// ═══════════════════════════════════════════════
+//  GAME FLOW
+// ═══════════════════════════════════════════════
+function cancelCpu() { token++; if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; } busy = false; }
+
+function newGame() {
+  cancelCpu();
+  const { pool, racks } = R.deal(settings.n);
+  S = {
+    n: settings.n, seats: settings.seats.slice(0, settings.n), level: settings.level,
+    racks, pool, table: [], opened: Array(settings.n).fill(false),
+    turn: 0, round: 1, passes: 0, over: false, winner: -1, lastPlayed: [],
+  };
+  racks.forEach(r => sortRack(r, 'num'));
+  phase = 'play';
+  closeOverlays();
+  beginTurn();
+}
+
+function beginTurn() {
+  selected.clear();
+  turnStart = { table: S.table.map(m => m.slice()), rack: S.racks[S.turn].slice() };
+  save();
+  if (isHuman(S.turn)) {
+    lastMsg = lastMsg && lastMsg.keep ? lastMsg : null;
+    if (humans().length > 1) showCover(); else render();
+  } else {
+    busy = true;
+    render();
+    const my = ++token;
+    cpuTimer = setTimeout(() => { cpuTimer = null; if (my === token) cpuTurn(); }, 750);
+  }
+}
+
+function endTurn() {
+  if (!S.racks[S.turn].length) { finish(S.turn, 'out'); return; }
+  if (S.pool.length === 0 && S.passes >= S.n) {
+    let best = 0;
+    for (let p = 1; p < S.n; p++) if (R.handValue(S.racks[p]) < R.handValue(S.racks[best])) best = p;
+    finish(best, 'low'); return;
+  }
+  S.turn = (S.turn + 1) % S.n;
+  if (S.turn === 0) S.round++;
+  beginTurn();
+}
+
+function cpuTurn() {
+  const p = S.turn;
+  const mv = R.cpuMove(S.table, S.racks[p], S.opened[p], S.level);
+  if (mv) {
+    const playedSet = new Set(mv.played);
+    S.table = mv.table;
+    S.racks[p] = S.racks[p].filter(id => !playedSet.has(id));
+    S.opened[p] = true;
+    S.passes = 0;
+    S.lastPlayed = mv.played.slice();
+    lastMsg = { key: 'cpuPlayed', args: [p, mv.played.length], keep: true };
+    Sound.place();
+  } else if (S.pool.length) {
+    S.racks[p].push(S.pool.pop());
+    S.passes = 0;
+    S.lastPlayed = [];
+    lastMsg = { key: 'cpuDrew', args: [p], keep: true };
+    Sound.draw();
+  } else {
+    S.passes++;
+    S.lastPlayed = [];
+    lastMsg = { key: 'cpuPassed', args: [p], keep: true };
+  }
+  busy = false;
+  render();
+  const my = ++token;
+  cpuTimer = setTimeout(() => { cpuTimer = null; if (my === token) endTurn(); }, 650);
+}
+
+// ── human actions ──
+function humanDraw() {
+  if (busy || phase !== 'play' || !isHuman(S.turn)) return;
+  resetTurn(true);
+  if (S.pool.length) { S.racks[S.turn].push(S.pool.pop()); S.passes = 0; lastMsg = { key: 'youDrew', args: [], keep: true }; Sound.draw(); }
+  else { S.passes++; lastMsg = null; }
+  S.lastPlayed = [];
+  sortRack(S.racks[S.turn], rackSort);
+  render();
+  endTurn();
+}
+
+function humanDone() {
+  if (busy || phase !== 'play' || !isHuman(S.turn)) return;
+  const p = S.turn;
+  const chk = R.checkTurn(turnStart.table, S.table, turnStart.rack, S.racks[p], S.opened[p]);
+  if (!chk.ok) {
+    Sound.bad();
+    const msg = { invalid: t('errInvalid'), under30: t('errUnder30', chk.value || 0), notOpenedTouch: t('errNotOpened'),
+                  noTiles: t('errNoTiles'), tookFromTable: t('errTookFromTable') }[chk.reason];
+    toast(msg);
+    render();
+    return;
+  }
+  S.opened[p] = true;
+  S.passes = 0;
+  S.lastPlayed = chk.played;
+  lastMsg = null;
+  Sound.place();
+  S.table = S.table.map(m => R.meldInfo(m).order);
+  endTurn();
+}
+
+function resetTurn(silent) {
+  if (!turnStart || phase !== 'play') return;
+  S.table = turnStart.table.map(m => m.slice());
+  S.racks[S.turn] = turnStart.rack.slice();
+  selected.clear();
+  if (!silent) { Sound.tap(); render(); }
+}
+
+function finish(winner, how) {
+  cancelCpu();
+  S.over = true; S.winner = winner; S.how = how;
+  phase = 'over';
+  clearSave();
+  const hs = humans();
+  if (hs.length === 1) { const won = winner === hs[0]; recordResult(won); won ? Sound.win() : Sound.lose(); }
+  else Sound.win();
+  render();
+  renderResult();
+  setTimeout(() => document.getElementById('resultOverlay').classList.add('active'), 500);
+}
+
+function renderResult() {
+  if (!S || !S.over) return;
+  const w = S.winner, hs = humans();
+  const left = S.racks.map(r => R.handValue(r));
+  const scores = left.map((v, p) => p === w ? left.reduce((a, b, q) => a + (q === w ? 0 : b), 0) : -v);
+  let title, icon;
+  if (hs.length === 1) { title = w === hs[0] ? t('youWin') : t('youLose'); icon = w === hs[0] ? '🏆' : '😵'; }
+  else { title = t('wins', playerName(w)); icon = '🏆'; }
+  document.getElementById('resultIcon').textContent = icon;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent = S.how === 'out' ? t('winOut', playerName(w)) : t('winLow', playerName(w));
+  document.getElementById('resultTable').innerHTML =
+    `<tr><th>${t('colPlayer')}</th><th class="num">${t('colLeft')}</th><th class="num">${t('colScore')}</th></tr>` +
+    [...Array(S.n).keys()].map(p => `<tr class="${p === w ? 'win' : ''}"><td><span style="color:${SEAT_COLORS[p]}">●</span> ${playerName(p)}</td>` +
+      `<td class="num">${left[p]}</td><td class="num">${scores[p] > 0 ? '+' : ''}${scores[p]}</td></tr>`).join('');
+}
+
+// ── moving tiles ──
+function locate(id) {
+  const r = S.racks[S.turn].indexOf(id);
+  if (r >= 0) return { where: 'rack' };
+  for (let i = 0; i < S.table.length; i++) if (S.table[i].includes(id)) return { where: 'table', meld: i };
+  return null;
+}
+const playedThisTurn = id => turnStart && turnStart.rack.includes(id);
+function canMove(id) {
+  const loc = locate(id);
+  if (!loc) return false;
+  if (loc.where === 'rack') return true;
+  return S.opened[S.turn] || playedThisTurn(id);
+}
+
+// target: { meld: i } | { newMeld: true } | { rack: true }
+function moveTiles(ids, target) {
+  if (busy || phase !== 'play' || !isHuman(S.turn)) return;
+  ids = ids.filter(id => locate(id));
+  if (!ids.length) return;
+  for (const id of ids) {
+    if (!canMove(id)) { Sound.bad(); toast(t('errLocked')); return; }
+    if (target.rack && locate(id).where === 'table' && !playedThisTurn(id)) { Sound.bad(); toast(t('errBackToRack')); return; }
+  }
+  const targetMeld = target.meld !== undefined ? S.table[target.meld] : null;
+  // remove from current places
+  for (const id of ids) {
+    const loc = locate(id);
+    if (loc.where === 'rack') S.racks[S.turn].splice(S.racks[S.turn].indexOf(id), 1);
+    else S.table[loc.meld].splice(S.table[loc.meld].indexOf(id), 1);
+  }
+  if (target.rack) S.racks[S.turn].push(...ids);
+  else if (targetMeld) targetMeld.push(...ids);
+  else S.table.push(ids.slice());
+  // tidy: drop empty sets, show valid sets in order
+  S.table = S.table.filter(m => m.length).map(m => { const info = R.meldInfo(m); return info.ok ? info.order : m; });
+  selected.clear();
+  Sound.place();
+  render();
+}
+
+let rackSort = 'num';
+function sortRack(rack, mode) {
+  const T = R.TILES;
+  rack.sort((a, b) => {
+    if (R.isJ(a) || R.isJ(b)) return R.isJ(a) - R.isJ(b);
+    return mode === 'num' ? (T[a].n - T[b].n) || (T[a].c - T[b].c) : (T[a].c - T[b].c) || (T[a].n - T[b].n);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════
+function tileHTML(id, extra) {
+  const T = R.TILES[id];
+  const cls = ['tile', R.isJ(id) ? 'joker' : 'c' + T.c];
+  if (extra) cls.push(extra);
+  return `<div class="${cls.join(' ')}" data-id="${id}">${R.isJ(id) ? '☺' : T.n}</div>`;
+}
+
+function render() {
+  if (!S) return renderSetupPreview();
+  const myTurn = phase === 'play' && isHuman(S.turn) && !busy;
+  const lastSet = new Set(S.lastPlayed || []);
+  // players
+  document.getElementById('players').innerHTML = [...Array(S.n).keys()].map(p => `
+    <div class="player-row ${phase === 'play' && p === S.turn ? 'active' : ''} ${phase === 'play' && p === S.turn && busy ? 'thinking-on' : ''}">
+      <div class="dot" style="background:${SEAT_COLORS[p]}"></div>
+      <div class="info">
+        <div class="name">${playerName(p)}<span class="thinking"><i></i><i></i><i></i></span></div>
+        <div class="sub">${S.opened[p] ? `<span class="ok">${t('opened')}</span>` : t('notOpened')}</div>
+      </div>
+      <div class="count">${S.racks[p].length}<small>${t('tiles')}</small></div>
+    </div>`).join('');
+  document.getElementById('poolNum').textContent = S.pool.length;
+
+  // table
+  const tb = document.getElementById('table');
+  const playedSet = new Set(turnStart ? S.racks[S.turn] && turnStart.rack.filter(id => !S.racks[S.turn].includes(id)) : []);
+  let html = S.table.map((m, i) => {
+    const ok = R.meldInfo(m).ok;
+    return `<div class="meld ${ok ? '' : 'invalid'}" data-meld="${i}">` + m.map(id => {
+      const locked = myTurn && !S.opened[S.turn] && !playedThisTurn(id);
+      const extra = myTurn && playedSet.has(id) ? 'fresh' : lastSet.has(id) ? 'last' : '';
+      return tileHTML(id, [extra, locked ? 'locked' : '', selected.has(id) ? 'selected' : ''].filter(Boolean).join(' '));
+    }).join('') + '</div>';
+  }).join('');
+  if (myTurn) html += `<div id="newMeld">${t('newMeld')}</div>`;
+  else if (!S.table.length) html += `<div class="table-empty-hint">${t('tableEmpty')}</div>`;
+  tb.innerHTML = html;
+
+  // rack
+  const v = viewer();
+  const rk = document.getElementById('rack');
+  if (v < 0) rk.innerHTML = `<div class="rack-hidden">${t('thinking', playerName(S.turn))}</div>`;
+  else rk.innerHTML = S.racks[v].map(id => tileHTML(id, selected.has(id) ? 'selected' : '')).join('');
+
+  // status
+  let text;
+  if (phase === 'over') text = t('wins', playerName(S.winner));
+  else if (busy) text = t('thinking', playerName(S.turn));
+  else if (isHuman(S.turn)) text = humans().length === 1 ? t('yourTurn') : t('yourTurnName', playerName(S.turn));
+  else text = '';
+  const prev = lastMsg ? t(lastMsg.key, ...(lastMsg.key.startsWith('cpu') ? [playerName(lastMsg.args[0]), ...lastMsg.args.slice(1)] : lastMsg.args)) : '';
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusMeta').textContent = [t('meta', S.round), prev].filter(Boolean).join(' · ');
+  const meter = document.getElementById('openMeter');
+  if (myTurn && !S.opened[S.turn]) {
+    const ps = new Set(turnStart.rack.filter(id => !S.racks[S.turn].includes(id)));
+    const val = S.table.filter(m => m.some(id => ps.has(id)) && R.meldInfo(m).ok).reduce((s, m) => s + R.meldInfo(m).value, 0);
+    meter.style.display = '';
+    document.getElementById('openText').textContent = t('openNeed', val);
+    document.getElementById('openBar').style.width = Math.min(100, val / 30 * 100) + '%';
+  } else meter.style.display = 'none';
+
+  // buttons
+  const changed = myTurn && (S.racks[S.turn].length !== turnStart.rack.length || JSON.stringify(S.table) !== JSON.stringify(turnStart.table));
+  document.getElementById('drawBtn').textContent = S.pool.length ? t('draw') : t('pass');
+  document.getElementById('drawBtn').disabled = !myTurn || changed;
+  document.getElementById('doneBtn').disabled = !myTurn || !changed;
+  document.getElementById('resetBtn').disabled = !changed;
+  document.getElementById('sortNumBtn').disabled = v < 0;
+  document.getElementById('sortColBtn').disabled = v < 0;
+  const st = getStats(), hs = humans();
+  document.getElementById('recordText').textContent = hs.length === 1 ? t('record', st.wins || 0, st.losses || 0) : hs.length > 1 ? t('noRecord') : '';
+}
+
+function renderSetupPreview() {
+  document.getElementById('players').innerHTML = '';
+  document.getElementById('table').innerHTML = `<div class="table-empty-hint">${t('tableEmpty')}</div>`;
+  document.getElementById('rack').innerHTML = '';
+  document.getElementById('statusText').textContent = t('chooseSettings');
+  document.getElementById('statusMeta').textContent = '';
+  document.getElementById('poolNum').textContent = 106;
+  ['drawBtn', 'doneBtn', 'resetBtn', 'sortNumBtn', 'sortColBtn'].forEach(id => document.getElementById(id).disabled = true);
+  document.getElementById('drawBtn').textContent = t('draw');
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ═══════════════════════════════════════════════
+//  INPUT — tap to select, tap a set to place; or drag & drop
+// ═══════════════════════════════════════════════
+let drag = null;
+document.addEventListener('pointerdown', e => {
+  const tile = e.target.closest('.tile[data-id]');
+  if (!tile || !S || phase !== 'play' || busy || !isHuman(S.turn) || tile.closest('.modal')) return;
+  const id = +tile.dataset.id;
+  drag = { id, x0: e.clientX, y0: e.clientY, active: false, el: tile };
+});
+document.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.active && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 7) {
+    if (!canMove(drag.id)) { Sound.bad(); toast(t('errLocked')); drag = null; return; }
+    drag.ids = selected.has(drag.id) ? [...selected] : [drag.id];
+    drag.active = true;
+    drag.ghosts = drag.ids.map((id, k) => {
+      const g = document.createElement('div');
+      g.innerHTML = tileHTML(id, 'ghost');
+      const el = g.firstChild; el.dataset.k = k;
+      document.body.appendChild(el);
+      return el;
+    });
+    drag.ids.forEach(id => document.querySelectorAll(`.tile[data-id="${id}"]`).forEach(el => el.classList.add('dragging-src')));
+  }
+  if (drag.active) {
+    const w = drag.ghosts[0].offsetWidth;
+    drag.ghosts.forEach((g, k) => { g.style.left = (e.clientX - w / 2 + k * (w + 3)) + 'px'; g.style.top = (e.clientY - g.offsetHeight / 2) + 'px'; });
+    document.querySelectorAll('.drop-hover').forEach(el => el.classList.remove('drop-hover'));
+    const tgt = dropTarget(e.clientX, e.clientY);
+    if (tgt && tgt.el) tgt.el.classList.add('drop-hover');
+    e.preventDefault();
+  }
+});
+document.addEventListener('pointerup', e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.active) {
+    d.ghosts.forEach(g => g.remove());
+    document.querySelectorAll('.drop-hover').forEach(el => el.classList.remove('drop-hover'));
+    const tgt = dropTarget(e.clientX, e.clientY);
+    if (tgt) moveTiles(d.ids, tgt.target); else render();
+    return;
+  }
+  // a tap on a tile: if tiles are selected and this tile sits in another set, place them there
+  const loc = locate(d.id);
+  if (selected.size && !selected.has(d.id) && loc && loc.where === 'table' && ![...selected].some(id => S.table[loc.meld].includes(id))) {
+    moveTiles([...selected], { meld: loc.meld }); return;
+  }
+  if (!canMove(d.id)) { Sound.bad(); toast(t('errLocked')); return; }
+  selected.has(d.id) ? selected.delete(d.id) : selected.add(d.id);
+  Sound.tap();
+  render();
+});
+function dropTarget(x, y) {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  const meld = el.closest('.meld[data-meld]');
+  if (meld) return { el: meld, target: { meld: +meld.dataset.meld } };
+  const nm = el.closest('#newMeld');
+  if (nm) return { el: nm, target: { newMeld: true } };
+  if (el.closest('#table')) return { el: document.getElementById('newMeld'), target: { newMeld: true } };
+  if (el.closest('.rack-wrap')) return { el: document.getElementById('rack'), target: { rack: true } };
+  return null;
+}
+// taps on empty places while tiles are selected
+document.getElementById('table').addEventListener('click', e => {
+  if (!selected.size || e.target.closest('.tile')) return;
+  const meld = e.target.closest('.meld[data-meld]');
+  moveTiles([...selected], meld ? { meld: +meld.dataset.meld } : { newMeld: true });
+});
+document.querySelector('.rack-wrap').addEventListener('click', e => {
+  if (!selected.size || e.target.closest('.tile')) return;
+  if ([...selected].some(id => locate(id) && locate(id).where === 'table')) moveTiles([...selected].filter(id => locate(id).where === 'table'), { rack: true });
+});
+
+document.getElementById('sortNumBtn').addEventListener('click', () => { if (viewer() < 0) return; rackSort = 'num'; sortRack(S.racks[viewer()], 'num'); Sound.tap(); render(); });
+document.getElementById('sortColBtn').addEventListener('click', () => { if (viewer() < 0) return; rackSort = 'col'; sortRack(S.racks[viewer()], 'col'); Sound.tap(); render(); });
+document.getElementById('resetBtn').addEventListener('click', () => resetTurn(false));
+document.getElementById('drawBtn').addEventListener('click', humanDraw);
+document.getElementById('doneBtn').addEventListener('click', humanDone);
+document.addEventListener('keydown', e => {
+  if (document.querySelector('.overlay.active')) return;
+  if (e.key === 'Escape') { selected.clear(); render(); }
+  if (e.key === 'Enter') humanDone();
+});
+
+// ═══════════════════════════════════════════════
+//  SAVE / STATS
+// ═══════════════════════════════════════════════
+function save() { try { localStorage.setItem(GAME_KEY, JSON.stringify({ settings, S: Object.assign({}, S, { table: turnStart ? turnStart.table : S.table, racks: S.racks.map((r, p) => p === S.turn && turnStart ? turnStart.rack : r) }) })); } catch (e) {} }
+function clearSave() { try { localStorage.removeItem(GAME_KEY); } catch (e) {} }
+function loadSave() {
+  try { const s = JSON.parse(localStorage.getItem(GAME_KEY)); if (s && s.S && Array.isArray(s.S.racks) && !s.S.over) return s; } catch (e) {}
+  return null;
+}
+function getStats() { try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { wins: 0, losses: 0 }; } catch (e) { return { wins: 0, losses: 0 }; } }
+function sf() { try { return typeof SillyFirebase !== 'undefined' ? SillyFirebase : null; } catch (e) { return null; } }
+function recordResult(won) {
+  const s = getStats();
+  s.wins = (s.wins || 0) + (won ? 1 : 0); s.losses = (s.losses || 0) + (won ? 0 : 1); s.savedAt = Date.now();
+  const fb = sf(); if (fb && fb.currentUser) s.uid = fb.currentUser.uid;
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) {}
+  if (fb) fb.saveProgress('rummikub', s);
+}
+
+// ═══════════════════════════════════════════════
+//  SETUP & OVERLAYS
+// ═══════════════════════════════════════════════
+function renderSeats() {
+  const box = document.getElementById('seats');
+  box.innerHTML = [...Array(settings.n).keys()].map(p => `
+    <div class="seat-row">
+      <div class="dot" style="background:${SEAT_COLORS[p]}"></div>
+      <div class="seat-name">${t('colors')[p]}</div>
+      <div class="pills" data-seat="${p}">
+        <div class="pill ${settings.seats[p] === 'human' ? 'active' : ''}" data-val="human">${t('human')}</div>
+        <div class="pill ${settings.seats[p] === 'cpu' ? 'active' : ''}" data-val="cpu">${t('cpu')}</div>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.pills').forEach(g => g.addEventListener('click', e => {
+    const pill = e.target.closest('.pill'); if (!pill) return;
+    settings.seats[+g.dataset.seat] = pill.dataset.val; renderSeats();
+  }));
+  document.getElementById('levelOpt').style.display = settings.seats.slice(0, settings.n).includes('cpu') ? '' : 'none';
+}
+document.querySelectorAll('.pills[data-group]').forEach(group => group.addEventListener('click', e => {
+  const pill = e.target.closest('.pill'); if (!pill) return;
+  group.querySelectorAll('.pill').forEach(p => p.classList.remove('active')); pill.classList.add('active');
+  if (group.dataset.group === 'n') { settings.n = +pill.dataset.val; renderSeats(); }
+  if (group.dataset.group === 'level') settings.level = pill.dataset.val;
+}));
+function syncPills() {
+  const set = (g, v) => document.querySelectorAll(`.pills[data-group="${g}"] .pill`).forEach(p => p.classList.toggle('active', p.dataset.val === String(v)));
+  set('n', settings.n); set('level', settings.level); renderSeats();
+}
+function closeOverlays() { document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active')); }
+function openSetup() {
+  closeOverlays();
+  document.getElementById('continueBtn').style.display = phase === 'setup' && loadSave() ? '' : 'none';
+  document.getElementById('cancelSetupBtn').style.display = phase === 'play' ? '' : 'none';
+  renderSeats();
+  document.getElementById('setupOverlay').classList.add('active');
+}
+function showCover() {
+  render();
+  document.getElementById('coverTitle').textContent = t('coverTitle', playerName(S.turn));
+  document.getElementById('rack').innerHTML = '';
+  document.getElementById('coverOverlay').classList.add('active');
+}
+document.getElementById('coverBtn').addEventListener('click', () => { closeOverlays(); render(); });
+document.getElementById('startBtn').addEventListener('click', () => { Sound.tap(); newGame(); });
+document.getElementById('continueBtn').addEventListener('click', () => {
+  const s = loadSave(); if (!s) return;
+  settings = Object.assign(settings, s.settings); S = s.S; phase = 'play'; syncPills(); closeOverlays(); beginTurn();
+});
+document.getElementById('cancelSetupBtn').addEventListener('click', () => { closeOverlays(); if (S && !isHuman(S.turn) && !cpuTimer) beginTurn(); });
+document.getElementById('newGameBtn').addEventListener('click', () => { if (phase === 'play' && busy) cancelCpu(); openSetup(); });
+document.getElementById('howToPlayBtn').addEventListener('click', () => { document.getElementById('helpOverlay').classList.add('active'); });
+document.getElementById('helpCloseBtn').addEventListener('click', () => document.getElementById('helpOverlay').classList.remove('active'));
+document.getElementById('playAgainBtn').addEventListener('click', () => { phase = 'setup'; S = null; render(); openSetup(); });
+document.getElementById('reviewBtn').addEventListener('click', closeOverlays);
+document.getElementById('exitBtn').addEventListener('click', () => window.location.href = '../../');
+document.getElementById('resultExitBtn').addEventListener('click', () => window.location.href = '../../');
+document.getElementById('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  const b = document.getElementById('soundBtn'); b.textContent = soundOn ? '🔊' : '🔇'; b.classList.toggle('muted', !soundOn);
+});
+SillyI18n.onChange(() => {
+  renderSeats(); render(); renderResult();
+  if (S && document.getElementById('coverOverlay').classList.contains('active')) document.getElementById('coverTitle').textContent = t('coverTitle', playerName(S.turn));
+});
+
+// ═══════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════
+(function boot() {
+  const s = loadSave();
+  if (s) settings = Object.assign(settings, s.settings);
+  document.getElementById('setupTiles').innerHTML = [0 * 13 + 6, 13 + 7, 2 * 13 + 8].map(id => tileHTML(id)).join('') + tileHTML(104);
+  syncPills();
+  render();
+  openSetup();
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+if (sf()) {
+  SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+  SillyFirebase.onAuthChanged(user => {
+    SillyFirebase.renderAvatarDisplay('game-avatar', user);
+    if (user) SillyFirebase.syncProgress('rummikub', STATS_KEY).then(() => render());
+  });
+}
+</script>
+</body>
+</html>
