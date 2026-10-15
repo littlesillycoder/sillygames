@@ -13,14 +13,14 @@ body{background:#0a0a18;display:flex;justify-content:center;align-items:center;m
 #sidebar-left .key{display:inline-block;background:#222;border:1px solid #555;border-radius:4px;padding:1px 7px;color:#fff;font-size:13px}
 #sidebar-right .score-val{color:#f5c518;font-size:15px}
 #sidebar-right .lives-row{margin-top:8px}
-#game-col{display:flex;flex-direction:column;align-items:center;gap:0;zoom:var(--game-zoom,1)}
+#game-col{display:flex;flex-direction:column;align-items:center;gap:0}
 #hud-bar{width:312px;height:44px;background:#0d0d1a;border:2px solid #2a2a50;border-bottom:none;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 8px;gap:4px}
 #hud-scores{display:flex;gap:14px;align-items:center}
 #hud-bar span{font-size:10px;color:#aaa}
 #hud-bar .val{color:#fff;font-size:11px;font-weight:bold}
 #hud-bar .hival{color:#f5c518;font-size:11px;font-weight:bold}
 #hud-btns{display:flex;gap:6px}
-canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none;image-rendering:pixelated}
+canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none}
 #lives-bar{width:312px;height:28px;background:#0d0d1a;border:2px solid #2a2a50;border-top:none;border-radius:0 0 4px 4px;display:flex;align-items:center;padding:0 8px;gap:4px}
 .gbtn{background:#1c1c38;border:1px solid #3a3a60;color:#ccc;font-family:monospace;font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;white-space:nowrap;transition:background 0.15s,color 0.15s}
 .gbtn:hover{background:#2a2a55;color:#fff}
@@ -1465,14 +1465,26 @@ SillyFirebase.onAuthChanged(async user => {
 });
 </script>
 <script>
-// scale the game panel to the window (canvas is drawn pixelated, so it stays crisp)
+// scale the game to the window and draw at the screen's real resolution (sharp, not blurry)
 (function fitGame() {
+  const cv = document.getElementById('game');
+  const W = cv.width, H = cv.height;          // logical size the game draws in (312 × 624)
+  const g = cv.getContext('2d');
   function fit() {
     const sideW = window.innerWidth > 860 ? 2 * 200 + 2 * 32 : 0;
-    const zH = (window.innerHeight - 24) / (44 + 624 + 28);
-    const zW = (window.innerWidth - sideW - 24) / 316;
-    const z = Math.max(0.6, Math.min(1.6, zH, zW));
-    document.documentElement.style.setProperty('--game-zoom', z.toFixed(3));
+    const zH = (window.innerHeight - 24 - 44 - 28) / H;
+    const zW = (window.innerWidth - sideW - 24) / (W + 4);
+    const z = Math.max(0.6, Math.min(1.15, zH, zW));
+    const k = z * (window.devicePixelRatio || 1);
+    cv.width = Math.round(W * k);
+    cv.height = Math.round(H * k);
+    g.setTransform(k, 0, 0, k, 0, 0);
+    g.imageSmoothingEnabled = true;
+    const cssW = Math.round(W * z) + 4;          // + left/right border
+    cv.style.width = cssW + 'px';
+    cv.style.height = Math.round(H * z) + 'px';
+    document.getElementById('hud-bar').style.width = cssW + 'px';
+    document.getElementById('lives-bar').style.width = cssW + 'px';
   }
   fit();
   window.addEventListener('resize', fit);

@@ -148,6 +148,11 @@
     .seat-row .pill { padding: 0.3rem 0.8rem; font-size: 0.9rem; }
     .modal-btns { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; margin-top: 0.4rem; }
     .modal-btns .btn { min-width: 130px; font-size: 1.05rem; padding: 0.7rem 1.3rem; }
+    /* setup dialog: keep the buttons on one row; English text left-aligned */
+    #setupOverlay .modal-btns { flex-wrap: nowrap; }
+    #setupOverlay .modal-btns .btn { min-width: 0; padding: 0.7rem 1.1rem; white-space: nowrap; }
+    html[lang="en"] .modal p { text-align: left; }
+    @media (max-width: 420px) { #setupOverlay .modal-btns { flex-wrap: wrap; } }
     .rules { text-align: left; color: var(--soft); font-size: 1.05rem; line-height: 1.75; margin: 0 0 1.3rem 1.2rem; }
     .rules li { margin-bottom: 0.7rem; padding-left: 0.2rem; }
     .rules li::marker { color: var(--accent2); }
@@ -365,7 +370,7 @@ const I18N = {
     setupIntro: 'Move all <b>10 marbles</b> into the triangle <b>directly opposite</b> you!<br>Step one hole at a time, or jump over other marbles — again and again.',
     numPlayers: 'Players', seatsLabel: 'Seats (tap to switch player / CPU)', cpuLevel: 'CPU difficulty',
     easy: 'Easy', medium: 'Medium', hard: 'Hard', human: 'Player',
-    start: '▶ Start', continue: '⏯ Continue last game', cancel: 'Cancel',
+    start: '▶ Start', continue: '⏯ Continue', cancel: 'Cancel',
     helpTitle: 'How to Play',
     rulesList: `
       <li>Each player has <b>10 marbles</b> starting in their own triangle. The goal is the <b>triangle directly opposite</b>.</li>

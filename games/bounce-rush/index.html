@@ -10,7 +10,7 @@
     background: #0d0d1a;
     color: #e2e8f0;
     font-family: 'Segoe UI', system-ui, sans-serif;
-    display: flex; flex-direction: column; align-items: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     min-height: 100vh;
     user-select: none;
   }
@@ -110,6 +110,10 @@
   #game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
 </style>
 <link rel="stylesheet" href="../shared/readable.css">
+<style>
+  /* only one sidebar (left): mirror its width on the right so the game itself sits in the centre */
+  .game-area::after { content: ''; width: 200px; flex-shrink: 0; }
+</style>
 </head>
 <body>
 <div class="topbar">

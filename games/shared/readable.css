@@ -4,7 +4,7 @@
 
 :root { --muted: #aab4c5; }
 
-.sidebar { width: 176px !important; flex-shrink: 0; }
+.sidebar { width: 200px !important; flex-shrink: 0; }
 
 .stat-box, .next-box, .info-box, .tip-box, .tips-box, .controls-box, .wh-panel, .wh-lightning-box {
   border-radius: 12px !important;
@@ -45,3 +45,6 @@
 .modal .controls-grid .desc { font-size: 1rem !important; color: #d3dae6 !important; }
 .modal .controls-grid .key, .modal kbd { font-size: 0.9rem !important; }
 .modal .legend-item { font-size: 0.95rem !important; color: #d3dae6 !important; }
+
+/* English: description text left-aligned (titles and buttons stay centred) */
+html[lang="en"] .modal p, html[lang="en"] .modal .subtitle { text-align: left !important; }
