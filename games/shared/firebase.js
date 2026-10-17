@@ -98,6 +98,8 @@ const SillyFirebase = {
   onAuthChanged(callback) {
     let firstCall = true;
     _sfAuth.onAuthStateChanged(user => {
+      // anonymous accounts (used only for online rooms) count as "not signed in" everywhere else
+      if (user && user.isAnonymous) user = null;
       this.currentUser = user;
       if (user) {
         this._cacheAvatar(user);

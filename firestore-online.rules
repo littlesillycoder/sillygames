@@ -1,0 +1,20 @@
+// ── sillygames online rooms ─────────────────────────────────────────────
+// Paste the "match /rooms/{code}" block below INSIDE your existing
+//   service cloud.firestore { match /databases/{database}/documents { ... } }
+// in Firebase console → Firestore Database → Rules, then press Publish.
+// Also turn on Authentication → Sign-in method → Anonymous.
+
+    match /rooms/{code} {
+      // anyone with a (Google or anonymous) account can look a room up by its code
+      allow read: if request.auth != null;
+      // create a room: 6-digit code, you are the host
+      allow create: if request.auth != null
+                    && code.matches('^[0-9]{6}$')
+                    && request.resource.data.host == request.auth.uid;
+      // change a room: you are in it already, or you are joining it now
+      allow update: if request.auth != null
+                    && (request.auth.uid in resource.data.seen
+                        || request.auth.uid in request.resource.data.seen);
+      // close a room: host only
+      allow delete: if request.auth != null && resource.data.host == request.auth.uid;
+    }
