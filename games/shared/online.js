@@ -105,6 +105,16 @@
       this._fire(code);
       return next;
     },
+    async expired(limit) {
+      const out = [];
+      for (let i = 0; i < localStorage.length && out.length < limit; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith('sgo_room_')) continue;
+        try { const r = JSON.parse(localStorage.getItem(k)); if (r && r.expireAt < Date.now()) out.push(r); } catch (e) {}
+      }
+      return out;
+    },
+    async remove(code) { localStorage.removeItem(this._key(code)); this._fire(code); },
     _subs: {},
     _fire(code) { (this._subs[code] || []).forEach(f => f()); },
     watch(code, cb) {
@@ -141,6 +151,11 @@
         return next;
       });
     },
+    async expired(limit) {
+      const q = await this.db.collection('rooms').where('expireAt', '<', Date.now()).limit(limit).get();
+      return q.docs.map(d => d.data());
+    },
+    async remove(code) { await this._ref(code).delete(); },
     watch(code, cb) { return this._ref(code).onSnapshot(s => cb(s.exists ? s.data() : null), () => cb(undefined)); },
   };
 
@@ -193,9 +208,21 @@
             createdAt: now, expireAt: now + 24 * 3600 * 1000,
           };
         });
-        if (made) { this._enter(code); return code; }
+        if (made) { this._enter(code); this._sweep(); return code; }
       }
       throw { userMsg: t('errGeneric') };
+    },
+
+    // tidy up: delete a few rooms whose 24 hours are over (rooms people closed the tab on)
+    async _sweep() {
+      try {
+        const old = await this.backend.expired(5);
+        for (const r of old) {
+          const lastSeen = Math.max(0, ...Object.values(r.seen || {}));
+          if (Date.now() - lastSeen < 3600 * 1000) continue;          // someone was still around an hour ago
+          await this.backend.remove(r.code).catch(() => {});
+        }
+      } catch (e) { /* best effort */ }
     },
 
     async join(code, name) {
