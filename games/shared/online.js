@@ -12,7 +12,9 @@
 // A game page uses it like this:
 //   SillyOnline.mount({
 //     game: 'chess', title: {zh:'西洋棋', en:'Chess'}, seats: 2,
-//     seatLabel: (i, lang) => ..., seatColor: i => '#fff',
+//     seatLabel: (i, lang, room) => ..., seatColor: (i, room) => '#fff',
+//     seatCounts: [2,3,4], defaultSeats: () => 2,      // optional: host picks the number of seats
+//     options: [{ key, label:{zh,en}, values:[{v, label}] }], defaultOpts: () => ({}),   // optional room options
 //     cpuLevels: ['easy','medium','hard'],
 //     newState: room => ({ moves: [] }),             // state when the host presses Start
 //     rematch: room => room,                          // optional: changes for "play again"
@@ -53,7 +55,7 @@
       errAnon: '連線功能還沒開放（Firebase 尚未啟用匿名登入）', errPerm: '連線功能還沒開放（資料庫規則尚未設定）',
       errGeneric: '連線失敗，請再試一次', errClosed: '房間已經關閉了', kicked: '你已離開房間',
       spectating: '你正在觀戰', rejoin: '回到房間', roomFull: '座位已滿，你會以觀戰身分加入',
-      cpuLevel: '電腦難度',
+      cpuLevel: '電腦難度', numPlayers: '人數',
     },
     en: {
       online: '🌐 Play Online', yourName: 'Your nickname', namePh: 'Type a nickname',
@@ -73,7 +75,7 @@
       errAnon: 'Online play is not switched on yet (Firebase anonymous sign-in is off)', errPerm: 'Online play is not switched on yet (database rules missing)',
       errGeneric: 'Connection failed — please try again', errClosed: 'The room has closed', kicked: 'You left the room',
       spectating: "You're watching", rejoin: 'Back to room', roomFull: 'The seats are full — you will join as a spectator',
-      cpuLevel: 'CPU level',
+      cpuLevel: 'CPU level', numPlayers: 'Players',
     },
   };
   const GAME_NAMES = { chess: { zh: '西洋棋', en: 'Chess' }, go: { zh: '圍棋', en: 'Go' }, 'chinese-checkers': { zh: '跳棋', en: 'Chinese Checkers' }, rummikub: { zh: '拉密', en: 'Rummikub' } };
@@ -203,7 +205,8 @@
           const now = Date.now();
           return {
             code, game: cfg.game, host: this.me.id, status: 'lobby', version: 0,
-            seats: Array.from({ length: cfg.seats }, (_, i) => i === 0 ? { id: this.me.id, name } : null),
+            seats: Array.from({ length: (cfg.defaultSeats ? cfg.defaultSeats() : cfg.seats) }, (_, i) => i === 0 ? { id: this.me.id, name } : null),
+            opts: cfg.defaultOpts ? cfg.defaultOpts() : {},
             spectators: {}, seen: { [this.me.id]: now }, state: null,
             createdAt: now, expireAt: now + 24 * 3600 * 1000,
           };
@@ -333,7 +336,25 @@
     // host actions
     addCpu(i, level) { return this.mutate(r => { if (!this.isHost(r) || r.seats[i]) return; r.seats[i] = { cpu: true, level }; return r; }); },
     removeSeat(i) { return this.mutate(r => { if (!this.isHost(r) || !r.seats[i] || !r.seats[i].cpu) return; r.seats[i] = null; return r; }); },
-    swapSeats() { return this.mutate(r => { if (!this.isHost(r)) return; r.seats.reverse(); return r; }); },
+    setSeatCount(n) {
+      return this.mutate(r => {
+        if (!this.isHost(r) || r.seats.length === n) return;
+        const people = r.seats.filter(s => s && !s.cpu), cpus = r.seats.filter(s => s && s.cpu);
+        if (people.length > n) return;
+        const keep = r.seats.slice();
+        // drop empty seats first, then CPUs, from the end
+        while (keep.length > n) {
+          let i = keep.lastIndexOf(null);
+          if (i < 0) i = keep.map(s => !!(s && s.cpu)).lastIndexOf(true);
+          keep.splice(i, 1);
+        }
+        while (keep.length < n) keep.push(null);
+        r.seats = keep;
+        return r;
+      });
+    },
+    setOpt(key, val) { return this.mutate(r => { if (!this.isHost(r)) return; r.opts = Object.assign({}, r.opts || {}, { [key]: val }); return r; }); },
+    swapSeats() { return this.mutate(r => { if (!this.isHost(r)) return; r.seats.length === 2 ? r.seats.reverse() : r.seats.unshift(r.seats.pop()); return r; }); },
     start() {
       return this.mutate(r => {
         if (!this.isHost(r) || r.seats.some(s => !s)) return;
@@ -430,6 +451,11 @@
         .sgo-levels { margin-left: auto; display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
         .sgo-addlbl { color: var(--muted, #aab4c5); font-size: 0.85rem; font-weight: 700; }
         .sgo-levels .pill { padding: 0.3rem 0.7rem; font-size: 0.85rem; margin: 0; }
+        .sgo-opt { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; flex-wrap: wrap; }
+        .sgo-opt-lbl { color: var(--muted, #aab4c5); font-weight: 700; font-size: 0.92rem; min-width: 3.5em; text-align: left; }
+        .sgo-opt .pills { margin: 0; justify-content: flex-start; }
+        .sgo-opt .pill { padding: 0.35rem 0.9rem; }
+        .pill.sgo-ro { cursor: default; opacity: 0.55; } .pill.sgo-ro.active { opacity: 1; }
         .sgo-spec { color: var(--muted, #aab4c5); font-size: 0.92rem; margin-bottom: 0.8rem; text-align: left; }
         .sgo-tip { color: var(--muted, #aab4c5) !important; font-size: 0.92rem !important; margin-bottom: 0.8rem !important; text-align: left; }
         .sgo-wait { color: var(--soft, #d3dae6); font-weight: 700; margin: 0.4rem 0 0.8rem; }
@@ -535,10 +561,23 @@
             (s.id !== O.me.id && !O.isOnline(room, s.id) ? `<span class="sgo-tag off">${esc(t('offline'))}</span>` : '');
           who = `<span class="who">${esc(s.name)}${tags}</span>`;
         }
-        return `<div class="sgo-seat"><div class="dot" style="background:${cfg.seatColor ? cfg.seatColor(i) : '#888'}"></div>
-          <span class="lbl">${esc(cfg.seatLabel ? cfg.seatLabel(i, L) : '#' + (i + 1))}</span>${who}${right}</div>`;
+        return `<div class="sgo-seat"><div class="dot" style="background:${cfg.seatColor ? cfg.seatColor(i, room) : '#888'}"></div>
+          <span class="lbl">${esc(cfg.seatLabel ? cfg.seatLabel(i, L, room) : '#' + (i + 1))}</span>${who}${right}</div>`;
       }).join('');
       const specs = Object.values(room.spectators || {}).map(s => esc(s.name));
+      // room options (host can change them; others see the choice)
+      const optRow = (label, items) => `<div class="sgo-opt"><span class="sgo-opt-lbl">${esc(label)}</span><div class="pills">${items}</div></div>`;
+      let optsHtml = '';
+      if (cfg.seatCounts && cfg.seatCounts.length > 1) {
+        const humansIn = room.seats.filter(x => x && !x.cpu).length;
+        optsHtml += optRow(t('numPlayers'), cfg.seatCounts.map(n =>
+          `<div class="pill ${room.seats.length === n ? 'active' : ''} ${host && n >= humansIn ? '' : 'sgo-ro'}" data-seatn="${n}">${n}</div>`).join(''));
+      }
+      for (const o of cfg.options || []) {
+        const cur = (room.opts || {})[o.key];
+        optsHtml += optRow(o.label[L] || o.label.zh, o.values.map(v =>
+          `<div class="pill ${cur === v.v ? 'active' : ''} ${host ? '' : 'sgo-ro'}" data-opt="${o.key}" data-v="${v.v}">${esc(typeof v.label === 'string' ? v.label : (v.label[L] || v.label.zh))}</div>`).join(''));
+      }
       ov.querySelector('.modal').innerHTML = `
         <h2>${esc(title)} · ${esc(t('online').replace('🌐 ', ''))}</h2>
         <div class="sgo-code-label">${esc(t('roomCode'))}</div>
@@ -547,6 +586,7 @@
           <button class="btn btn-ghost" id="sgoCopy">${esc(t('copy'))}</button>
           <button class="btn btn-ghost" id="sgoCopyLink">${esc(t('copyLink'))}</button>
         </div>
+        ${optsHtml}
         <div class="sgo-seats">${seatsHtml}</div>
         <div class="sgo-spec">👀 ${esc(t('spectators'))}：${specs.length ? specs.join('、') : esc(t('noSpectators'))}</div>
         ${host ? `<p class="sgo-tip">${esc(full ? t('lobbyTip') : t('needPlayers'))}</p>` : `<div class="sgo-wait">${esc(O.mySeat(room) < 0 ? t('spectating') + ' · ' : '')}${esc(t('waitHost'))}</div>`}
@@ -566,6 +606,13 @@
         if (LOCAL) u.searchParams.set('online', 'local');
         copy(u.toString());
       });
+      if (host) {
+        ov.querySelectorAll('[data-seatn]:not(.sgo-ro)').forEach(b => b.addEventListener('click', () => O.setSeatCount(+b.dataset.seatn)));
+        ov.querySelectorAll('[data-opt]').forEach(b => b.addEventListener('click', () => {
+          const o = (cfg.options || []).find(x => x.key === b.dataset.opt); if (!o) return;
+          const v = o.values.find(x => String(x.v) === b.dataset.v); if (v) O.setOpt(o.key, v.v);
+        }));
+      }
       ov.querySelectorAll('[data-cpu]').forEach(b => b.addEventListener('click', () => O.addCpu(+b.dataset.cpu, b.dataset.lv)));
       ov.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => O.removeSeat(+b.dataset.rm)));
       const st = ov.querySelector('#sgoStart'); if (st) st.addEventListener('click', () => O.start());

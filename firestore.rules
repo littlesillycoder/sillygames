@@ -46,7 +46,7 @@ service cloud.firestore {
       function goodShape() {
         let d = newData();
         return d.keys().hasOnly(['code', 'game', 'host', 'status', 'version', 'round', 'seats', 'members',
-                                 'spectators', 'seen', 'state', 'createdAt', 'expireAt'])
+                                 'spectators', 'seen', 'state', 'opts', 'createdAt', 'expireAt'])
             && d.code == code
             && d.game in ['chess', 'go', 'chinese-checkers', 'rummikub']
             && d.status in ['lobby', 'playing']
@@ -96,6 +96,7 @@ service cloud.firestore {
           && (!changed('host')   || isHost())
           && (!changed('status') || isHost())
           && (!changed('round')  || isHost())
+          && (!changed('opts')   || isHost())
           && (!changed('seats')  || isHost() || membersOnlySelf())
           && (!changed('state')  || isHost() || me() in oldData().members))
       );

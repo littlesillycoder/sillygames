@@ -142,6 +142,9 @@
     }
     .pill:hover { border-color: var(--accent); color: var(--text); }
     .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .pill-online.active { background: var(--accent2); color: #062a33; border-color: var(--accent2); }
+    .player-name .off { color: #fca5a5; font-size: 0.8em; font-weight: 600; margin-left: 0.3em; }
+    .score-ok { color: #4ade80; font-weight: 700; font-size: 0.9rem; margin-top: 0.4rem; }
     .modal-btns { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; margin-top: 0.4rem; }
     .modal-btns .btn { min-width: 130px; font-size: 1.05rem; padding: 0.7rem 1.3rem; }
     /* setup dialog: keep the buttons on one row; English text left-aligned */
@@ -253,6 +256,7 @@
       <div class="score-row"><span data-i18n="scoreWhiteLbl"></span><b id="scoreWhite">0</b></div>
       <div class="score-row" style="color:var(--muted)"><span data-i18n="blackNeeds"></span><b id="scoreNeed">185</b></div>
       <div class="score-lead" id="scoreLead"></div>
+      <div class="score-ok" id="scoreOk"></div>
       <div class="btns">
         <button class="btn btn-ghost" id="resumeBtn" data-i18n="resume"></button>
         <button class="btn btn-primary" id="confirmBtn" data-i18n="confirm"></button>
@@ -292,6 +296,7 @@
       <div class="pill active" data-val="medium" data-i18n="optMedium"></div>
       <div class="pill" data-val="hard" data-i18n="optHard"></div>
       <div class="pill" data-val="local" data-i18n="optLocal"></div>
+      <div class="pill pill-online" data-val="online" data-i18n="optOnline"></div>
     </div>
 
     <div id="colorOpt">
@@ -341,6 +346,7 @@
 </div>
 
 <script src="engine.js"></script>
+<script src="../shared/online.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 //  CONSTANTS & STATE
@@ -419,6 +425,11 @@ const I18N = {
     counting: '終局數子中。', gameOver: '對局結束。',
     leadBy: (c, zi) => `${c}勝 ${zi} 子`,
     record: (w, l) => `對電腦戰績：${w} 勝 ${l} 敗`, localGame: '雙人對弈',
+    optOnline: '🌐 連線對戰', enterOnline: '🌐 進入連線', you2: '你', offline: '離線', watching: '觀戰中',
+    waitingFor: n => `等待 ${n} 下棋…`, onlineRoom: (c, n) => `🌐 房間 ${c}` + (n ? `・${n} 人觀戰` : ''),
+    rematch: '▶ 再來一局', waitHost: '⏳ 等房主開新局', leaveRoom: '✕ 離開房間',
+    confirmLeave: '確定要離開房間嗎？對局中離開會算認輸。', syncFail: '連線不穩，已重新同步棋盤',
+    okWaiting: n => `✓ 已確認，等待 ${n} 確認…`, okBoth: '雙方確認中…', boardSize: '棋盤大小',
   },
   en: {
     brand: '⚫ Go', rules: ' Rules', newGame: ' New Game', exit: ' Exit', exitBtn: '✕ Exit',
@@ -467,6 +478,11 @@ const I18N = {
     counting: 'Counting the score.', gameOver: 'Game over.',
     leadBy: (c, zi) => `${c} wins by ${zi} stones`,
     record: (w, l) => `Record vs CPU: ${w} W · ${l} L`, localGame: 'Local 2-player game',
+    optOnline: '🌐 Online', enterOnline: '🌐 Go Online', you2: 'you', offline: 'offline', watching: 'Watching',
+    waitingFor: n => `Waiting for ${n} to move…`, onlineRoom: (c, n) => `🌐 Room ${c}` + (n ? ` · ${n} watching` : ''),
+    rematch: '▶ Play Again', waitHost: '⏳ Waiting for host', leaveRoom: '✕ Leave Room',
+    confirmLeave: 'Leave the room? Leaving during a game counts as resigning.', syncFail: 'Connection hiccup — board re-synced',
+    okWaiting: n => `✓ Confirmed — waiting for ${n}…`, okBoth: 'Waiting for both players…', boardSize: 'Board size',
   },
 };
 function t(key, ...args) {
@@ -616,8 +632,17 @@ function aiCall(msg) {
 // ═══════════════════════════════════════════════
 //  GAME FLOW
 // ═══════════════════════════════════════════════
-const isCpu = () => settings.opp !== 'local';
-const isHumanTurn = () => !isCpu() || board.toPlay === humanColor;
+let online = false, onlineRound = -1, onlineCpuBusy = false, scoringSent = -1;
+const isCpu = () => !online && settings.opp !== 'local' && settings.opp !== 'online';
+const myColor = () => { const i = SillyOnline.mySeat(); return i < 0 ? -1 : (i === 0 ? BLACK : WHITE); };
+const seatOf = c => c === BLACK ? 0 : 1;
+const isHumanTurn = () => online ? myColor() === board.toPlay : (!isCpu() || board.toPlay === humanColor);
+function onlineName(c) {
+  const i = seatOf(c), r = SillyOnline.room, s = r && r.seats[i];
+  if (!s) return colorName(c);
+  const nm = s.cpu ? t('level_' + s.level) : s.name;
+  return nm + (SillyOnline.mySeat() === i ? (lang === 'zh' ? `（${t('you2')}）` : ` (${t('you2')})`) : '');
+}
 const colorName = c => c === BLACK ? t('black') : t('white');
 const label = p => { if (p === PASS) return t('passWord'); const [x, y] = board.xy(p); return COLS[x] + (settings.size - y); };
 
@@ -640,8 +665,9 @@ function startGame(fromSave) {
   maybeAI();
 }
 
-function doMove(p) {
+function doMove(p, remote) {
   const mover = board.toPlay;
+  if (online && !remote) pushMove(p, moves.length);
   const caps = board.play(p);
   moves.push(p);
   hintMove = -1; estimate = null; touchPreview = -1;
@@ -656,7 +682,7 @@ function doMove(p) {
   if (board.passes >= 2) { enterScoring(); return; }
   saveGame();
   refresh();
-  maybeAI();
+  online ? onlineCpu() : maybeAI();
 }
 
 function maybeAI() {
@@ -689,11 +715,13 @@ function humanPlay(p) {
 }
 
 function playerLabel(c) {
+  if (online) return onlineName(c);
   if (!isCpu()) return colorName(c);
   return c === humanColor ? t('you') : levelName();
 }
 
 function undo() {
+  if (online) return;
   if (phase !== 'play' && phase !== 'scoring') return;
   if (!moves.length) return;
   if (aiBusy) { restartWorker(); aiBusy = false; reqId++; }
@@ -710,6 +738,15 @@ function undo() {
 }
 
 function resumePlay() {
+  if (online) {
+    SillyOnline.mutate(r => {
+      if (!r.state || r.state.result || SillyOnline.mySeat(r) < 0) return;
+      while (r.state.moves.length && r.state.moves[r.state.moves.length - 1] === PASS) r.state.moves.pop();
+      r.state.scoring = null;
+      return r;
+    });
+    return;
+  }
   // drop the trailing passes and keep playing
   while (moves.length && moves[moves.length - 1] === PASS) moves.pop();
   board = GoEngine.replay(settings.size, moves, allowSuicide());
@@ -722,6 +759,7 @@ function resumePlay() {
 function enterScoring() {
   phase = 'scoring';
   dead = new Set();
+  if (online) { onlineScoring(); return; }
   saveGame();
   refresh();
   setStatus(t('estimatingDead'), '');
@@ -743,6 +781,20 @@ function enterScoring() {
 
 function toggleDead(p) {
   if (board.color[p] === EMPTY) return;
+  if (online) {
+    if (SillyOnline.mySeat() < 0) return;
+    const stones = board.groupStones(p);
+    SillyOnline.mutate(r => {
+      if (!r.state || !r.state.scoring || r.state.result) return;
+      const d = new Set(r.state.scoring.dead || []);
+      const isDead = d.has(p);
+      stones.forEach(q => isDead ? d.delete(q) : d.add(q));
+      r.state.scoring.dead = [...d]; r.state.scoring.ok = {};
+      return r;
+    });
+    Sound.stone();
+    return;
+  }
   const stones = board.groupStones(p);
   const isDead = dead.has(p);
   stones.forEach(q => isDead ? dead.delete(q) : dead.add(q));
@@ -751,6 +803,20 @@ function toggleDead(p) {
 }
 
 function confirmScore() {
+  if (online) {
+    const me = SillyOnline.mySeat(); if (me < 0) return;
+    SillyOnline.mutate(r => {
+      if (!r.state || !r.state.scoring || r.state.result) return;
+      r.state.scoring.ok = Object.assign({}, r.state.scoring.ok, { [me]: true });
+      const allOk = r.seats.every((s, i) => s && (s.cpu || s.left || r.state.scoring.ok[i]));
+      if (allOk) {
+        const z = countStones(new Set(r.state.scoring.dead || []));
+        r.state.result = { how: 'count', winner: z.margin > 0 ? BLACK : WHITE, margin: Math.abs(z.margin), b: z.black, w: z.white, need: z.need };
+      }
+      return r;
+    });
+    return;
+  }
   const s = board.score(KOMI, dead);
   const winner = s.diff > 0 ? BLACK : WHITE;
   wasCounted = true;
@@ -760,6 +826,11 @@ function confirmScore() {
 
 function resign() {
   if (phase !== 'play') return;
+  if (online) {
+    const c = myColor(); if (c < 0) return;
+    SillyOnline.mutate(r => { if (!r.state || r.state.result) return; r.state.result = { how: 'resign', winner: 3 - c, loser: c }; return r; });
+    return;
+  }
   const loser = isCpu() ? humanColor : board.toPlay;
   endGame(3 - loser, () => t('resigned', playerLabel(loser)));
 }
@@ -767,8 +838,11 @@ function resign() {
 function endGame(winner, detail, margin) {
   if (aiBusy) { restartWorker(); aiBusy = false; reqId++; }
   phase = 'over';
-  clearSavedGame();
-  if (isCpu()) {
+  if (!online) clearSavedGame();
+  if (online) {
+    const mc = myColor();
+    mc < 0 ? Sound.win() : winner === mc ? Sound.win() : Sound.lose();
+  } else if (isCpu()) {
     const won = winner === humanColor;
     recordResult(won);
     won ? Sound.win() : Sound.lose();
@@ -785,7 +859,13 @@ function renderResult() {
   const { winner, margin, detail } = resultInfo;
   lastResult = margin !== undefined ? t('winBy', colorName(winner), fmtZi(margin)) : t('winResign', colorName(winner));
   let title, icon;
-  if (isCpu()) {
+  if (online && myColor() > 0) {
+    const won = winner === myColor();
+    title = won ? t('youWin') : t('youLose');
+    icon = won ? '🏆' : '😵';
+  } else if (online) {
+    title = t('wins', onlineName(winner)); icon = winner === BLACK ? '⚫' : '⚪';
+  } else if (isCpu()) {
     const won = winner === humanColor;
     title = won ? t('youWin') : t('youLose');
     icon = won ? '🏆' : '😵';
@@ -796,10 +876,13 @@ function renderResult() {
   document.getElementById('resultIcon').textContent = icon;
   document.getElementById('resultTitle').textContent = title;
   document.getElementById('resultSubtitle').innerHTML = `${detail()}<br><b style="color:#fff">${lastResult}</b>`;
+  const again = document.getElementById('playAgainBtn'), ex = document.getElementById('resultExitBtn');
+  if (online) { const h = SillyOnline.isHost(); again.textContent = h ? t('rematch') : t('waitHost'); again.disabled = !h; ex.textContent = t('leaveRoom'); }
+  else { again.textContent = t('playAgain'); again.disabled = false; ex.textContent = t('exitBtn'); }
 }
 
 function requestHint() {
-  if (phase !== 'play' || aiBusy || !isHumanTurn()) return;
+  if (online || phase !== 'play' || aiBusy || !isHumanTurn()) return;
   aiBusy = true; refresh();
   setStatus(t('findingMove'), '');
   const myId = reqId + 1;
@@ -813,7 +896,7 @@ function requestHint() {
 }
 
 function requestEstimate() {
-  if (phase !== 'play' || aiBusy) return;
+  if (online || phase !== 'play' || aiBusy) return;
   if (estimate) { estimate = null; refresh(); return; }
   aiBusy = true; refresh();
   setStatus(t('estimatingTerr'), '');
@@ -831,6 +914,7 @@ function requestEstimate() {
 //  SAVE / STATS
 // ═══════════════════════════════════════════════
 function saveGame() {
+  if (online) return;
   try { localStorage.setItem(GAME_KEY, JSON.stringify({ settings, humanColor, moves })); } catch (e) {}
 }
 function clearSavedGame() { try { localStorage.removeItem(GAME_KEY); } catch (e) {} }
@@ -873,10 +957,15 @@ function setStatus(text, meta) {
 }
 
 function refresh() {
-  const bName = isCpu() ? (humanColor === BLACK ? t('you') : levelName()) : t('black');
-  const wName = isCpu() ? (humanColor === WHITE ? t('you') : levelName()) : t('white');
+  const bName = online ? onlineName(BLACK) : isCpu() ? (humanColor === BLACK ? t('you') : levelName()) : t('black');
+  const wName = online ? onlineName(WHITE) : isCpu() ? (humanColor === WHITE ? t('you') : levelName()) : t('white');
   document.getElementById('blackName').textContent = bName;
   document.getElementById('whiteName').textContent = wName;
+  if (online && SillyOnline.room) for (const c of [BLACK, WHITE]) {
+    const s = SillyOnline.room.seats[seatOf(c)];
+    if (s && !s.cpu && (s.left || (s.id !== SillyOnline.me.id && !SillyOnline.isOnline(SillyOnline.room, s.id))))
+      document.getElementById(c === BLACK ? 'blackName' : 'whiteName').innerHTML += `<span class="off">（${t('offline')}）</span>`;
+  }
   document.getElementById('blackCaps').textContent = board.captures[BLACK];
   document.getElementById('whiteCaps').textContent = board.captures[WHITE];
   {
@@ -888,7 +977,7 @@ function refresh() {
   const playing = phase === 'play';
   bc.classList.toggle('active', playing && board.toPlay === BLACK);
   wc.classList.toggle('active', playing && board.toPlay === WHITE);
-  const cpuThinking = aiBusy && isCpu() && board.toPlay !== humanColor;
+  const cpuThinking = aiBusy && (online ? onlineCpuBusy : isCpu() && board.toPlay !== humanColor);
   bc.classList.toggle('thinking-on', cpuThinking && board.toPlay === BLACK);
   wc.classList.toggle('thinking-on', cpuThinking && board.toPlay === WHITE);
 
@@ -896,7 +985,13 @@ function refresh() {
   const meta = t('moveMeta', board.moveNum) + (last >= 0 ? ' · ' + t('lastMove', colorName(3 - board.toPlay), label(last)) : '');
   if (phase === 'play') {
     let msg;
-    if (cpuThinking) msg = t('thinking', levelName());
+    if (online) {
+      const mc = myColor(), turnName = onlineName(board.toPlay);
+      if (mc === board.toPlay) msg = board.passes === 1 ? t('oppPassedYou') : t('yourMove');
+      else if (mc < 0) msg = t('watching') + '・' + t('toPlay', turnName);
+      else msg = cpuThinking ? t('thinking', turnName) : t('waitingFor', turnName);
+    }
+    else if (cpuThinking) msg = t('thinking', levelName());
     else if (isCpu()) msg = board.passes === 1 ? t('oppPassedYou') : t('yourMove');
     else msg = t('toPlay', colorName(board.toPlay)) + (board.passes === 1 ? t('oppPassed') : '');
     if (hintMove > 0) msg += t('tryMove', label(hintMove));
@@ -922,20 +1017,29 @@ function refresh() {
     document.getElementById('scoreNeed').textContent = z.need;
     document.getElementById('scoreLead').textContent =
       t('leadBy', z.margin > 0 ? t('black') : t('white'), fmtZi(Math.abs(z.margin)));
+    const okEl = document.getElementById('scoreOk'), r = SillyOnline.room;
+    okEl.textContent = '';
+    if (online && r && r.state && r.state.scoring) {
+      const ok = r.state.scoring.ok || {}, me = SillyOnline.mySeat();
+      if (me >= 0 && ok[me]) { const other = 1 - me; okEl.textContent = t('okWaiting', onlineName(other ? WHITE : BLACK)); }
+    }
+    const spect = online && SillyOnline.mySeat() < 0;
+    document.getElementById('resumeBtn').disabled = spect;
+    document.getElementById('confirmBtn').disabled = spect || !!(online && r && r.state && r.state.scoring && (r.state.scoring.ok || {})[SillyOnline.mySeat()]);
   }
 
   // buttons
   const canAct = phase === 'play' && !aiBusy && isHumanTurn();
   document.getElementById('passBtn').disabled = !canAct;
-  document.getElementById('hintBtn').disabled = !canAct;
-  document.getElementById('estimateBtn').disabled = phase !== 'play' || aiBusy;
-  document.getElementById('undoBtn').disabled = !(phase === 'play' || phase === 'scoring') || !moves.length ||
+  document.getElementById('hintBtn').disabled = online || !canAct;
+  document.getElementById('estimateBtn').disabled = online || phase !== 'play' || aiBusy;
+  document.getElementById('undoBtn').disabled = online || !(phase === 'play' || phase === 'scoring') || !moves.length ||
     (isCpu() && !moves.some((m, i) => (i % 2 === 0 ? BLACK : WHITE) === humanColor));
-  document.getElementById('resignBtn').disabled = phase !== 'play';
+  document.getElementById('resignBtn').disabled = phase !== 'play' || (online && myColor() < 0);
   document.getElementById('actionGrid').style.display = phase === 'scoring' ? 'none' : '';
 
-  const st = getStats();
-  document.getElementById('recordText').textContent =
+  const st = getStats(), rm = SillyOnline.room;
+  document.getElementById('recordText').textContent = online && rm ? t('onlineRoom', rm.code, Object.keys(rm.spectators || {}).length) :
     isCpu() ? t('record', st.wins || 0, st.losses || 0) : t('localGame');
 
   draw();
@@ -1210,16 +1314,26 @@ document.querySelectorAll('.pills').forEach(group => {
     pill.classList.add('active');
     const g = group.dataset.group, v = pill.dataset.val;
     if (g === 'size') settings.size = +v;
-    if (g === 'opp') { settings.opp = v; document.getElementById('colorOpt').style.display = v === 'local' ? 'none' : ''; }
+    if (g === 'opp') { settings.opp = v; syncSetupMode(); }
     if (g === 'color') settings.color = +v;
   });
 });
 function syncPills() {
   const set = (g, v) => document.querySelectorAll(`.pills[data-group="${g}"] .pill`).forEach(p => p.classList.toggle('active', p.dataset.val === String(v)));
   set('size', settings.size); set('opp', settings.opp); set('color', settings.color);
-  document.getElementById('colorOpt').style.display = settings.opp === 'local' ? 'none' : '';
+  syncSetupMode();
 }
-document.getElementById('startBtn').addEventListener('click', () => { Sound.stone(); startGame(false); });
+function syncSetupMode() {
+  document.getElementById('colorOpt').style.display = settings.opp === 'local' || settings.opp === 'online' ? 'none' : '';
+  const sb = document.getElementById('startBtn');
+  sb.dataset.i18n = settings.opp === 'online' ? 'enterOnline' : 'start';
+  sb.textContent = t(sb.dataset.i18n);
+}
+document.getElementById('startBtn').addEventListener('click', () => {
+  Sound.stone();
+  if (settings.opp === 'online') { closeOverlays(); SillyOnline.openEntry(); return; }
+  startGame(false);
+});
 document.getElementById('continueBtn').addEventListener('click', () => {
   const s = loadSavedGame();
   if (!s) return;
@@ -1230,16 +1344,22 @@ document.getElementById('continueBtn').addEventListener('click', () => {
   startGame(true);
 });
 document.getElementById('cancelSetupBtn').addEventListener('click', closeOverlays);
-document.getElementById('newGameBtn').addEventListener('click', openSetup);
+document.getElementById('newGameBtn').addEventListener('click', () => {
+  if (online) { if (confirm(t('confirmLeave'))) SillyOnline.leave(); return; }
+  openSetup();
+});
 document.getElementById('howToPlayBtn').addEventListener('click', () => { closeOverlays(); document.getElementById('helpOverlay').classList.add('active'); });
 document.getElementById('helpCloseBtn').addEventListener('click', () => {
   closeOverlays();
   if (phase === 'setup') openSetup();
 });
-document.getElementById('playAgainBtn').addEventListener('click', openSetup);
+document.getElementById('playAgainBtn').addEventListener('click', () => { if (online) { SillyOnline.rematch(); return; } openSetup(); });
 document.getElementById('reviewBtn').addEventListener('click', closeOverlays);
-document.getElementById('exitBtn').addEventListener('click', () => window.location.href = '../../');
-document.getElementById('resultExitBtn').addEventListener('click', () => window.location.href = '../../');
+document.getElementById('exitBtn').addEventListener('click', async () => {
+  if (online) { if (!confirm(t('confirmLeave'))) return; await SillyOnline.leave(); }
+  window.location.href = '../../';
+});
+document.getElementById('resultExitBtn').addEventListener('click', () => { if (online) SillyOnline.leave(); else window.location.href = '../../'; });
 document.getElementById('soundBtn').addEventListener('click', () => {
   soundEnabled = !soundEnabled;
   const btn = document.getElementById('soundBtn');
@@ -1251,14 +1371,141 @@ document.querySelectorAll('.lang-switch button').forEach(b =>
   b.addEventListener('click', e => { e.stopPropagation(); setLang(b.dataset.lang); }));
 
 // ═══════════════════════════════════════════════
+//  ONLINE (games/shared/online.js)
+// ═══════════════════════════════════════════════
+function pushMove(p, idx) {
+  SillyOnline.mutate(r => {
+    if (!r.state || r.state.result || r.state.moves.length !== idx) return;
+    r.state.moves.push(p);
+    return r;
+  }).then(res => {
+    if (!res || !res.state || res.state.moves[idx] !== p) { toast(t('syncFail')); if (res) applyOnline(res, true); }
+  }).catch(() => { toast(t('syncFail')); if (SillyOnline.room) applyOnline(SillyOnline.room, true); });
+}
+// the host's browser plays CPU seats (and seats whose player left)
+function onlineCpu() {
+  const r = SillyOnline.room;
+  if (!online || !r || phase !== 'play' || onlineCpuBusy || !SillyOnline.isHost()) return;
+  const s = r.seats[seatOf(board.toPlay)];
+  if (!s || !(s.cpu || s.left)) return;
+  onlineCpuBusy = aiBusy = true; refresh();
+  const idx = moves.length, myId = reqId + 1, t0 = Date.now();
+  aiCall({ type: 'think', opts: LEVELS[s.level || 'medium'] }).then(res => {
+    setTimeout(() => {
+      onlineCpuBusy = aiBusy = false;
+      if (res.id !== myId || !online || phase !== 'play' || moves.length !== idx) { refresh(); return; }
+      if (res.resign) {
+        const loser = board.toPlay;
+        SillyOnline.mutate(rr => { if (!rr.state || rr.state.result) return; rr.state.result = { how: 'resign', winner: 3 - loser, loser }; return rr; });
+        return;
+      }
+      doMove(res.move !== PASS && !board.isLegal(res.move, board.toPlay) ? PASS : res.move);
+    }, Math.max(0, 450 - (Date.now() - t0)));
+  });
+}
+// both passed: the host suggests dead stones, everyone can adjust, every player confirms
+function onlineScoring() {
+  const r = SillyOnline.room;
+  refresh();
+  if (!r || !r.state) return;
+  if (r.state.scoring && r.state.scoring.at === moves.length) { dead = new Set(r.state.scoring.dead || []); refresh(); return; }
+  if (!SillyOnline.isHost() || scoringSent === moves.length) { setStatus(t('estimatingDead'), ''); return; }
+  scoringSent = moves.length;
+  setStatus(t('estimatingDead'), '');
+  const at = moves.length;
+  aiCall({ type: 'ownership', playouts: 1500, budgetMs: 1500 }).then(res => {
+    const own = res.own, seen = new Set(), d = [];
+    for (const p of allPoints()) {
+      const c = board.color[p];
+      if (c === EMPTY || seen.has(board.head[p])) continue;
+      seen.add(board.head[p]);
+      const stones = board.groupStones(p);
+      const avg = stones.reduce((s, q) => s + own[q], 0) / stones.length;
+      if ((c === BLACK && avg < -0.3) || (c === WHITE && avg > 0.3)) d.push(...stones);
+    }
+    SillyOnline.mutate(rr => {
+      if (!rr.state || rr.state.result || rr.state.moves.length !== at || (rr.state.scoring && rr.state.scoring.at === at)) return;
+      rr.state.scoring = { at, dead: d, ok: {} };
+      return rr;
+    });
+  });
+}
+function applyOnline(room, force) {
+  const st = room.state || { moves: [] };
+  const sm = st.moves || [];
+  if (room.round !== onlineRound || force) {
+    if (room.round !== onlineRound) {
+      onlineRound = room.round;
+      restartWorker(); aiBusy = onlineCpuBusy = false; scoringSent = -1;
+      hintMove = -1; estimate = null; hover = -1; touchPreview = -1; wasCounted = false; lastResult = null; resultInfo = null;
+      closeOverlays();
+    }
+    if ((room.opts || {}).size) settings.size = room.opts.size;
+    moves = sm.slice();
+    board = GoEngine.replay(settings.size, moves, allowSuicide());
+    phase = 'play'; dead = new Set();
+    resize();
+    if (board.passes >= 2) enterScoring(); else { refresh(); onlineCpu(); }
+  } else {
+    const prefix = sm.length >= moves.length && moves.every((m, i) => sm[i] === m);
+    if (!prefix) return applyOnline(room, true);
+    if (sm.length < moves.length || (phase === 'scoring' && board.passes < 2)) return applyOnline(room, true);
+    for (let i = moves.length; i < sm.length && phase === 'play'; i++) doMove(sm[i], true);
+    // resumed after counting
+    if (phase === 'scoring' && sm.length < moves.length) return applyOnline(room, true);
+    if (phase === 'scoring') {
+      if (st.scoring && st.scoring.at === moves.length) dead = new Set(st.scoring.dead || []);
+      else onlineScoring();
+      refresh();
+    }
+  }
+  const res = st.result;
+  if (res && phase !== 'over') {
+    if (res.how === 'count') {
+      wasCounted = true;
+      if (st.scoring) dead = new Set(st.scoring.dead || []);
+      endGame(res.winner, () => t('resultDetail', fmtZi(res.b), fmtZi(res.w), res.need), res.margin);
+    } else endGame(res.winner, () => t('resigned', onlineName(res.loser)));
+  } else if (phase === 'over' && resultInfo) renderResult();
+}
+
+SillyOnline.mount({
+  game: 'go',
+  title: { zh: '圍棋', en: 'Go' },
+  seats: 2,
+  seatLabel: (i, l) => I18N[l][i === 0 ? 'black' : 'white'],
+  seatColor: i => i === 0 ? '#111827' : '#f8fafc',
+  cpuLevels: ['easy', 'medium', 'hard'],
+  options: [{ key: 'size', label: { zh: '棋盤大小', en: 'Board size' }, values: [9, 13, 19].map(n => ({ v: n, label: `${n} × ${n}` })) }],
+  defaultOpts: () => ({ size: settings.size }),
+  newState: () => ({ moves: [], result: null, scoring: null }),
+  rematch: r => { r.seats.reverse(); return r; },
+  onLeaveGame: (r, seat) => {
+    if (r.state && !r.state.result) { const c = seat === 0 ? BLACK : WHITE; r.state.result = { how: 'resign', winner: 3 - c, loser: c }; }
+    return r;
+  },
+  onRoom: room => { online = true; applyOnline(room); },
+  onExit: () => {
+    online = false; onlineRound = -1; aiBusy = onlineCpuBusy = false; restartWorker();
+    phase = 'setup'; moves = []; resultInfo = null; lastResult = null; dead = new Set();
+    board = new Board(settings.size, allowSuicide());
+    settings.opp = 'online'; syncPills();
+    resize(); refresh(); setStatus(t('chooseSettings'), ''); openSetup();
+  },
+  onCancelEntry: () => openSetup(),
+});
+
+// ═══════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════
 (function boot() {
   const saved = loadSavedGame();
   if (saved) {
     settings = Object.assign(settings, saved.settings);
+    if (settings.opp === 'online') settings.opp = 'medium';
     syncPills();
   }
+  syncSetupMode();
   board = new Board(settings.size, allowSuicide());
   applyLang();
   resize();
