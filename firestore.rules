@@ -1,0 +1,106 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════════════
+//  sillygames — Firestore security rules
+//  Firebase console → Firestore Database → Rules → replace everything → Publish
+//
+//  What the site stores:
+//    users/{uid}/games/{gameId}   cloud saves of signed-in (Google) players
+//    analytics/{pageId}           visit counter on the home page
+//    rooms/{code}                 online game rooms (6-digit code)
+//  Anything else is locked.
+// ════════════════════════════════════════════════════════════════════
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()  { return request.auth != null; }
+    function isGoogle()  { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    function now()       { return request.time.toMillis(); }
+
+    // ── 1. Cloud saves: only your own, only with a real (non-anonymous) account ──
+    match /users/{uid}/{document=**} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if isGoogle() && request.auth.uid == uid
+                            && request.resource.data.uid == uid;
+    }
+
+    // ── Visit counter: anyone may read it or add exactly 1 ──
+    match /analytics/{pageId} {
+      allow read: if true;
+      allow create: if pageId.matches('^[A-Za-z0-9_-]{1,40}$')
+                    && request.resource.data.keys().hasOnly(['total'])
+                    && request.resource.data.total == 1;
+      allow update: if request.resource.data.keys().hasOnly(['total'])
+                    && request.resource.data.total == resource.data.total + 1;
+    }
+
+    // ── 2. Online rooms ──
+    match /rooms/{code} {
+      function me()        { return request.auth.uid; }
+      function newData()   { return request.resource.data; }
+      function oldData()   { return resource.data; }
+      function changed(f)  { return newData().diff(oldData()).affectedKeys().hasAny([f]); }
+      function unchanged(fs) { return !newData().diff(oldData()).affectedKeys().hasAny(fs); }
+
+      // only our own fields, sensible types and sizes
+      function goodShape() {
+        let d = newData();
+        return d.keys().hasOnly(['code', 'game', 'host', 'status', 'version', 'round', 'seats', 'members',
+                                 'spectators', 'seen', 'state', 'createdAt', 'expireAt'])
+            && d.code == code
+            && d.game in ['chess', 'go', 'chinese-checkers', 'rummikub']
+            && d.status in ['lobby', 'playing']
+            && d.host is string
+            && d.seats is list && d.seats.size() >= 2 && d.seats.size() <= 6
+            && d.members is list && d.members.size() <= 6
+            && d.spectators is map && d.spectators.size() <= 30
+            && d.seen is map && d.seen.size() <= 40
+            && d.createdAt is int && d.expireAt is int;
+      }
+      // a brand-new room: you are the host and the only person in it, lasts at most ~24 h
+      function freshRoom() {
+        let d = newData();
+        return code.matches('^[0-9]{6}$')
+            && d.host == me()
+            && d.status == 'lobby'
+            && d.members == [me()]
+            && d.seen.keys().hasOnly([me()])
+            && d.spectators.size() == 0
+            && d.expireAt <= now() + 86400000 + 600000;
+      }
+      // you may only touch your own entry in a per-person map
+      function ownKeyOnly(f) {
+        return !changed(f) || newData()[f].diff(oldData()[f]).affectedKeys().hasOnly([me()]);
+      }
+      // a non-host may only add or remove themself from the seats
+      function membersOnlySelf() {
+        return newData().members.toSet().difference(oldData().members.toSet()).hasOnly([me()])
+            && oldData().members.toSet().difference(newData().members.toSet()).hasOnly([me()]);
+      }
+      function isHost()    { return oldData().host == me(); }
+      function inRoom()    { return me() in oldData().seen; }
+      function joining()   { return !inRoom() && me() in newData().seen; }
+
+      allow read: if signedIn();
+
+      allow create: if signedIn() && goodShape() && freshRoom();
+
+      allow update: if signedIn() && goodShape() && (
+        // an expired room's code can be reused for a new room
+        (oldData().expireAt < now() && freshRoom())
+        ||
+        (oldData().expireAt >= now()
+          && unchanged(['code', 'game', 'createdAt', 'expireAt'])
+          && (inRoom() || joining())
+          && ownKeyOnly('seen') && ownKeyOnly('spectators')
+          && (!changed('host')   || isHost())
+          && (!changed('status') || isHost())
+          && (!changed('round')  || isHost())
+          && (!changed('seats')  || isHost() || membersOnlySelf())
+          && (!changed('state')  || isHost() || me() in oldData().members))
+      );
+
+      allow delete: if signedIn() && resource.data.host == request.auth.uid;
+    }
+  }
+}

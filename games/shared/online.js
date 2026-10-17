@@ -84,6 +84,8 @@
   // ─────────────────────────────── backends
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   const clone = o => JSON.parse(JSON.stringify(o));
+  // members = uids of the people sitting in a seat (the security rules use this list)
+  const withMembers = r => { if (r && Array.isArray(r.seats)) r.members = r.seats.filter(x => x && !x.cpu && !x.left && x.id).map(x => x.id); return r; };
 
   const LocalBackend = {
     name: 'local',
@@ -96,7 +98,7 @@
     async get(code) { try { return JSON.parse(localStorage.getItem(this._key(code))); } catch (e) { return null; } },
     async transact(code, fn) {
       const cur = await this.get(code);
-      const next = fn(cur ? clone(cur) : null);
+      const next = withMembers(fn(cur ? clone(cur) : null));
       if (next === undefined) return cur;
       if (next === null) localStorage.removeItem(this._key(code));
       else localStorage.setItem(this._key(code), JSON.stringify(next));
@@ -133,7 +135,7 @@
       const ref = this._ref(code);
       return this.db.runTransaction(async tx => {
         const s = await tx.get(ref);
-        const next = fn(s.exists ? clone(s.data()) : null);
+        const next = withMembers(fn(s.exists ? clone(s.data()) : null));
         if (next === undefined) return s.exists ? s.data() : null;
         if (next === null) tx.delete(ref); else tx.set(ref, next);
         return next;
