@@ -340,13 +340,13 @@ const I18N = {
     seatName: (c, who) => `${c}・${who}`,
     undo: '↶ 悔棋', hint: '💡 提示',
     setupTitle: '跳棋',
-    setupIntro: '把你的 <b>10 顆棋子</b>全部移到<b>正對面</b>的三角區！<br>可以一步一步走，也可以連續跳過其他棋子。',
+    setupIntro: '把你的 <b>10 顆棋子</b>全部移到<b>正對面、和你同顏色</b>的三角區！<br>可以一步一步走，也可以連續跳過其他棋子。',
     numPlayers: '人數', seatsLabel: '座位（點選切換玩家或電腦）', cpuLevel: '電腦難度',
     easy: '簡單', medium: '中等', hard: '困難', human: '玩家',
     start: '▶ 開始', continue: '⏯ 繼續上一局', cancel: '取消',
     helpTitle: '跳棋規則',
     rulesList: `
-      <li>每人有 <b>10 顆棋子</b>，從自己的三角區出發，目標是<b>正對面的三角區</b>。</li>
+      <li>每人有 <b>10 顆棋子</b>，從自己的三角區出發，目標是<b>正對面的三角區</b>。棋盤上<b>和你棋子同顏色的三角形</b>就是你的終點。</li>
       <li><b>走一步：</b>移到旁邊相鄰的空位。</li>
       <li><b>跳：</b>隔著一顆棋子（自己或別人的都可以）跳到後面的空位，而且可以<b>連續跳</b>。被跳過的棋子不會被吃掉。</li>
       <li>每回合只能選一種：走一步，或是一連串的跳。</li>
@@ -383,13 +383,13 @@ const I18N = {
     seatName: (c, who) => `${c} · ${who}`,
     undo: '↶ Undo', hint: '💡 Hint',
     setupTitle: 'Chinese Checkers',
-    setupIntro: 'Move all <b>10 marbles</b> into the triangle <b>directly opposite</b> you!<br>Step one hole at a time, or jump over other marbles — again and again.',
+    setupIntro: 'Move all <b>10 marbles</b> into the triangle <b>opposite you, tinted in your colour</b>!<br>Step one hole at a time, or jump over other marbles — again and again.',
     numPlayers: 'Players', seatsLabel: 'Seats (tap to switch player / CPU)', cpuLevel: 'CPU difficulty',
     easy: 'Easy', medium: 'Medium', hard: 'Hard', human: 'Player',
     start: '▶ Start', continue: '⏯ Continue', cancel: 'Cancel',
     helpTitle: 'How to Play',
     rulesList: `
-      <li>Each player has <b>10 marbles</b> starting in their own triangle. The goal is the <b>triangle directly opposite</b>.</li>
+      <li>Each player has <b>10 marbles</b> starting in their own triangle. The goal is the <b>triangle directly opposite</b> — it's tinted in <b>your marble colour</b>.</li>
       <li><b>Step:</b> move to an empty neighbouring hole.</li>
       <li><b>Jump:</b> hop over one adjacent marble (anyone's) into the empty hole behind it. You can <b>chain jumps</b>. Jumped marbles are not captured.</li>
       <li>Each turn is either one step or one chain of jumps.</li>
@@ -904,12 +904,15 @@ function draw() {
   ctx.lineWidth = unit * 1.55; ctx.strokeStyle = woodFill; ctx.stroke();
   ctx.fillStyle = woodFill; ctx.fill();
   ctx.restore();
-  // tinted corner triangles
+  // tinted corner triangles: a triangle takes the colour of the player who is heading there,
+  // so "get your marbles into your colour" is the goal; unused corners stay neutral
   const active = new Set(order);
   TRIS.forEach((tri, k) => {
     const pts = tri.map(i => [cells[i].x, cells[i].y]);
-    const col = COLORS[k];
-    ctx.globalAlpha = active.has(k) ? 0.5 : 0.18;
+    const goalOf = opposite(k);                       // player whose goal is corner k
+    const owner = active.has(goalOf) ? goalOf : active.has(k) ? k : -1;
+    const col = owner >= 0 ? COLORS[owner] : '#b9a27a';
+    ctx.globalAlpha = owner >= 0 ? 0.5 : 0.22;
     poly(pts, col, col, unit * 1.1);
     ctx.globalAlpha = 1;
   });
