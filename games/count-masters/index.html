@@ -674,39 +674,55 @@ function gateLabel(gate) {
   return sym[gate.op] + gate.v;
 }
 
+// Balanced gates: mostly additions, at most 3 × 2 and one × 3 per track, so armies grow to
+// hundreds or a few thousand instead of millions. Values rise a little with the level.
+function makeGates(n, rng, lvl) {
+  const pick = arr => arr[Math.floor(rng() * arr.length)];
+  const up = Math.min(lvl - 1, 6);
+  const plus  = [5, 8, 10, 12, 15, 18, 20, 25].map(v => v + up * 3);
+  const minus = [4, 6, 8, 10, 12, 15].map(v => v + up * 2);
+  const out = []; let x2 = 0, x3 = 0;
+  for (let i = 0; i < n; i++) {
+    let good;
+    const r = rng();
+    if (r < 0.14 && x2 < 3 && i >= 2) { good = { op: 'x', v: 2 }; x2++; }
+    else if (r < 0.19 && x3 < 1 && i >= n / 2) { good = { op: 'x', v: 3 }; x3++; }
+    else good = { op: '+', v: pick(plus) };
+    let bad;
+    const q = rng();
+    if (q < 0.18) bad = { op: '+', v: Math.max(3, Math.round((good.op === '+' ? good.v : pick(plus)) * 0.4)) };   // both add — pick the bigger one
+    else if (q < 0.38) bad = { op: '/', v: 2 };
+    else bad = { op: '-', v: pick(minus) };
+    out.push([good, bad]);
+  }
+  return out;
+}
+// enemy army at the end of each single-player level (army carries over between levels)
+const ENEMY = [180, 450, 850, 1400, 2100, 2950, 3950, 5100];
+const enemyFor = lvl => lvl <= ENEMY.length ? ENEMY[lvl - 1] : Math.round(ENEMY[ENEMY.length - 1] * Math.pow(1.25, lvl - ENEMY.length));
+
 function buildLevel(lvl, rng = Math.random, opt = {}) {
   objects = [];
   const cfg = LEVEL_CFG[Math.min(lvl - 1, LEVEL_CFG.length - 1)];
   scrollSpeed = cfg.speed + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 0.15 : 0);
 
-  const gateCount = opt.gates || (10 + Math.min(lvl - 1, 5));
-  const spacing = opt.spacing || 200; // gap between gates (online races use a little more room to change lanes)
-  const wallChance = opt.wallChance || 0.25;
-  levelLength = 600 + gateCount * spacing; // level grows to fit all gates
+  const gateCount = opt.gates || 20;
+  const spacing = opt.spacing || 260;          // room to switch lanes between a gate and a wall
+  const wallChance = opt.wallChance || 0.5;
+  levelLength = 600 + gateCount * spacing;
 
-  // Shuffle gate pairs for this level
-  const shuffled = [...GATE_PAIRS].map(g => [rng(), g]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-
+  const pairs = makeGates(gateCount, rng, lvl);
   for (let i = 0; i < gateCount; i++) {
     const dist = 300 + i * spacing;
-    const pair = shuffled[i % shuffled.length];
-
-    // Randomize which side is good/bad
-    const flip = rng() < 0.5;
-    const left  = flip ? pair[0] : pair[1];
-    const right = flip ? pair[1] : pair[0];
-
-    objects.push({ type: 'gate', dist, left, right, triggered: false });
-
-    // Occasional obstacle between gates (less frequent with more gates)
+    const [good, bad] = pairs[i];
+    const flip = rng() < 0.5;                   // which side is the better one
+    objects.push({ type: 'gate', dist, left: flip ? good : bad, right: flip ? bad : good, triggered: false });
     if (i < gateCount - 1 && rng() < wallChance) {
       objects.push({ type: 'obstacle', dist: dist + spacing * 0.6, side: rng() < 0.5 ? 'left' : 'right', triggered: false });
     }
   }
 
-  // Enemy at end
-  const eCount = cfg.enemyCount + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 150 : 0);
-  objects.push({ type: 'enemy', dist: levelLength - 180, count: eCount, triggered: false });
+  objects.push({ type: 'enemy', dist: levelLength - 180, count: enemyFor(lvl), triggered: false });
 }
 
 // ═══════════════════════════════════════════════
@@ -1641,7 +1657,7 @@ function raceTrack(n, seed) {
   for (const i of picks) {
     const g = gates[i];
     const special = rng() < 0.6 ? { op: 'steal', v: 25 } : { op: 'half', v: 2 };
-    if (!isGoodGate(g.left)) g.left = special; else g.right = special;
+    if (gateGain(g.left, 50, 0) < gateGain(g.right, 50, 0)) g.left = special; else g.right = special;
   }
   objs.push({ type: 'finish', dist: levelLength - 180, triggered: false });
   const out = { objects: objs, levelLength, speed: scrollSpeed };
