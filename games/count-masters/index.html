@@ -127,6 +127,35 @@
     .modal-score { font-size: 2.8rem; font-weight: 900; color: var(--accent2); margin: 0.4rem 0; }
     .modal-buttons { display: flex; gap: 0.7rem; justify-content: center; margin-top: 1rem; }
     .modal-buttons .btn { white-space: nowrap; }
+    @media (max-width: 480px) { .modal-buttons { gap: 0.4rem; } .modal-buttons .btn { padding: 0.6rem 0.75rem !important; font-size: 0.92rem !important; } }
+    .btn-online { background: linear-gradient(135deg, #06b6d4, #0e7490); color: #fff; }
+    /* online race board */
+    #raceBoard { display: none; }
+    .race-only { display: none !important; }
+    body.racing .race-only { display: flex !important; }
+    body.racing #raceBoard { display: block; }
+    body.racing .solo-only, body.racing #pauseBtn, body.racing #restartBtn, body.racing #howToPlayBtn { display: none !important; }
+    .rb-title { font-size: 0.95rem; font-weight: 700; color: #aab4c5; margin-bottom: 0.5rem; }
+    .rb-row { padding: 0.45rem 0; border-top: 1px solid var(--border); }
+    .rb-row:first-of-type { border-top: none; }
+    .rb-top { display: flex; align-items: center; gap: 0.45rem; font-size: 0.95rem; font-weight: 700; }
+    .rb-top .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .rb-top .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eef2f7; }
+    .rb-top .ct { font-variant-numeric: tabular-nums; color: #4ade80; }
+    .rb-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); margin-top: 0.35rem; overflow: hidden; }
+    .rb-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #7c3aed, #06b6d4); }
+    .rb-sub { font-size: 0.8rem; color: #aab4c5; margin-top: 0.2rem; }
+    .rb-note { font-size: 0.85rem; color: #fde68a; margin-top: 0.5rem; line-height: 1.5; }
+    .race-table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 0.4rem; font-size: 0.98rem; }
+    .race-table th { color: #aab4c5; font-weight: 700; font-size: 0.85rem; padding: 0.35rem 0.4rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .race-table td { padding: 0.45rem 0.4rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .race-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .race-table tr.me td { color: #67e8f9; font-weight: 700; }
+    .race-table tr.top td:first-child { color: #fbbf24; }
+    .race-next { color: #aab4c5; font-size: 0.92rem; margin-top: 0.4rem; }
+    .race-toast { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); background: rgba(88,28,135,0.95); color: #fff;
+      padding: 0.6rem 1.2rem; border-radius: 14px; font-weight: 800; z-index: 300; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .race-toast.show { opacity: 1; }
 
     /* Pause badge */
     .pause-badge {
@@ -183,11 +212,11 @@
 <div class="game-wrapper">
 
   <div class="sidebar">
-    <div class="stat-box">
+    <div class="stat-box solo-only">
       <div class="stat-label" data-i18n="level"></div>
       <div class="stat-value" id="levelDisplay">1</div>
     </div>
-    <div class="stat-box">
+    <div class="stat-box solo-only">
       <div class="stat-label" data-i18n="score"></div>
       <div class="stat-value" id="scoreDisplay">0</div>
     </div>
@@ -206,6 +235,10 @@
           <div style="width:10px;height:10px;background:#ef4444;border-radius:2px;flex-shrink:0"></div>
           <span data-i18n="shrink"></span>
         </div>
+        <div class="race-only" style="display:flex;align-items:center;gap:0.4rem">
+          <div style="width:10px;height:10px;background:#a855f7;border-radius:2px;flex-shrink:0"></div>
+          <span data-i18n="stealLegend"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -213,7 +246,12 @@
   <canvas id="gameCanvas" width="380" height="620"></canvas>
 
   <div class="sidebar">
-    <div class="stat-box">
+    <div class="stat-box" id="raceBoard">
+      <div class="rb-title" id="rbTitle"></div>
+      <div id="rbRows"></div>
+      <div class="rb-note" id="rbNote"></div>
+    </div>
+    <div class="stat-box solo-only">
       <div class="stat-label" data-i18n="enemy"></div>
       <div class="stat-value red" id="enemyDisplay">—</div>
     </div>
@@ -221,7 +259,7 @@
       <div class="stat-label" data-i18n="controls"></div>
       <div style="font-size:0.75rem;line-height:1.8;color:var(--muted)" data-i18n-html="controlsText"></div>
     </div>
-    <div class="tip-box">
+    <div class="tip-box solo-only">
       <div class="stat-label" data-i18n="tip"></div>
       <div style="font-size:0.75rem;color:var(--muted);line-height:1.6" data-i18n="tipText"></div>
     </div>
@@ -246,10 +284,27 @@
     <div class="modal-buttons">
       <button class="btn btn-secondary" id="continueBtn" style="display:none;font-size:1rem;padding:0.7rem 1.5rem"></button>
       <button class="btn btn-primary" id="startBtn" style="font-size:1rem;padding:0.7rem 1.5rem" data-i18n="startGame"></button>
+      <button class="btn btn-online" id="onlineBtn" style="font-size:1rem;padding:0.7rem 1.5rem" data-i18n="onlineBtn"></button>
       <button class="btn btn-danger" onclick="window.location.href='../../'" style="font-size:1rem;padding:0.7rem 1.5rem" data-i18n="exit"></button>
     </div>
   </div>
 </div>
+
+<!-- ONLINE RACE RESULT -->
+<div class="overlay" id="raceOverlay">
+  <div class="modal">
+    <h2 id="raceTitle"></h2>
+    <p class="subtitle" id="raceSub"></p>
+    <table class="race-table" id="raceTable"></table>
+    <div class="race-next" id="raceNext"></div>
+    <div class="modal-buttons" id="raceBtns">
+      <button class="btn btn-primary" id="raceAgainBtn"></button>
+      <button class="btn btn-ghost" id="raceCloseBtn" data-i18n="viewTrack"></button>
+      <button class="btn btn-danger" id="raceLeaveBtn" data-i18n="leaveRoom"></button>
+    </div>
+  </div>
+</div>
+<div class="race-toast" id="raceToast"></div>
 
 <!-- RESULT MODAL -->
 <div class="overlay" id="resultOverlay">
@@ -267,6 +322,7 @@
 </div>
 
 <script src="../shared/i18n.js"></script>
+<script src="../shared/online.js"></script>
 <script>
 SillyI18n.add({
   zh: {
@@ -282,12 +338,25 @@ SillyI18n.add({
         <li><span class="icon">🟢</span> 穿過<b style="color:#4ade80">綠色的門</b>，火柴人會變多或倍增</li>
         <li><span class="icon">🔴</span> 避開<b style="color:#f87171">紅色的門</b>，它會讓軍隊變少！</li>
         <li><span class="icon">⚔️</span> 最後你的軍隊會和敵軍決戰</li>
-        <li><span class="icon">🏆</span> 火柴人比敵人多就獲勝！</li>`,
+        <li><span class="icon">🏆</span> 火柴人比敵人多就獲勝！</li>
+        <li><span class="icon">🌐</span> 連線對戰：2～4 人跑同一條跑道、比 3 場，每場人數最多的得最高分；紫色搶人門可以搶領先者的人！</li>`,
     cont: n => `▶ 繼續（第 ${n} 關）`, startGame: '▶ 開始遊戲', newGame: '↺ 新遊戲', resumeGame: '▶ 繼續遊戲',
     victory: '🎉 勝利！', nextLevel: '下一關 ▶', playAgain: '↺ 再玩一次',
     levelClear: '🏆 過關！', defeatedWith: n => `你打敗了敵軍，還剩 ${n} 個火柴人！`, levelDone: n => `第 ${n} 關完成！`,
     defeated: '💀 戰敗！', outnumbered: '你的軍隊人數不夠！', reached: (n, s) => `你到達第 ${n} 關，得分 ${s}`,
     safe: '安全', battleZone: '決戰區', enemyCv: '敵軍', yourArmyCv: '你的軍隊', lvl: n => `第 ${n} 關`,
+    onlineBtn: '🌐 連線對戰', viewTrack: '👁 看跑道', leaveRoom: '✕ 離開房間', rematch: '▶ 再來一局', waitHost: '⏳ 等房主開新局',
+    raceN: n => `第 ${n} 場／共 3 場`, racers: '比賽中', waitOthers: '你已抵達終點！等待其他人跑完…',
+    finished: '✓ 抵達', running: '跑步中', offlineTag: '離線', leftTag: '已離開', watching: '👀 你正在觀戰',
+    raceResult: n => `第 ${n} 場結果`, finalResult: '🏆 總成績', nextRace: s => `下一場 ${s} 秒後開始…`,
+    colRank: '名次', colPlayer: '玩家', colArmy: '人數', colPts: '得分', colTotal: '總分',
+    champion: n => `🏆 ${n} 獲得冠軍！`, coChamps: n => `🤝 ${n} 並列冠軍！`, youChamp: '🏆 你是冠軍！',
+    ptsRule: '每場依人數排名得分：第 1 名 3 分、第 2 名 2 分、第 3 名 1 分。人數相同時，先到終點的排前面。',
+    stoleFrom: (a, n) => `🟣 ${a} 搶走了你 ${n} 人！`, halvedBy: a => `🟣 ${a} 把你的人數砍半了！`,
+    youStole: (b, n) => `🟣 你搶走了 ${b} ${n} 人！`, youHalved: b => `🟣 你把 ${b} 的人數砍半！`,
+    stealGate: '紫色搶人門：搶走人數最多的對手 25% 的人，或把他的人數砍半！',
+    stealLegend: '搶人門（搶最多的人）', colArmySum: '三場總人數',
+    cpuName: lv => `電腦（${({ easy: '簡單', medium: '中等', hard: '困難' })[lv]}）`, you2: '你',
   },
   en: {
     pageTitle: 'Count Masters', title: 'Count Masters', howTo: 'How to Play', pause: '⏸ Pause', resume: '▶ Resume',
@@ -302,12 +371,25 @@ SillyI18n.add({
         <li><span class="icon">🟢</span> Go through <b style="color:#4ade80">green gates</b> to multiply or add stickmen</li>
         <li><span class="icon">🔴</span> Avoid <b style="color:#f87171">red gates</b> — they shrink your army!</li>
         <li><span class="icon">⚔️</span> At the end, your army battles the enemy crowd</li>
-        <li><span class="icon">🏆</span> Bring more stickmen than the enemy to win!</li>`,
+        <li><span class="icon">🏆</span> Bring more stickmen than the enemy to win!</li>
+        <li><span class="icon">🌐</span> Online race: 2–4 players run the same track over 3 races — the biggest army scores most, and purple gates steal from the leader!</li>`,
     cont: n => `▶ Continue (Level ${n})`, startGame: '▶ Start Game', newGame: '↺ New Game', resumeGame: '▶ Resume Game',
     victory: '🎉 Victory!', nextLevel: 'Next Level ▶', playAgain: '↺ Play Again',
     levelClear: '🏆 Level Clear!', defeatedWith: n => `You defeated the enemy with ${n} stickmen remaining!`, levelDone: n => `Level ${n} complete!`,
     defeated: '💀 Defeated!', outnumbered: 'Your army was outnumbered!', reached: (n, s) => `You reached Level ${n} with a score of ${s}`,
     safe: 'SAFE', battleZone: 'BATTLE ZONE', enemyCv: 'ENEMY', yourArmyCv: 'YOUR ARMY', lvl: n => `LVL ${n}`,
+    onlineBtn: '🌐 Online Race', viewTrack: '👁 View Track', leaveRoom: '✕ Leave Room', rematch: '▶ Play Again', waitHost: '⏳ Waiting for host',
+    raceN: n => `Race ${n} of 3`, racers: 'Racers', waitOthers: "You made it! Waiting for the others to finish…",
+    finished: '✓ Finished', running: 'Running', offlineTag: 'offline', leftTag: 'left', watching: "👀 You're watching",
+    raceResult: n => `Race ${n} Results`, finalResult: '🏆 Final Standings', nextRace: s => `Next race starts in ${s}s…`,
+    colRank: '#', colPlayer: 'Player', colArmy: 'Army', colPts: 'Points', colTotal: 'Total',
+    champion: n => `🏆 ${n} is the champion!`, coChamps: n => `🤝 Joint champions: ${n}!`, youChamp: "🏆 You're the champion!",
+    ptsRule: 'Each race: 1st gets 3 points, 2nd 2, 3rd 1 — ranked by army size; on a tie, whoever finished first ranks higher.',
+    stoleFrom: (a, n) => `🟣 ${a} stole ${n} of your army!`, halvedBy: a => `🟣 ${a} halved your army!`,
+    youStole: (b, n) => `🟣 You stole ${n} from ${b}!`, youHalved: b => `🟣 You halved ${b}'s army!`,
+    stealGate: 'Purple steal gates: take 25% from the biggest army, or halve it!',
+    stealLegend: 'Steal from the leader', colArmySum: 'Army (3 races)',
+    cpuName: lv => `CPU (${({ easy: 'Easy', medium: 'Medium', hard: 'Hard' })[lv]})`, you2: 'you',
   },
 });
 </script>
@@ -515,6 +597,7 @@ let dashOffset = 0;
 let savedGameState = null;
 
 // ─── SAVE / LOAD ─────────────────────────────────────────────
+const sfOk = () => { try { return typeof SillyFirebase !== 'undefined'; } catch (e) { return false; } };
 const CM_SAVE_KEY  = 'countMasters_save';
 const CM_GUEST_KEY = 'countMasters_guest_save';
 let savedLevel   = 0;    // 0 = no save; N > 1 = continue from level N
@@ -526,19 +609,19 @@ function saveProgress() {
     data.uid = gamePlayedAs;
     localStorage.setItem(CM_SAVE_KEY, JSON.stringify(data));
     localStorage.setItem(`countMasters_save_${gamePlayedAs}`, JSON.stringify(data));
-    if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('countMasters', data);
+    if (sfOk()) SillyFirebase.saveProgress('countMasters', data);
   } else {
     sessionStorage.setItem(CM_GUEST_KEY, JSON.stringify(data));
   }
 }
 
 function clearSaveProgress() {
-  const uid = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+  const uid = (sfOk() && SillyFirebase.currentUser)
     ? SillyFirebase.currentUser.uid : null;
   if (uid) {
     localStorage.removeItem(CM_SAVE_KEY);
     localStorage.removeItem(`countMasters_save_${uid}`);
-    if (typeof SillyFirebase !== 'undefined') SillyFirebase.saveProgress('countMasters', null);
+    if (sfOk()) SillyFirebase.saveProgress('countMasters', null);
   } else {
     sessionStorage.removeItem(CM_GUEST_KEY);
   }
@@ -577,6 +660,7 @@ function gateValue(gate) {
   return 0;
 }
 
+const isSteal = g => g.op === 'steal' || g.op === 'half';
 function isGoodGate(gate) {
   const { op, v } = gate;
   if (op === 'x' || op === '+') return true;
@@ -584,11 +668,13 @@ function isGoodGate(gate) {
 }
 
 function gateLabel(gate) {
+  if (gate.op === 'steal') return 'STEAL ' + gate.v + '%';
+  if (gate.op === 'half') return 'TOP ÷2';
   const sym = { 'x':'×', '+':'+', '-':'−', '/':'÷' };
   return sym[gate.op] + gate.v;
 }
 
-function buildLevel(lvl) {
+function buildLevel(lvl, rng = Math.random) {
   objects = [];
   const cfg = LEVEL_CFG[Math.min(lvl - 1, LEVEL_CFG.length - 1)];
   scrollSpeed = cfg.speed + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 0.15 : 0);
@@ -598,22 +684,22 @@ function buildLevel(lvl) {
   levelLength = 600 + gateCount * spacing; // level grows to fit all gates
 
   // Shuffle gate pairs for this level
-  const shuffled = [...GATE_PAIRS].sort(() => Math.random() - 0.5);
+  const shuffled = [...GATE_PAIRS].map(g => [rng(), g]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
 
   for (let i = 0; i < gateCount; i++) {
     const dist = 300 + i * spacing;
     const pair = shuffled[i % shuffled.length];
 
     // Randomize which side is good/bad
-    const flip = Math.random() < 0.5;
+    const flip = rng() < 0.5;
     const left  = flip ? pair[0] : pair[1];
     const right = flip ? pair[1] : pair[0];
 
     objects.push({ type: 'gate', dist, left, right, triggered: false });
 
     // Occasional obstacle between gates (less frequent with more gates)
-    if (i < gateCount - 1 && Math.random() < 0.25) {
-      objects.push({ type: 'obstacle', dist: dist + spacing * 0.6, side: Math.random() < 0.5 ? 'left' : 'right', triggered: false });
+    if (i < gateCount - 1 && rng() < 0.25) {
+      objects.push({ type: 'obstacle', dist: dist + spacing * 0.6, side: rng() < 0.5 ? 'left' : 'right', triggered: false });
     }
   }
 
@@ -626,7 +712,7 @@ function buildLevel(lvl) {
 //  INIT
 // ═══════════════════════════════════════════════
 function initGame(keepCount = false) {
-  gamePlayedAs = (typeof SillyFirebase !== 'undefined' && SillyFirebase.currentUser)
+  gamePlayedAs = (sfOk() && SillyFirebase.currentUser)
     ? SillyFirebase.currentUser.uid : null;
   if (level > 1) saveProgress(); // save current level so Continue resumes exactly here
   const cfg = LEVEL_CFG[Math.min(level - 1, LEVEL_CFG.length - 1)];
@@ -648,6 +734,7 @@ function initGame(keepCount = false) {
 function applyGate(gate) {
   const prev = count;
   const { op, v } = gate;
+  if (isSteal(gate)) { if (window.Race) Race.onSteal(gate); updateUI(); return; }
   if (op === 'x') count = Math.max(1, count * v);
   else if (op === '+') count = count + v;
   else if (op === '-') count = Math.max(1, count - v);
@@ -895,9 +982,10 @@ function drawGate(obj, distAhead) {
   const depth = 5 * sc;     // 3-D side depth
 
   function drawHalf(x, gate, good) {
-    const col     = good ? '#22c55e' : '#ef4444';
-    const colDark = good ? '#15803d' : '#b91c1c';
-    const colGlow = good ? 'rgba(34,197,94,0.18)' : 'rgba(239,68,68,0.18)';
+    const st = isSteal(gate);
+    const col     = st ? '#a855f7' : good ? '#22c55e' : '#ef4444';
+    const colDark = st ? '#6b21a8' : good ? '#15803d' : '#b91c1c';
+    const colGlow = st ? 'rgba(168,85,247,0.25)' : good ? 'rgba(34,197,94,0.18)' : 'rgba(239,68,68,0.18)';
 
     // Glow halo
     ctx.fillStyle = colGlow;
@@ -942,7 +1030,7 @@ function drawGate(obj, distAhead) {
     ctx.fill();
 
     // Label
-    const fs = Math.max(9, Math.round(22 * sc));
+    const fs = Math.max(9, Math.round((st ? 15 : 22) * sc));
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${fs}px Segoe UI, system-ui, sans-serif`;
     ctx.textAlign = 'center';
@@ -1158,8 +1246,9 @@ function update() {
   if (keys['ArrowLeft'])  targetX = Math.max(-(ROAD_HW - 20), targetX - 5);
   if (keys['ArrowRight']) targetX = Math.min(ROAD_HW - 20, targetX + 5);
 
-  // Progress
-  levelProgress += scrollSpeed;
+  // Progress (online race: a wall hit stuns the crowd for a moment)
+  if (window.Race && Race.active) { Race.frames++; if (Race.stun > 0) Race.stun--; else levelProgress += scrollSpeed; }
+  else levelProgress += scrollSpeed;
 
   // Update objects
   objects.forEach(obj => {
@@ -1189,8 +1278,14 @@ function update() {
           const ang = Math.random() * Math.PI * 2;
           sparks.push({ x: sx, y: CROWD_Y - 20, vx: Math.cos(ang) * (1 + Math.random() * 4), vy: Math.sin(ang) * (1 + Math.random() * 4) - 1, color: '#f87171', life: 1 });
         }
+        if (window.Race && Race.active) Race.stun = 45;
         updateUI();
       }
+    }
+
+    if (obj.type === 'finish' && distAhead <= 80) {
+      obj.triggered = true;
+      Race.finish();
     }
 
     if (obj.type === 'enemy' && distAhead <= 80) {
@@ -1293,7 +1388,7 @@ function drawRunning() {
     .sort((a, b) => (b.dist - levelProgress) - (a.dist - levelProgress));
 
   // Draw finish banner (just before enemy)
-  const enemyObj = objects.find(o => o.type === 'enemy');
+  const enemyObj = objects.find(o => o.type === 'enemy' || o.type === 'finish');
   if (enemyObj) {
     const fDist = (enemyObj.dist - 80) - levelProgress;
     if (fDist > 1 && fDist < VIEW_DIST) drawFinish(fDist);
@@ -1356,22 +1451,29 @@ function drawRunning() {
   ctx.font = '10px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText(SillyI18n.en('lvl', level), VP_X, CH - 14);
+  ctx.fillText(window.Race && Race.active ? `RACE ${Race.race} / 3` : SillyI18n.en('lvl', level), VP_X, CH - 14);
+  if (window.Race && Race.active) Race.drawOverlay();
 }
 
 // ═══════════════════════════════════════════════
 //  MAIN LOOP
 // ═══════════════════════════════════════════════
-function loop() {
-  if (gameState === 'running') {
-    update();
-    drawRunning();
-    requestAnimationFrame(loop);
-  } else if (gameState === 'battle') {
-    updateBattle();
-    drawBattle();
-    requestAnimationFrame(loop);
+let lastTs = 0, stepAcc = 0;
+const STEP = 1000 / 60;
+function loop(ts) {
+  if (gameState !== 'running' && gameState !== 'battle') { lastTs = 0; return; }
+  ts = ts || performance.now();
+  stepAcc += lastTs ? Math.min(250, ts - lastTs) : STEP;
+  lastTs = ts;
+  while (stepAcc >= STEP) {
+    stepAcc -= STEP;
+    if (gameState === 'running') update();
+    else if (gameState === 'battle') updateBattle();
+    else break;
   }
+  if (gameState === 'running') drawRunning();
+  else if (gameState === 'battle') drawBattle();
+  if (gameState === 'running' || gameState === 'battle') requestAnimationFrame(loop); else lastTs = 0;
 }
 
 // ═══════════════════════════════════════════════
@@ -1494,11 +1596,461 @@ document.getElementById('resultExitBtn').addEventListener('click', () => { windo
   drawCountBadge(VP_X, CROWD_Y + 28, 10, '#06b6d4', 'rgba(5,20,40,0.85)');
 })();
 </script>
+<script>
+// ═══════════════════════════════════════════════
+//  ONLINE RACE (games/shared/online.js)
+//  2–4 players run the same track (same seed) on their own devices.
+//  3 races; each race ranks by army size (then finish time); 3/2/1/0 points.
+//  Fast data (progress, army, steal events) goes through the room's "live" channel,
+//  one doc per player; the host runs the CPU racers and decides when a race is over.
+// ═══════════════════════════════════════════════
+const Race = window.Race = {
+  online: false, active: false, done: false,
+  race: 0, seed: 0, round: -1, frames: 0, stun: 0,
+  events: [], applied: new Set(), live: {}, unLive: null,
+  lastPush: 0, countdownTimer: null, hostTimer: null, nextTimer: null,
+  cpus: {},            // host only: seat -> CPU racer
+  raceStartAt: 0,      // local time the current race started (after the countdown)
+  resultSeenAt: 0, resultKey: '', key: '',
+};
+const RACE_COLORS = ['#06b6d4', '#f59e0b', '#a855f7', '#ef4444'];
+const POINTS = [3, 2, 1, 0];
+const CPU_SKILL = { easy: { gate: 0.55, wall: 0.5 }, medium: { gate: 0.8, wall: 0.78 }, hard: { gate: 0.96, wall: 0.95 } };
+const tt = (k, ...a) => SillyI18n.t(k, ...a);
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+// the track for race n with this seed — identical on every device
+function raceTrack(n, seed) {
+  const saved = { objects, levelLength, scrollSpeed };
+  const rng = mulberry32(seed);
+  buildLevel(n, rng);
+  const objs = objects.filter(o => o.type !== 'enemy');
+  const gates = objs.filter(o => o.type === 'gate');
+  // 1–2 purple steal gates: they replace the weaker side of a pair
+  const nSteal = 1 + (rng() < 0.6 ? 1 : 0);
+  const picks = new Set();
+  while (picks.size < nSteal) picks.add(2 + Math.floor(rng() * Math.max(1, gates.length - 4)));
+  for (const i of picks) {
+    const g = gates[i];
+    const special = rng() < 0.6 ? { op: 'steal', v: 25 } : { op: 'half', v: 2 };
+    if (!isGoodGate(g.left)) g.left = special; else g.right = special;
+  }
+  objs.push({ type: 'finish', dist: levelLength - 180, triggered: false });
+  const out = { objects: objs, levelLength, speed: scrollSpeed };
+  objects = saved.objects; levelLength = saved.levelLength; scrollSpeed = saved.scrollSpeed;
+  return out;
+}
+const cloneTrack = tr => tr.objects.map(o => Object.assign({}, o, { triggered: false }));
+
+// ── who is who ──
+const room = () => SillyOnline.room;
+const mySeat = () => SillyOnline.mySeat();
+const seatId = i => { const s = room() && room().seats[i]; return !s ? null : s.cpu ? 'cpu' + i : s.id; };
+function seatName(i) {
+  const s = room() && room().seats[i];
+  if (!s) return '';
+  const nm = s.cpu ? tt('cpuName', s.level) : s.name;
+  return nm + (i === mySeat() ? (SillyI18n.lang === 'zh' ? `（${tt('you2')}）` : ` (${tt('you2')})`) : '');
+}
+// latest progress of seat i in the current race (from the live channel, or my own state)
+function liveOf(i) {
+  if (i === mySeat() && Race.race) return { round: Race.round, race: Race.race, count, prog: Math.min(1, levelProgress / (levelLength - 180)), done: Race.done, t: Race.frames };
+  const L = Race.live[seatId(i)];
+  return L && L.round === Race.round && L.race === Race.race ? L : null;
+}
+function targetCount(i) { const c = Race.cpus[i]; if (c && c.race === Race.race) return c.count; const L = liveOf(i); return L ? L.count : 10; }
+// the opponent with the biggest army who is still running
+function pickTarget(from) {
+  let best = -1, bc = -1;
+  (room() ? room().seats : []).forEach((s, i) => {
+    if (i === from || !s) return;
+    const c = Race.cpus[i];
+    const L = c && c.race === Race.race ? c : liveOf(i);
+    if (!L || L.done) return;
+    if (L.count > bc) { bc = L.count; best = i; }
+  });
+  return best;
+}
+
+// ── my run ──
+function pushLive(force) {
+  const now = Date.now();
+  if (!force && now - Race.lastPush < 1000) return;
+  Race.lastPush = now;
+  const me = mySeat(); if (me < 0 || !Race.race) return;
+  SillyOnline.liveSet(SillyOnline.me.id, {
+    seat: me, round: Race.round, race: Race.race, count,
+    prog: Math.min(1, levelProgress / (levelLength - 180)), done: Race.done, t: Race.frames,
+    ev: Race.events.slice(-20), at: now,
+  });
+}
+Race.onSteal = function (gate) {
+  const me = mySeat();
+  const target = pickTarget(me);
+  const sx = VP_X + crowdX;
+  if (gate.op === 'steal') {
+    // take 25 % of the leader's army (at least 5)
+    const n = target >= 0 ? Math.max(5, Math.floor(targetCount(target) * gate.v / 100)) : 5;
+    count += n;
+    floats.push({ x: sx, y: CROWD_Y - 50, text: '+' + n, color: '#c084fc', life: 1 });
+    if (target >= 0) { Race.events.push({ id: `${me}-${Race.round}-${Race.race}-${Race.events.length}`, to: target, kind: 'steal', n, race: Race.race }); toast(tt('youStole', seatName(target), n)); }
+  } else if (target >= 0) {
+    Race.events.push({ id: `${me}-${Race.round}-${Race.race}-${Race.events.length}`, to: target, kind: 'half', race: Race.race });
+    toast(tt('youHalved', seatName(target)));
+  }
+  playGreenGate('x');
+  for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2; sparks.push({ x: sx, y: CROWD_Y - 20, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3 - 1, color: '#c084fc', life: 1 }); }
+  pushLive(true);
+};
+Race.finish = function () {
+  Race.done = true; Race.active = false;
+  gameState = 'idle';
+  pushLive(true);
+  playVictory();
+  drawWaiting();
+  renderBoard();
+};
+function startRun() {
+  clearInterval(Race.countdownTimer); Race.countdownTimer = null;
+  const tr = raceTrack(Race.race, Race.seed);
+  objects = cloneTrack(tr); levelLength = tr.levelLength; scrollSpeed = tr.speed;
+  count = 10; crowdX = 0; targetX = 0; levelProgress = 0; frame = 0; floats = []; sparks = [];
+  Race.frames = 0; Race.stun = 0; Race.done = false; Race.events = []; Race.active = true;
+  gameState = 'running';
+  updateUI();
+  pushLive(true);
+  requestAnimationFrame(loop);
+}
+// 3-2-1 before every race (also starts the host's CPU racers)
+function countdown() {
+  clearInterval(Race.countdownTimer);
+  gameState = 'idle'; Race.active = false;
+  const goAt = Date.now() + 3200;
+  let started = false;
+  const tick = () => {
+    const left = goAt - Date.now();
+    drawRoad();
+    drawCrowd(VP_X, CROWD_Y, 10, Math.floor(Date.now() / 83) % 16, '#e2e8f0');
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = '#fbbf24'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 22px Segoe UI, sans-serif'; ctx.fillText(`RACE ${Race.race} / 3`, VP_X, CH / 2 - 90);
+    ctx.font = 'bold 110px Segoe UI, sans-serif';
+    ctx.fillText(left > 0 ? String(Math.ceil(left / 1000)) : 'GO!', VP_X, CH / 2);
+    if (left <= -250 && !started) {
+      started = true;
+      Race.raceStartAt = Date.now();
+      if (SillyOnline.isHost()) startCpus();
+      if (mySeat() >= 0) startRun();
+      else { clearInterval(Race.countdownTimer); drawWatching(); }
+    }
+  };
+  tick();
+  Race.countdownTimer = setInterval(tick, 100);
+}
+function drawWaiting() {
+  drawRunning();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = '#fbbf24'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 44px Segoe UI, sans-serif'; ctx.fillText('FINISH!', VP_X, CH / 2 - 40);
+  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 18px Segoe UI, sans-serif';
+  ctx.fillText(`ARMY: ${count}`, VP_X, CH / 2 + 10);
+  ctx.fillStyle = '#aab4c5'; ctx.font = '15px Segoe UI, sans-serif';
+  ctx.fillText('WAITING FOR OTHERS…', VP_X, CH / 2 + 44);
+}
+function drawWatching() {
+  drawRoad();
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = '#e2e8f0'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 30px Segoe UI, sans-serif'; ctx.fillText('WATCHING', VP_X, CH / 2);
+}
+Race.drawOverlay = function () { pushLive(false); };
+
+// ── incoming steals ──
+function applyEvents() {
+  const me = mySeat();
+  for (const L of Object.values(Race.live)) {
+    if (!L || L.round !== Race.round || L.race !== Race.race || !Array.isArray(L.ev)) continue;
+    for (const e of L.ev) {
+      if (Race.applied.has(e.id) || e.race !== Race.race) continue;
+      const c = Race.cpus[e.to];
+      if (e.to === me) {
+        if (!Race.active || Race.done) { Race.applied.add(e.id); continue; }
+        Race.applied.add(e.id);
+        const before = count;
+        count = e.kind === 'half' ? Math.max(1, Math.ceil(count / 2)) : Math.max(1, count - e.n);
+        floats.push({ x: VP_X + crowdX, y: CROWD_Y - 50, text: '−' + (before - count), color: '#c084fc', life: 1 });
+        playRedGate('/');
+        toast(e.kind === 'half' ? tt('halvedBy', seatName(L.seat)) : tt('stoleFrom', seatName(L.seat), e.n));
+        updateUI(); pushLive(true);
+      } else if (c && c.race === Race.race) {
+        Race.applied.add(e.id);
+        if (!c.done) c.count = e.kind === 'half' ? Math.max(1, Math.ceil(c.count / 2)) : Math.max(1, c.count - e.n);
+      }
+    }
+  }
+}
+
+// ── host: CPU racers ──
+function startCpus() {
+  Race.cpus = {};
+  const tr = raceTrack(Race.race, Race.seed);
+  room().seats.forEach((s, i) => {
+    if (s && s.cpu) Race.cpus[i] = { race: Race.race, objs: cloneTrack(tr), len: tr.levelLength, speed: tr.speed, prog: 0, count: 10, frames: 0, stun: 0, done: false, ev: [], level: s.level, lastPush: 0, rng: mulberry32(Race.seed ^ ((i + 1) * 7919)) };
+  });
+}
+function gateGain(g, c, hasTarget) {
+  if (g.op === 'x') return c * g.v - c;
+  if (g.op === '+') return g.v;
+  if (g.op === '-') return -Math.min(g.v, c - 1);
+  if (g.op === '/') return -(c - Math.ceil(c / g.v));
+  if (g.op === 'steal') return hasTarget ? Math.max(5, Math.floor(hasTarget * g.v / 100)) : 5;
+  if (g.op === 'half') return hasTarget ? Math.floor(hasTarget / 4) : 0;
+  return 0;
+}
+function stepCpu(i, c, n) {
+  const sk = CPU_SKILL[c.level] || CPU_SKILL.medium;
+  for (let k = 0; k < n && !c.done; k++) {
+    c.frames++;
+    if (c.stun > 0) c.stun--; else c.prog += c.speed;
+    for (const o of c.objs) {
+      if (o.triggered) continue;
+      const ahead = o.dist - c.prog;
+      if (ahead > (o.type === 'finish' ? 80 : 30)) continue;
+      o.triggered = true;
+      if (o.type === 'gate') {
+        const tgt = pickTarget(i), tc = tgt >= 0 ? targetCount(tgt) : 0;
+        const gl = gateGain(o.left, c.count, tc), gr = gateGain(o.right, c.count, tc);
+        let g = gl >= gr ? o.left : o.right;
+        if (c.rng() > sk.gate) g = g === o.left ? o.right : o.left;
+        if (isSteal(g)) {
+          const n = g.op === 'steal' ? (tgt >= 0 ? Math.max(5, Math.floor(tc * g.v / 100)) : 5) : 0;
+          if (g.op === 'steal') c.count += n;
+          if (tgt >= 0) c.ev.push({ id: `c${i}-${Race.round}-${Race.race}-${c.ev.length}`, to: tgt, kind: g.op, n, race: Race.race });
+        } else if (g.op === 'x') c.count *= g.v;
+        else if (g.op === '+') c.count += g.v;
+        else if (g.op === '-') c.count = Math.max(1, c.count - g.v);
+        else if (g.op === '/') c.count = Math.max(1, Math.ceil(c.count / g.v));
+      } else if (o.type === 'obstacle') {
+        if (c.rng() > sk.wall) { c.count = Math.max(1, c.count - Math.max(1, Math.floor(c.count * 0.25))); c.stun = 45; }
+      } else if (o.type === 'finish') c.done = true;
+    }
+  }
+}
+function hostTick() {
+  const r = room();
+  if (!Race.online || !r || !r.state || !SillyOnline.isHost()) return;
+  const st = r.state;
+  if (st.phase === 'run' && st.race === Race.race && Race.raceStartAt) {
+    // advance CPU racers in fixed 1/60 s steps
+    const due = Math.floor((Date.now() - Race.raceStartAt) / STEP);
+    for (const [i, c] of Object.entries(Race.cpus)) {
+      if (c.race !== Race.race) continue;
+      stepCpu(+i, c, due - c.frames);
+      if (Date.now() - c.lastPush > 1000 || (c.done && !c.pushedDone)) {
+        c.lastPush = Date.now(); if (c.done) c.pushedDone = true;
+        SillyOnline.liveSet('cpu' + i, { seat: +i, round: Race.round, race: Race.race, count: c.count, prog: Math.min(1, c.prog / (c.len - 180)), done: c.done, t: c.frames, ev: c.ev.slice(-20), at: Date.now() });
+      }
+    }
+    // is everyone home? (left / offline / over 2 minutes count as finished with what they have)
+    const timeUp = Date.now() - Race.raceStartAt > 120000;
+    const fin = r.seats.map((s, i) => {
+      if (!s) return true;
+      if (s.cpu) return !!(Race.cpus[i] && Race.cpus[i].done);
+      const L = liveOf(i);
+      return !!(L && L.done) || !!s.left || !SillyOnline.isOnline(r, s.id) || timeUp;
+    });
+    if (fin.every(Boolean)) {
+      const rows = r.seats.map((s, i) => {
+        const c = Race.cpus[i]; const L = c ? { count: c.count, t: c.frames, done: c.done } : liveOf(i);
+        return { seat: i, count: L ? L.count : 0, t: L && L.done ? L.t : 999999 };
+      });
+      const race = Race.race;
+      SillyOnline.mutate(rr => {
+        if (!rr.state || rr.state.phase !== 'run' || rr.state.race !== race) return;
+        const ranked = rows.slice().sort((a, b) => b.count - a.count || a.t - b.t);
+        ranked.forEach(x => {
+          const better = ranked.filter(y => y.count > x.count || (y.count === x.count && y.t < x.t)).length;
+          x.rank = better + 1; x.pts = POINTS[Math.min(better, 3)];
+          rr.state.points[x.seat] = (rr.state.points[x.seat] || 0) + x.pts;
+          rr.state.sums[x.seat] = (rr.state.sums[x.seat] || 0) + x.count;
+        });
+        rr.state.results[race] = ranked;
+        rr.state.phase = 'result';
+        return rr;
+      });
+    }
+  } else if (st.phase === 'result' && Race.resultSeenAt && Date.now() - Race.resultSeenAt > 6500) {
+    const race = st.race;
+    Race.resultSeenAt = 0;
+    SillyOnline.mutate(rr => {
+      if (!rr.state || rr.state.phase !== 'result' || rr.state.race !== race) return;
+      if (race >= 3) rr.state.phase = 'done';
+      else { rr.state.race = race + 1; rr.state.seed = (Math.random() * 2 ** 31) | 0; rr.state.phase = 'run'; }
+      return rr;
+    });
+  }
+}
+
+// ── side board ──
+function renderBoard() {
+  const r = room(); if (!Race.online || !r) return;
+  const st = r.state || {};
+  document.getElementById('rbTitle').textContent = st.race ? tt('raceN', st.race) : tt('racers');
+  document.getElementById('rbRows').innerHTML = r.seats.map((s, i) => {
+    if (!s) return '';
+    const c = Race.cpus[i];
+    const L = c && c.race === Race.race ? { count: c.count, prog: Math.min(1, c.prog / (c.len - 180)), done: c.done } : liveOf(i);
+    const off = !s.cpu && s.id !== SillyOnline.me.id && !SillyOnline.isOnline(r, s.id);
+    const status = s.left ? tt('leftTag') : off ? tt('offlineTag') : L && L.done ? tt('finished') : tt('running');
+    const pts = (st.points || {})[i] || 0;
+    return `<div class="rb-row"><div class="rb-top"><span class="dot" style="background:${RACE_COLORS[i]}"></span>
+      <span class="nm">${SillyOnline.esc(seatName(i))}</span><span class="ct">${L ? L.count : 10}</span></div>
+      <div class="rb-bar"><i style="width:${Math.round((L ? L.prog : 0) * 100)}%"></i></div>
+      <div class="rb-sub">${status} · ${pts} ${SillyI18n.lang === 'zh' ? '分' : 'pts'}</div></div>`;
+  }).join('');
+  const note = mySeat() < 0 ? tt('watching') : Race.done && st.phase === 'run' ? tt('waitOthers') : tt('stealGate');
+  document.getElementById('rbNote').textContent = note;
+}
+
+// ── results ──
+function showRaceResult(st, final) {
+  const r = room();
+  const me = mySeat();
+  const medal = k => k === 1 ? '🥇' : k === 2 ? '🥈' : k === 3 ? '🥉' : k;
+  let title, sub;
+  if (!final) {
+    const res = st.results[st.race] || [];
+    title = tt('raceResult', st.race);
+    document.getElementById('raceTable').innerHTML =
+      `<tr><th>${tt('colRank')}</th><th>${tt('colPlayer')}</th><th class="num">${tt('colArmy')}</th><th class="num">${tt('colPts')}</th><th class="num">${tt('colTotal')}</th></tr>` +
+      res.map(x => `<tr class="${x.seat === me ? 'me' : ''} ${x.rank === 1 ? 'top' : ''}"><td>${medal(x.rank)}</td>
+        <td><span style="color:${RACE_COLORS[x.seat]}">●</span> ${SillyOnline.esc(seatName(x.seat))}</td><td class="num">${x.count}</td><td class="num">+${x.pts}</td><td class="num">${st.points[x.seat] || 0}</td></tr>`).join('');
+    sub = tt('ptsRule');
+  } else {
+    title = tt('finalResult');
+    const seats = r.seats.map((s, i) => i).filter(i => r.seats[i]);
+    const ranked = seats.map(i => ({ seat: i, pts: st.points[i] || 0, sum: st.sums[i] || 0 })).sort((a, b) => b.pts - a.pts || b.sum - a.sum);
+    ranked.forEach(x => { x.rank = ranked.filter(y => y.pts > x.pts || (y.pts === x.pts && y.sum > x.sum)).length + 1; });
+    const champs = ranked.filter(x => x.rank === 1);
+    sub = champs.length > 1 ? tt('coChamps', champs.map(x => seatName(x.seat)).join(SillyI18n.lang === 'zh' ? '、' : ', '))
+      : champs[0].seat === me ? tt('youChamp') : tt('champion', seatName(champs[0].seat));
+    document.getElementById('raceTable').innerHTML =
+      `<tr><th>${tt('colRank')}</th><th>${tt('colPlayer')}</th><th class="num">${tt('colArmySum')}</th><th class="num">${tt('colTotal')}</th></tr>` +
+      ranked.map(x => `<tr class="${x.seat === me ? 'me' : ''} ${x.rank === 1 ? 'top' : ''}"><td>${x.rank === 1 ? '🏆' : x.rank}</td>
+        <td><span style="color:${RACE_COLORS[x.seat]}">●</span> ${SillyOnline.esc(seatName(x.seat))}</td><td class="num">${x.sum}</td><td class="num">${x.pts}</td></tr>`).join('');
+    if (me >= 0) champs.some(x => x.seat === me) ? playVictory() : playDefeat();
+  }
+  document.getElementById('raceTitle').textContent = title;
+  document.getElementById('raceSub').textContent = sub;
+  const again = document.getElementById('raceAgainBtn');
+  again.textContent = SillyOnline.isHost() ? tt('rematch') : tt('waitHost');
+  again.disabled = !SillyOnline.isHost();
+  document.getElementById('raceBtns').style.display = final ? '' : 'none';
+  clearInterval(Race.nextTimer);
+  if (!final && st.race < 3) {
+    const at = Date.now() + 6500;
+    const upd = () => { const s = Math.max(0, Math.ceil((at - Date.now()) / 1000)); document.getElementById('raceNext').textContent = tt('nextRace', s); if (!s) clearInterval(Race.nextTimer); };
+    upd(); Race.nextTimer = setInterval(upd, 250);
+  } else document.getElementById('raceNext').textContent = '';
+  document.getElementById('raceOverlay').classList.add('active');
+}
+
+// ── room updates ──
+function onRoom(r) {
+  Race.online = true;
+  document.body.classList.add('racing');
+  document.getElementById('startOverlay').classList.remove('active');
+  document.getElementById('resultOverlay').classList.remove('active');
+  if (!Race.unLive) Race.unLive = SillyOnline.liveWatch(map => { Race.live = map; applyEvents(); renderBoard(); });
+  if (!Race.hostTimer) Race.hostTimer = setInterval(() => { hostTick(); renderBoard(); }, 400);
+  const st = r.state; if (!st) return;
+  const key = r.round + ':' + st.race + ':' + st.seed;
+  if (st.phase === 'run' && key !== Race.key) {
+    Race.key = key; Race.round = r.round; Race.race = st.race; Race.seed = st.seed;
+    Race.applied = new Set(); Race.cpus = {}; Race.raceStartAt = 0; Race.done = false;
+    document.getElementById('raceOverlay').classList.remove('active');
+    countdown();
+  } else if (st.phase === 'result' && Race.resultKey !== key) {
+    Race.resultKey = key; Race.resultSeenAt = Date.now();
+    Race.active = false; if (gameState === 'running') gameState = 'idle';
+    showRaceResult(st, false);
+  } else if (st.phase === 'done' && Race.resultKey !== key + ':done') {
+    Race.resultKey = key + ':done';
+    Race.active = false; if (gameState === 'running') gameState = 'idle';
+    showRaceResult(st, true);
+  }
+  renderBoard();
+}
+function raceExit() {
+  clearInterval(Race.countdownTimer); clearInterval(Race.hostTimer); clearInterval(Race.nextTimer);
+  Race.hostTimer = null; if (Race.unLive) Race.unLive(); Race.unLive = null;
+  Object.assign(Race, { online: false, active: false, done: false, race: 0, key: '', resultKey: '', cpus: {}, live: {} });
+  document.body.classList.remove('racing');
+  document.getElementById('raceOverlay').classList.remove('active');
+  gameState = 'idle';
+  drawRoad(); drawCrowd(VP_X, CROWD_Y, 10, 0, '#e2e8f0');
+  updateStartPanel();
+  document.getElementById('startOverlay').classList.add('active');
+}
+async function raceLeave() {
+  await SillyOnline.leave();      // the live doc stays, so the race can still count my last army
+}
+let toastT = null;
+function toast(msg) {
+  const el = document.getElementById('raceToast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+SillyOnline.mount({
+  game: 'count-masters',
+  title: { zh: '人海大作戰', en: 'Count Masters' },
+  seats: 2,
+  seatCounts: [2, 3, 4],
+  defaultSeats: () => 2,
+  seatLabel: (i, l) => (l === 'zh' ? ['藍', '橘', '紫', '紅'] : ['Blue', 'Orange', 'Purple', 'Red'])[i],
+  seatColor: i => RACE_COLORS[i],
+  cpuLevels: ['easy', 'medium', 'hard'],
+  newState: () => ({ race: 1, seed: (Math.random() * 2 ** 31) | 0, phase: 'run', results: {}, points: {}, sums: {} }),
+  onRoom: r => onRoom(r),
+  onExit: () => raceExit(),
+  onCancelEntry: () => document.getElementById('startOverlay').classList.add('active'),
+});
+
+document.getElementById('onlineBtn').addEventListener('click', () => {
+  document.getElementById('startOverlay').classList.remove('active');
+  SillyOnline.openEntry();
+});
+document.getElementById('raceAgainBtn').addEventListener('click', () => { if (SillyOnline.isHost()) SillyOnline.rematch(); });
+document.getElementById('raceCloseBtn').addEventListener('click', () => document.getElementById('raceOverlay').classList.remove('active'));
+document.getElementById('raceLeaveBtn').addEventListener('click', () => raceLeave());
+// leaving during an online race
+document.getElementById('exitBtn').addEventListener('click', async e => {
+  if (!Race.online) return;
+  e.stopImmediatePropagation();
+  if (!confirm(SillyI18n.lang === 'zh' ? '確定要離開房間嗎？' : 'Leave the room?')) return;
+  await raceLeave(); window.location.href = '../../';
+}, true);
+SillyI18n.onChange(() => {
+  if (!Race.online) return;
+  renderBoard();
+  const st = room() && room().state;
+  if (st && document.getElementById('raceOverlay').classList.contains('active')) showRaceResult(st, st.phase === 'done');
+});
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="../shared/firebase.js"></script>
 <script>
+if ((() => { try { return typeof SillyFirebase !== 'undefined'; } catch (e) { return false; } })()) {
 SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
 
 // Pre-load savedLevel from cached uid — shows Continue immediately, no pop-in
@@ -1551,6 +2103,7 @@ SillyFirebase.onAuthChanged(async user => {
     if (gameState === 'idle') updateStartPanel();
   }
 });
+}
 </script>
 </body>
 </html>

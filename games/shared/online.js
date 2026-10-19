@@ -78,7 +78,7 @@
       cpuLevel: 'CPU level', numPlayers: 'Players',
     },
   };
-  const GAME_NAMES = { chess: { zh: '西洋棋', en: 'Chess' }, go: { zh: '圍棋', en: 'Go' }, 'chinese-checkers': { zh: '跳棋', en: 'Chinese Checkers' }, rummikub: { zh: '拉密', en: 'Rummikub' } };
+  const GAME_NAMES = { chess: { zh: '西洋棋', en: 'Chess' }, go: { zh: '圍棋', en: 'Go' }, 'chinese-checkers': { zh: '跳棋', en: 'Chinese Checkers' }, rummikub: { zh: '拉密', en: 'Rummikub' }, 'count-masters': { zh: '人海大作戰', en: 'Count Masters' } };
   const lang = () => { try { const v = localStorage.getItem('sg_lang'); if (v === 'zh' || v === 'en') return v; } catch (e) {} return (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en'; };
   const t = (k, ...a) => { const v = DICT[lang()][k] ?? DICT.zh[k] ?? k; return typeof v === 'function' ? v(...a) : v; };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -117,6 +117,30 @@
       return out;
     },
     async remove(code) { localStorage.removeItem(this._key(code)); this._fire(code); },
+    // live channel: one small doc per player, written only by its owner (fast-changing data such as race progress)
+    _lkey: (code, id) => 'sgo_live_' + code + '_' + id,
+    async liveSet(code, id, data) {
+      localStorage.setItem(this._lkey(code, id), JSON.stringify(data));
+      (this._lsubs[code] || []).forEach(f => f());
+    },
+    async liveRemove(code, id) { localStorage.removeItem(this._lkey(code, id)); (this._lsubs[code] || []).forEach(f => f()); },
+    _lsubs: {},
+    liveWatch(code, cb) {
+      const pre = 'sgo_live_' + code + '_';
+      const read = () => {
+        const out = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(pre)) { try { out[k.slice(pre.length)] = JSON.parse(localStorage.getItem(k)); } catch (e) {} }
+        }
+        cb(out);
+      };
+      const onStorage = e => { if (e.key && e.key.startsWith(pre)) read(); };
+      window.addEventListener('storage', onStorage);
+      (this._lsubs[code] = this._lsubs[code] || []).push(read);
+      read();
+      return () => { window.removeEventListener('storage', onStorage); this._lsubs[code] = (this._lsubs[code] || []).filter(f => f !== read); };
+    },
     _subs: {},
     _fire(code) { (this._subs[code] || []).forEach(f => f()); },
     watch(code, cb) {
@@ -158,6 +182,14 @@
       return q.docs.map(d => d.data());
     },
     async remove(code) { await this._ref(code).delete(); },
+    _live(code, id) { return this._ref(code).collection('live').doc(id); },
+    async liveSet(code, id, data) { await this._live(code, id).set(data); },
+    async liveRemove(code, id) { await this._live(code, id).delete(); },
+    liveWatch(code, cb) {
+      return this._ref(code).collection('live').onSnapshot(q => {
+        const out = {}; q.forEach(d => { out[d.id] = d.data(); }); cb(out);
+      }, () => {});
+    },
     watch(code, cb) { return this._ref(code).onSnapshot(s => cb(s.exists ? s.data() : null), () => cb(undefined)); },
   };
 
@@ -411,6 +443,10 @@
       return false;
     },
     openEntry() { UI.entry(''); },
+    // live channel for the current room
+    liveSet(id, data) { if (!this.code) return Promise.resolve(); return this.backend.liveSet(this.code, id, data).catch(e => console.warn('[online] live', e)); },
+    liveRemove(id) { if (!this.code) return Promise.resolve(); return this.backend.liveRemove(this.code, id).catch(() => {}); },
+    liveWatch(cb) { return this.code ? this.backend.liveWatch(this.code, cb) : () => {}; },
     t, lang, esc,
   };
 
@@ -422,6 +458,12 @@
       st.id = 'sgo-css';
       st.textContent = `
         .sgo-modal { max-width: 540px; }
+        .sgo-modal .modal-icon { font-size: 2.4rem; margin-bottom: 0.4rem; }
+        .sgo-modal .modal-btns { display: flex; gap: 0.6rem; justify-content: center; margin-top: 0.4rem; }
+        .sgo-modal .pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+        .sgo-modal .pill { padding: 0.4rem 0.9rem; border-radius: 999px; border: 1px solid var(--border, #2a2a50);
+          background: var(--bg, #0d0d1a); color: var(--soft, #d3dae6); font-size: 0.92rem; font-weight: 600; cursor: pointer; }
+        .sgo-modal .pill.active { background: var(--accent, #7c3aed); color: #fff; border-color: var(--accent, #7c3aed); }
         .sgo-field { text-align: left; margin: 0.4rem 0 0.9rem; }
         .sgo-field label { display: block; font-size: 0.92rem; font-weight: 700; color: var(--muted, #aab4c5); margin-bottom: 0.35rem; }
         .sgo-input { width: 100%; padding: 0.7rem 0.9rem; border-radius: 10px; border: 1px solid var(--border, #2a2a50);

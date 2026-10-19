@@ -48,7 +48,7 @@ service cloud.firestore {
         return d.keys().hasOnly(['code', 'game', 'host', 'status', 'version', 'round', 'seats', 'members',
                                  'spectators', 'seen', 'state', 'opts', 'createdAt', 'expireAt'])
             && d.code == code
-            && d.game in ['chess', 'go', 'chinese-checkers', 'rummikub']
+            && d.game in ['chess', 'go', 'chinese-checkers', 'rummikub', 'count-masters']
             && d.status in ['lobby', 'playing']
             && d.host is string
             && d.seats is list && d.seats.size() >= 2 && d.seats.size() <= 6
@@ -103,6 +103,14 @@ service cloud.firestore {
 
       // close a room: the host, or anyone once its 24 hours are over (tidy-up when a new room is made)
       allow delete: if signedIn() && (resource.data.host == request.auth.uid || resource.data.expireAt < now());
+
+      // fast-changing per-player data (race progress): each player writes only their own doc;
+      // the host also writes the docs of CPU players ("cpu0" … "cpu5")
+      match /live/{lid} {
+        allow read: if signedIn();
+        allow write: if signedIn() && (lid == request.auth.uid
+          || (lid.matches('^cpu[0-5]$') && get(/databases/$(database)/documents/rooms/$(code)).data.host == request.auth.uid));
+      }
     }
   }
 }
