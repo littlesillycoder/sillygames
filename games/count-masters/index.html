@@ -674,13 +674,14 @@ function gateLabel(gate) {
   return sym[gate.op] + gate.v;
 }
 
-function buildLevel(lvl, rng = Math.random) {
+function buildLevel(lvl, rng = Math.random, opt = {}) {
   objects = [];
   const cfg = LEVEL_CFG[Math.min(lvl - 1, LEVEL_CFG.length - 1)];
   scrollSpeed = cfg.speed + (lvl > LEVEL_CFG.length ? (lvl - LEVEL_CFG.length) * 0.15 : 0);
 
-  const gateCount = 10 + Math.min(lvl - 1, 5);
-  const spacing = 200; // fixed 200px gap between each gate
+  const gateCount = opt.gates || (10 + Math.min(lvl - 1, 5));
+  const spacing = opt.spacing || 200; // gap between gates (online races use a little more room to change lanes)
+  const wallChance = opt.wallChance || 0.25;
   levelLength = 600 + gateCount * spacing; // level grows to fit all gates
 
   // Shuffle gate pairs for this level
@@ -698,7 +699,7 @@ function buildLevel(lvl, rng = Math.random) {
     objects.push({ type: 'gate', dist, left, right, triggered: false });
 
     // Occasional obstacle between gates (less frequent with more gates)
-    if (i < gateCount - 1 && rng() < 0.25) {
+    if (i < gateCount - 1 && rng() < wallChance) {
       objects.push({ type: 'obstacle', dist: dist + spacing * 0.6, side: rng() < 0.5 ? 'left' : 'right', triggered: false });
     }
   }
@@ -1629,7 +1630,8 @@ function mulberry32(a) {
 function raceTrack(n, seed) {
   const saved = { objects, levelLength, scrollSpeed };
   const rng = mulberry32(seed);
-  buildLevel(n, rng);
+  // online races: 20 gates, a wall between gates half of the time, a bit more room to switch lanes
+  buildLevel(n, rng, { gates: 20, spacing: 260, wallChance: 0.5 });
   const objs = objects.filter(o => o.type !== 'enemy');
   const gates = objs.filter(o => o.type === 'gate');
   // 1–2 purple steal gates: they replace the weaker side of a pair
