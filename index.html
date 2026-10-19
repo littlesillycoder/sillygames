@@ -250,6 +250,17 @@
     .tag-action   { background: rgba(239,68,68,0.2); color: #fca5a5; }
     .tag-runner   { background: rgba(249,115,22,0.2); color: #fdba74; }
     .tag-strategy { background: rgba(234,179,8,0.18); color: #fde047; }
+    .tag-online   { background: rgba(6,182,212,0.22); color: #67e8f9; }
+    .online-badge {
+      position: absolute; top: 8px; right: 8px; z-index: 2;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.28rem 0.65rem; border-radius: 999px;
+      background: rgba(8,47,73,0.88); border: 1px solid rgba(103,232,249,0.7);
+      color: #a5f3fc; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.4px;
+      box-shadow: 0 2px 10px rgba(6,182,212,0.35); backdrop-filter: blur(4px);
+    }
+    .online-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #22d3ee; box-shadow: 0 0 6px #22d3ee; animation: onlinePulse 1.6s ease-in-out infinite; }
+    @keyframes onlinePulse { 50% { opacity: 0.35; } }
 
     .card-title {
       font-size: 1.05rem;
@@ -381,6 +392,7 @@
           <button data-tag="tag-classic">Classic</button>
           <button data-tag="tag-strategy">Strategy</button>
           <button data-tag="tag-wordhunt">Word Hunt</button>
+          <button data-tag="tag-online">🌐 Online</button>
         </div>
       </div>
     </nav>
@@ -408,6 +420,7 @@
     <!-- ── Rummikub ── -->
     <a class="game-card" href="games/rummikub/">
       <div class="card-thumb">
+        <span class="online-badge"><span class="dot"></span>ONLINE</span>
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs><radialGradient id="rkf" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#1f7a5c"/><stop offset="1" stop-color="#0d3b2e"/></radialGradient>
           <linearGradient id="rkt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf5"/><stop offset="1" stop-color="#ece4cf"/></linearGradient>
@@ -426,6 +439,7 @@
         <div class="card-tags">
           <span class="tag tag-strategy">Strategy</span>
           <span class="tag tag-classic">Classic</span>
+          <span class="tag tag-online">🌐 Online</span>
         </div>
         <div class="card-title">拉密 · Rummikub</div>
         <div class="card-desc">用群組和順組把手牌全部打出去！2～4 人，可跟電腦、朋友同機或🌐連線對戰。Empty your rack first — 2 to 4 players, online too.</div>
@@ -436,6 +450,7 @@
     <!-- ── Chess ── -->
     <a class="game-card" href="games/chess/">
       <div class="card-thumb">
+        <span class="online-badge"><span class="dot"></span>ONLINE</span>
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs><linearGradient id="cprw" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#ece6d8"/><stop offset="1" stop-color="#c7bea9"/></linearGradient><linearGradient id="cpnw" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#ece6d8"/><stop offset="1" stop-color="#c7bea9"/></linearGradient><linearGradient id="cpbw" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#ece6d8"/><stop offset="1" stop-color="#c7bea9"/></linearGradient><linearGradient id="cpqw" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#ece6d8"/><stop offset="1" stop-color="#c7bea9"/></linearGradient><linearGradient id="cpkw" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#ece6d8"/><stop offset="1" stop-color="#c7bea9"/></linearGradient><linearGradient id="cppw" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#ece6d8"/><stop offset="1" stop-color="#c7bea9"/></linearGradient><linearGradient id="cpbb" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#6e6e6e"/><stop offset="0.45" stop-color="#2c2c2c"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient><linearGradient id="cppb" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#6e6e6e"/><stop offset="0.45" stop-color="#2c2c2c"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient><linearGradient id="cpnb" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#6e6e6e"/><stop offset="0.45" stop-color="#2c2c2c"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient><linearGradient id="cprb" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#6e6e6e"/><stop offset="0.45" stop-color="#2c2c2c"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient><linearGradient id="cpqb" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#6e6e6e"/><stop offset="0.45" stop-color="#2c2c2c"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient><linearGradient id="cpkb" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#6e6e6e"/><stop offset="0.45" stop-color="#2c2c2c"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient></defs>
           <rect width="320" height="180" fill="#0d0d1a"/>
@@ -449,6 +464,7 @@
         <div class="card-tags">
           <span class="tag tag-strategy">Strategy</span>
           <span class="tag tag-classic">Classic</span>
+          <span class="tag tag-online">🌐 Online</span>
         </div>
         <div class="card-title">西洋棋 · Chess</div>
         <div class="card-desc">完整國際規則，可跟三種難度的電腦、朋友同機，或用房間代碼🌐連線對戰。Full-rules chess vs the CPU, a friend, or online with a room code.</div>
@@ -459,6 +475,7 @@
     <!-- ── Chinese Checkers ── -->
     <a class="game-card" href="games/chinese-checkers/">
       <div class="card-thumb">
+        <span class="online-badge"><span class="dot"></span>ONLINE</span>
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs><radialGradient id="ccg0" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="35%" stop-color="#ef4444"/><stop offset="100%" stop-color="#ef4444"/></radialGradient><radialGradient id="ccg1" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="35%" stop-color="#a855f7"/><stop offset="100%" stop-color="#a855f7"/></radialGradient><radialGradient id="ccg2" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="35%" stop-color="#22c55e"/><stop offset="100%" stop-color="#22c55e"/></radialGradient><radialGradient id="ccg3" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#3b82f6"/></radialGradient><radialGradient id="ccg4" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="35%" stop-color="#facc15"/><stop offset="100%" stop-color="#facc15"/></radialGradient><radialGradient id="ccg5" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="35%" stop-color="#f97316"/><stop offset="100%" stop-color="#f97316"/></radialGradient></defs>
           <rect width="320" height="180" fill="#0d0d1a"/>
@@ -474,6 +491,7 @@
         <div class="card-tags">
           <span class="tag tag-strategy">Strategy</span>
           <span class="tag tag-classic">Classic</span>
+          <span class="tag tag-online">🌐 Online</span>
         </div>
         <div class="card-title">跳棋 · Chinese Checkers</div>
         <div class="card-desc">一步一步走或連續跳，最先把 10 顆棋子送到對面就贏！2～3 人，可跟電腦、朋友同機或🌐連線對戰。Hop your marbles across the star — 2 or 3 players.</div>
@@ -484,6 +502,7 @@
     <!-- ── Go ── -->
     <a class="game-card" href="games/go/">
       <div class="card-thumb">
+        <span class="online-badge"><span class="dot"></span>ONLINE</span>
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="goWood" x1="0" y1="0" x2="1" y2="1">
@@ -538,6 +557,7 @@
         <div class="card-tags">
           <span class="tag tag-strategy">Strategy</span>
           <span class="tag tag-classic">Classic</span>
+          <span class="tag tag-online">🌐 Online</span>
         </div>
         <div class="card-title">Go · 圍棋</div>
         <div class="card-desc">千年經典圍地遊戲，可與電腦、朋友同機或🌐連線對弈，支援 9／13／19 路，台灣數子法（黑貼 7.5 目）。The ancient game of territory — play the CPU or a friend.</div>
@@ -876,6 +896,7 @@
     <!-- ── Count Masters ── -->
     <a class="game-card" href="games/count-masters/">
       <div class="card-thumb">
+        <span class="online-badge"><span class="dot"></span>ONLINE</span>
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="bg3" cx="50%" cy="50%" r="70%">
@@ -974,6 +995,7 @@
         <div class="card-tags">
           <span class="tag tag-action">Action</span>
           <span class="tag tag-runner">Runner</span>
+          <span class="tag tag-online">🌐 Online</span>
         </div>
         <div class="card-title">Count Masters: Stickman</div>
         <div class="card-desc">Grow your stickman army by running through multiplier gates. Crush the enemy crowd at the end of each level! 🌐 Race 2–4 friends online!</div>
@@ -1156,7 +1178,8 @@
   });
 
   document.addEventListener('DOMContentLoaded', () => {
-    SillyFirebase.onAuthChanged(user => {
+    // Firebase can be blocked (ad-blockers, school networks) — never let that break the page
+    try { SillyFirebase.onAuthChanged(user => {
       lobbyRenderAuthBar(user);
       if (user) {
         SillyFirebase.trackVisit('lobby').then(total => {
@@ -1164,7 +1187,7 @@
           if (el && total !== null) el.textContent = total.toLocaleString() + ' total visits';
         });
       }
-    });
+    }); } catch (e) { console.warn('[lobby] Firebase unavailable', e); }
 
     // ── Nav filter logic ──────────────────────────────
     const NEW_HREFS = ['games/rummikub/', 'games/chess/', 'games/chinese-checkers/', 'games/go/', 'games/bubble-bobble/', 'games/pac-man/'];
