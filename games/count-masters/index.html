@@ -351,7 +351,7 @@ SillyI18n.add({
     raceResult: n => `第 ${n} 場結果`, finalResult: '🏆 總成績', nextRace: s => `下一場 ${s} 秒後開始…`,
     colRank: '名次', colPlayer: '玩家', colArmy: '人數', colPts: '得分', colTotal: '總分',
     champion: n => `🏆 ${n} 獲得冠軍！`, coChamps: n => `🤝 ${n} 並列冠軍！`, youChamp: '🏆 你是冠軍！',
-    ptsRule: '每場依人數排名得分：第 1 名 3 分、第 2 名 2 分、第 3 名 1 分。人數相同時，先到終點的排前面。',
+    ptsRule: '每場依人數排名得分：第 1 名 3 分、第 2 名 2 分、第 3 名 1 分。人數一樣就同名次、同分。',
     stoleFrom: (a, n) => `🟣 ${a} 搶走了你 ${n} 人！`, halvedBy: a => `🟣 ${a} 把你的人數砍半了！`,
     youStole: (b, n) => `🟣 你搶走了 ${b} ${n} 人！`, youHalved: b => `🟣 你把 ${b} 的人數砍半！`,
     stealGate: '紫色搶人門：搶走人數最多的對手 25% 的人，或把他的人數砍半！',
@@ -384,7 +384,7 @@ SillyI18n.add({
     raceResult: n => `Race ${n} Results`, finalResult: '🏆 Final Standings', nextRace: s => `Next race starts in ${s}s…`,
     colRank: '#', colPlayer: 'Player', colArmy: 'Army', colPts: 'Points', colTotal: 'Total',
     champion: n => `🏆 ${n} is the champion!`, coChamps: n => `🤝 Joint champions: ${n}!`, youChamp: "🏆 You're the champion!",
-    ptsRule: 'Each race: 1st gets 3 points, 2nd 2, 3rd 1 — ranked by army size; on a tie, whoever finished first ranks higher.',
+    ptsRule: 'Each race: 1st gets 3 points, 2nd 2, 3rd 1 — ranked by army size; equal armies share the place and the points.',
     stoleFrom: (a, n) => `🟣 ${a} stole ${n} of your army!`, halvedBy: a => `🟣 ${a} halved your army!`,
     youStole: (b, n) => `🟣 You stole ${n} from ${b}!`, youHalved: b => `🟣 You halved ${b}'s army!`,
     stealGate: 'Purple steal gates: take 25% from the biggest army, or halve it!',
@@ -1246,7 +1246,7 @@ function update() {
   if (keys['ArrowLeft'])  targetX = Math.max(-(ROAD_HW - 20), targetX - 5);
   if (keys['ArrowRight']) targetX = Math.min(ROAD_HW - 20, targetX + 5);
 
-  // Progress (online race: a wall hit stuns the crowd for a moment)
+  // Progress (online race also counts steps for the live board)
   if (window.Race && Race.active) { Race.frames++; if (Race.stun > 0) Race.stun--; else levelProgress += scrollSpeed; }
   else levelProgress += scrollSpeed;
 
@@ -1278,7 +1278,6 @@ function update() {
           const ang = Math.random() * Math.PI * 2;
           sparks.push({ x: sx, y: CROWD_Y - 20, vx: Math.cos(ang) * (1 + Math.random() * 4), vy: Math.sin(ang) * (1 + Math.random() * 4) - 1, color: '#f87171', life: 1 });
         }
-        if (window.Race && Race.active) Race.stun = 45;
         updateUI();
       }
     }
@@ -1838,7 +1837,7 @@ function stepCpu(i, c, n) {
         else if (g.op === '-') c.count = Math.max(1, c.count - g.v);
         else if (g.op === '/') c.count = Math.max(1, Math.ceil(c.count / g.v));
       } else if (o.type === 'obstacle') {
-        if (c.rng() > sk.wall) { c.count = Math.max(1, c.count - Math.max(1, Math.floor(c.count * 0.25))); c.stun = 45; }
+        if (c.rng() > sk.wall) c.count = Math.max(1, c.count - Math.max(1, Math.floor(c.count * 0.25)));
       } else if (o.type === 'finish') c.done = true;
     }
   }
@@ -1874,9 +1873,9 @@ function hostTick() {
       const race = Race.race;
       SillyOnline.mutate(rr => {
         if (!rr.state || rr.state.phase !== 'run' || rr.state.race !== race) return;
-        const ranked = rows.slice().sort((a, b) => b.count - a.count || a.t - b.t);
+        const ranked = rows.slice().sort((a, b) => b.count - a.count);
         ranked.forEach(x => {
-          const better = ranked.filter(y => y.count > x.count || (y.count === x.count && y.t < x.t)).length;
+          const better = ranked.filter(y => y.count > x.count).length;
           x.rank = better + 1; x.pts = POINTS[Math.min(better, 3)];
           rr.state.points[x.seat] = (rr.state.points[x.seat] || 0) + x.pts;
           rr.state.sums[x.seat] = (rr.state.sums[x.seat] || 0) + x.count;
