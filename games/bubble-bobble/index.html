@@ -6,12 +6,13 @@
 <title>Bubble Bobble Classic</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a18;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:monospace;overflow:hidden}
+body{background:#0a0a18;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:monospace;overflow-x:hidden}
 #layout{display:flex;align-items:center;gap:32px}
-#sidebar-left,#sidebar-right{width:200px;color:#d3dae6;font-size:15px;line-height:1.85}
-#sidebar-left h2,#sidebar-right h2{color:#4ecdc4;font-size:16px;letter-spacing:1px;margin-bottom:10px;text-transform:uppercase}
-#sidebar-left .key{display:inline-block;background:#222;border:1px solid #555;border-radius:4px;padding:1px 7px;color:#fff;font-size:13px}
-#sidebar-right .score-val{color:#f5c518;font-size:15px}
+#sidebar-left,#sidebar-right{width:190px;color:#d3dae6;font-size:13px;line-height:1.5}
+.sp{height:10px}
+#sidebar-left h2,#sidebar-right h2{color:#4ecdc4;font-size:14px;letter-spacing:1px;margin-bottom:5px;text-transform:uppercase}
+#sidebar-left .key{display:inline-block;background:#222;border:1px solid #555;border-radius:4px;padding:0 6px;color:#fff;font-size:12px;line-height:1.4;margin:1px 0}
+#sidebar-right .score-val{color:#f5c518;font-size:13px}
 #sidebar-right .lives-row{margin-top:8px}
 #game-col{display:flex;flex-direction:column;align-items:center;gap:0}
 #hud-bar{width:312px;height:44px;background:#0d0d1a;border:2px solid #2a2a50;border-bottom:none;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 8px;gap:4px}
@@ -26,17 +27,17 @@ canvas{display:block;border:2px solid #2a2a50;border-top:none;border-bottom:none
 .gbtn:hover{background:#2a2a55;color:#fff}
 .gbtn.pause-btn{color:#4ecdc4;border-color:#4ecdc4}
 .gbtn.exit-btn{background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#991b1b;}
-#game-avatar{display:flex;align-items:center;margin-left:0.5rem;}
+#game-avatar{display:flex;align-items:center;margin-left:0.3rem;}
+#game-avatar>div{width:24px!important;height:24px!important;font-size:12px!important}
 </style>
 </head>
 <body>
 <div id="layout">
   <div id="sidebar-left">
-    <div style="margin-bottom:14px"><div data-lang-switch></div></div>
+    <div style="margin-bottom:10px"><div data-lang-switch></div></div>
     <div data-i18n-html="leftHelp"></div>
-    <br>
+    <div class="sp"></div>
     <div id="word-progress" style="text-align:center"></div>
-    <br>
   </div>
 
   <div id="game-col">
@@ -72,14 +73,14 @@ SillyI18n.add({
     <div><span class="key">X</span> / <span class="key">Space</span> 吐泡泡</div>
     <div><span class="key">Enter</span> 開始</div>
     <div><span class="key">P</span> / <span class="key">Esc</span> 暫停</div>
-    <br>
+    <div class="sp"></div>
     <h2>玩法說明</h2>
     <div>吐泡泡把敵人</div>
     <div>包起來，</div>
     <div>再跳上去把泡泡</div>
     <div>踩破。</div>
     <div>記得收集水果！</div>
-    <br>
+    <div class="sp"></div>
     <div style="color:#ff6b6b">⚠ 敵人 5 秒後</div>
     <div>會生氣逃出泡泡，</div>
     <div>而且變得更快！</div>`,
@@ -88,18 +89,18 @@ SillyI18n.add({
     <div>🍓 草莓 <span class="score-val">200</span></div>
     <div>🍍 鳳梨 <span class="score-val">500</span></div>
     <div>🍒 櫻桃 <span class="score-val">1000</span></div>
-    <br>
+    <div class="sp"></div>
     <h2>敵人</h2>
     <div>第 1 關：4 🦕</div>
     <div>第 2 關：6 🦕</div>
     <div>第 3 關：8 🦕</div>
-    <br>
+    <div class="sp"></div>
     <h2>小提示</h2>
     <div>泡泡撞到牆後</div>
     <div>會往上飄。</div>
     <div>快速連續踩破</div>
     <div>有連鎖加分！</div>
-    <br>
+    <div class="sp"></div>
     <h2>額外生命</h2>
     <div>最多 6 條命</div>
     <div>拼出 3 個單字</div>
@@ -125,14 +126,14 @@ SillyI18n.add({
     <div><span class="key">X</span> / <span class="key">Space</span> Shoot</div>
     <div><span class="key">Enter</span> Start</div>
     <div><span class="key">P</span> / <span class="key">Esc</span> Pause</div>
-    <br>
+    <div class="sp"></div>
     <h2>How to Play</h2>
     <div>Shoot bubbles to</div>
     <div>trap enemies.</div>
     <div>Jump on trapped</div>
     <div>bubbles to pop.</div>
     <div>Collect fruit!</div>
-    <br>
+    <div class="sp"></div>
     <div style="color:#ff6b6b">⚠ Angry enemies</div>
     <div>escape after 5s</div>
     <div>and speed up!</div>`,
@@ -141,18 +142,18 @@ SillyI18n.add({
     <div>🍓 Strawberry <span class="score-val">200</span></div>
     <div>🍍 Pineapple <span class="score-val">500</span></div>
     <div>🍒 Cherry <span class="score-val">1000</span></div>
-    <br>
+    <div class="sp"></div>
     <h2>Enemies</h2>
     <div>Level 1: 4 🦕</div>
     <div>Level 2: 6 🦕</div>
     <div>Level 3: 8 🦕</div>
-    <br>
+    <div class="sp"></div>
     <h2>Tips</h2>
     <div>Bubbles float up</div>
     <div>after hitting wall.</div>
     <div>Pop quickly for</div>
     <div>bonus chain!</div>
-    <br>
+    <div class="sp"></div>
     <h2>Extra Lives</h2>
     <div>Max 6 lives</div>
     <div>Spell 3 words</div>
@@ -1200,6 +1201,15 @@ function spawnLevelFruits(map) {
   return pool.slice(0, 5).map((p, i) => new Fruit(p.x, p.y, i % 4, 600));
 }
 
+// a fresh word to spell — at the start of every level, and again each time a word is completed
+function startWord() {
+  currentWord = nextWord();
+  collectedLetters = new Array(currentWord.length).fill(false);
+  wordCompleteTimer = 0;
+  letterBubbles = currentWord.split('').map((l,i) => new LetterBubble(l,i));
+  updateWordSidebar();
+}
+
 function initLevel() {
   map=getMap(gs.level); brickColor=getBrickColor(gs.level);
   bubbles=[];
@@ -1208,10 +1218,7 @@ function initLevel() {
   giantFruit=null;
   lifeBubble = pendingLifeBubble ? new LifeBubble() : null;
   pendingLifeBubble = false;
-  currentWord = nextWord();
-  collectedLetters = new Array(currentWord.length).fill(false);
-  wordCompleteTimer = 0;
-  letterBubbles = currentWord.split('').map((l,i) => new LetterBubble(l,i));
+  startWord();
   levelStartScore=gs.score;
   player=new Player(CW/2, CH-TILE*2);
   spawnEnemies();
@@ -1374,7 +1381,7 @@ function update() {
         addScore(50, lb.x, lb.y);
         SFX.fruit();
         if(collectedLetters.every(c=>c)){
-          wordCompleteTimer=480;
+          wordCompleteTimer=150;   // show the finished word for 2.5 s, then the next word appears
           addScore(500, CW/2, CH/3);
           SFX.clear();
           gs.wordStreak++;
@@ -1386,7 +1393,7 @@ function update() {
     }
   }
   letterBubbles=letterBubbles.filter(lb=>!lb.dead);
-  if(wordCompleteTimer>0) wordCompleteTimer--;
+  if(wordCompleteTimer>0 && --wordCompleteTimer===0 && gs.state==='playing') startWord();
 
   if(enemies.length===0 && gs.state==='playing'){
     // Spawn bonus giant fruit if player earned enough points this level

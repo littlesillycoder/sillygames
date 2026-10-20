@@ -12,12 +12,15 @@ const _sfConfig = {
   appId: "1:823493598031:web:2d47adfb1ec6f6ec03c33a"
 };
 
-if (!firebase.apps.length) {
+// The Firebase SDK can be blocked (ad-blockers, school networks). SillyFirebase is still defined
+// then — it just works as "signed out, nothing saved to the cloud" — so games never crash.
+const _sfReady = typeof firebase !== 'undefined';
+if (_sfReady && !firebase.apps.length) {
   firebase.initializeApp(_sfConfig);
 }
 
-const _sfAuth = firebase.auth();
-const _sfDb   = firebase.firestore();
+const _sfAuth = _sfReady ? firebase.auth() : null;
+const _sfDb   = _sfReady ? firebase.firestore() : null;
 
 const SillyFirebase = {
   currentUser: null,
@@ -82,6 +85,7 @@ const SillyFirebase = {
   // onBeforePopup — optional function called just before the popup opens
   //                 (use this to pause the game, etc.)
   signIn(onBeforePopup) {
+    if (!_sfReady) return;
     if (typeof onBeforePopup === 'function') onBeforePopup();
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
@@ -89,7 +93,7 @@ const SillyFirebase = {
   },
 
   signOut() {
-    _sfAuth.signOut();
+    if (_sfAuth) _sfAuth.signOut();
   },
 
   // Register an auth state listener.
@@ -97,6 +101,7 @@ const SillyFirebase = {
   // Also keeps SillyFirebase.currentUser in sync.
   onAuthChanged(callback) {
     let firstCall = true;
+    if (!_sfAuth) { setTimeout(() => callback(null), 0); return; }
     _sfAuth.onAuthStateChanged(user => {
       // anonymous accounts (used only for online rooms) count as "not signed in" everywhere else
       if (user && user.isAnonymous) user = null;
@@ -272,6 +277,7 @@ const SillyFirebase = {
   // Stored at analytics/{pageId} → { total: N }
   async trackVisit(pageId) {
     try {
+      if (!_sfDb) return null;
       const ref = _sfDb.collection('analytics').doc(pageId);
       await ref.set(
         { total: firebase.firestore.FieldValue.increment(1) },
