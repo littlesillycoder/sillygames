@@ -412,7 +412,7 @@
 <div class="section">
   <div class="section-header">
     <h2>All Games</h2>
-    <span class="count">11</span>
+    <span class="count">12</span>
   </div>
 
   <div class="games-grid">
@@ -1003,6 +1003,57 @@
       </div>
     </a>
 
+    <!-- ── Escape Road ── -->
+    <a class="game-card" href="games/escape-road/">
+      <div class="card-thumb">
+        <span class="online-badge"><span class="dot"></span>ONLINE</span>
+        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+          <rect width="320" height="180" fill="#8b919c"/>
+          <!-- roads -->
+          <rect x="0" y="70" width="320" height="44" fill="#3b3f4a"/>
+          <rect x="196" y="0" width="44" height="180" fill="#3b3f4a"/>
+          <line x1="0" y1="92" x2="320" y2="92" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-dasharray="10,10"/>
+          <line x1="218" y1="0" x2="218" y2="180" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-dasharray="10,10"/>
+          <!-- buildings -->
+          <rect x="10" y="8" width="80" height="52" fill="#0f766e"/><rect x="10" y="52" width="80" height="10" fill="#0a4f49"/>
+          <rect x="104" y="8" width="80" height="52" fill="#b45309"/><rect x="104" y="52" width="80" height="10" fill="#7a3906"/>
+          <rect x="252" y="8" width="60" height="52" fill="#6d28d9"/><rect x="252" y="52" width="60" height="10" fill="#4a1c94"/>
+          <rect x="10" y="122" width="120" height="50" fill="#be123c"/>
+          <rect x="140" y="122" width="44" height="50" fill="#3f7d3a"/><circle cx="162" cy="146" r="13" fill="#166534"/>
+          <rect x="252" y="122" width="60" height="50" fill="#1e5f99"/>
+          <!-- player car -->
+          <g transform="translate(120 82)">
+            <rect x="0" y="0" width="36" height="20" rx="5" fill="#06b6d4"/>
+            <rect x="22" y="3" width="5" height="14" fill="#0f172a"/><rect x="4" y="3" width="4" height="14" fill="#0f172a"/>
+            <rect x="2" y="8" width="32" height="1.6" fill="#fff"/><rect x="2" y="11" width="32" height="1.6" fill="#fff"/>
+          </g>
+          <!-- police -->
+          <g transform="translate(46 80)">
+            <circle cx="18" cy="12" r="26" fill="#ef4444" opacity="0.18"/>
+            <rect x="0" y="2" width="36" height="20" rx="5" fill="#f8fafc"/><rect x="24" y="2" width="12" height="20" fill="#111827"/>
+            <rect x="14" y="5" width="5" height="7" fill="#ef4444"/><rect x="14" y="12" width="5" height="7" fill="#3b82f6"/>
+          </g>
+          <g transform="translate(206 128) rotate(-90)">
+            <circle cx="18" cy="10" r="26" fill="#3b82f6" opacity="0.18"/>
+            <rect x="0" y="0" width="36" height="20" rx="5" fill="#f8fafc"/><rect x="24" y="0" width="12" height="20" fill="#111827"/>
+            <rect x="14" y="3" width="5" height="7" fill="#3b82f6"/><rect x="14" y="10" width="5" height="7" fill="#ef4444"/>
+          </g>
+          <circle cx="178" cy="92" r="7" fill="#fde047" stroke="#ca8a04" stroke-width="2"/>
+          <text x="300" y="30" text-anchor="end" font-family="Arial,sans-serif" font-size="18" fill="#fbbf24">★★★</text>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="tag tag-action">Action</span>
+          <span class="tag tag-arcade">Arcade</span>
+          <span class="tag tag-online">🌐 Online</span>
+        </div>
+        <div class="card-title">Escape Road</div>
+        <div class="card-desc">The cops are on your tail! Steer through the city, grab cash and stay free as long as you can. 🌐 Race 2–4 friends online!</div>
+        <div class="play-btn">▶ Play Now</div>
+      </div>
+    </a>
+
     <!-- ── Ping Pong ── -->
     <a class="game-card" href="games/ping-pong/">
       <div class="card-thumb">
@@ -1190,7 +1241,7 @@
     }); } catch (e) { console.warn('[lobby] Firebase unavailable', e); }
 
     // ── Nav filter logic ──────────────────────────────
-    const NEW_HREFS = ['games/rummikub/', 'games/chess/', 'games/chinese-checkers/', 'games/go/', 'games/bubble-bobble/', 'games/pac-man/'];
+    const NEW_HREFS = ['games/escape-road/', 'games/rummikub/', 'games/chess/', 'games/chinese-checkers/', 'games/go/', 'games/bubble-bobble/', 'games/pac-man/'];
     const TOP_HREFS = ['games/bubble-bobble/', 'games/pac-man/'];
 
     let activeFilter = null;

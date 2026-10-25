@@ -48,7 +48,7 @@ service cloud.firestore {
         return d.keys().hasOnly(['code', 'game', 'host', 'status', 'version', 'round', 'seats', 'members',
                                  'spectators', 'seen', 'state', 'opts', 'createdAt', 'expireAt'])
             && d.code == code
-            && d.game in ['chess', 'go', 'chinese-checkers', 'rummikub', 'count-masters']
+            && d.game in ['chess', 'go', 'chinese-checkers', 'rummikub', 'count-masters', 'escape-road']
             && d.status in ['lobby', 'playing']
             && d.host is string
             && d.seats is list && d.seats.size() >= 2 && d.seats.size() <= 6

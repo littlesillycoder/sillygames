@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Escape Road</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a; --surface: #14142b; --border: #2a2a50;
+      --accent: #7c3aed; --accent2: #06b6d4; --text: #e2e8f0; --muted: #64748b;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column; user-select: none;
+      overflow-x: hidden;
+    }
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem; height: 54px; display: flex; align-items: center; gap: 1rem; flex-shrink: 0;
+    }
+    .topbar .brand { font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+    .topbar .brand a { color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+    .topbar .brand a:hover { color: var(--text); }
+    .topbar .sep { color: var(--muted); }
+    .topbar-actions { margin-left: auto; display: flex; gap: 0.6rem; align-items: center; }
+    .btn {
+      padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.85; transform: scale(1.02); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-ghost:hover { border-color: var(--accent); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #5b21b6); color: #fff; }
+    .btn-danger { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; }
+    .btn-online { background: linear-gradient(135deg, #06b6d4, #0e7490); color: #fff; }
+
+    .game-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 1.5rem; gap: 1.5rem; }
+    .sidebar { display: flex; flex-direction: column; gap: 1rem; width: 140px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem; }
+    .stat-label { font-size: 0.7rem; font-weight: 600; color: var(--muted); margin-bottom: 0.3rem; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--accent2); font-variant-numeric: tabular-nums; }
+    .stat-value.gold { color: #fbbf24; }
+    .stat-value.red { color: #f87171; }
+    .tip-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem; font-size: 0.75rem; color: var(--muted); line-height: 1.7; }
+    .hp-bar { height: 12px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 0.35rem; }
+    .hp-bar i { display: block; height: 100%; width: 100%; border-radius: 6px; background: linear-gradient(90deg, #22c55e, #84cc16); transition: width .15s; }
+    .stars { font-size: 1.35rem; letter-spacing: 2px; color: #fbbf24; }
+    .stars .off { color: rgba(255,255,255,0.15); }
+    #miniMap { display: block; width: 100%; aspect-ratio: 1; border-radius: 8px; background: #0b2540; margin-top: 0.3rem; }
+
+    #gameCanvas { border-radius: 12px; border: 2px solid var(--border); display: block; touch-action: none; background: #1e5f99; }
+
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); backdrop-filter: blur(6px); z-index: 200; align-items: center; justify-content: center; }
+    .overlay.active { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 2rem 2.2rem; max-width: 580px; width: 92%; text-align: center; max-height: 94vh; overflow-y: auto; }
+    .modal h2 { font-size: 1.7rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .modal .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.2rem; }
+    .modal .instructions { background: var(--bg); border-radius: 10px; padding: 1rem; text-align: left; margin-bottom: 1rem; }
+    .modal .instructions h3 { font-size: 0.8rem; font-weight: 700; color: var(--accent2); margin-bottom: 0.6rem; }
+    .modal .instructions ul { list-style: none; font-size: 0.84rem; color: var(--muted); display: flex; flex-direction: column; gap: 0.45rem; }
+    .modal .instructions li { display: flex; align-items: flex-start; gap: 0.6rem; }
+    .modal .instructions .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: -1px; }
+    .modal-score { font-size: 2.8rem; font-weight: 900; color: var(--accent2); margin: 0.4rem 0; }
+    .modal-buttons { display: flex; gap: 0.7rem; justify-content: center; margin-top: 1rem; }
+    .modal-buttons .btn { white-space: nowrap; font-size: 1rem; padding: 0.7rem 1.4rem; }
+    @media (max-width: 480px) { .modal-buttons { gap: 0.4rem; } .modal-buttons .btn { padding: 0.6rem 0.7rem !important; font-size: 0.92rem !important; } .modal { padding: 1.3rem 1.1rem; } }
+    .best-line { color: #fde68a; font-weight: 700; margin-top: -0.4rem; margin-bottom: 0.6rem; min-height: 1.2em; }
+
+    .pause-badge { display: none; position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(124,58,237,0.92); color: #fff; font-weight: 700; font-size: 0.9rem; padding: 0.4rem 1.4rem; border-radius: 50px; z-index: 150; pointer-events: none; }
+    .pause-badge.visible { display: block; }
+
+    /* online race */
+    #raceBoard { display: none; }
+    body.racing #raceBoard { display: block; }
+    body.racing .solo-only, body.racing #pauseBtn, body.racing #restartBtn, body.racing #howToPlayBtn { display: none !important; }
+    .rb-title { font-size: 0.95rem; font-weight: 700; color: #aab4c5; margin-bottom: 0.5rem; }
+    .rb-row { padding: 0.45rem 0; border-top: 1px solid var(--border); }
+    .rb-row:first-of-type { border-top: none; }
+    .rb-top { display: flex; align-items: center; gap: 0.45rem; font-size: 0.95rem; font-weight: 700; }
+    .rb-top .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .rb-top .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eef2f7; }
+    .rb-top .ct { font-variant-numeric: tabular-nums; color: #fbbf24; }
+    .rb-sub { font-size: 0.8rem; color: #aab4c5; margin-top: 0.2rem; }
+    .rb-note { font-size: 0.85rem; color: #fde68a; margin-top: 0.5rem; line-height: 1.5; }
+    .race-table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 0.4rem; font-size: 0.98rem; }
+    .race-table th { color: #aab4c5; font-weight: 700; font-size: 0.85rem; padding: 0.35rem 0.4rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .race-table td { padding: 0.45rem 0.4rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .race-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .race-table tr.me td { color: #67e8f9; font-weight: 700; }
+    .race-table tr.top td:first-child { color: #fbbf24; }
+    .race-next { color: #aab4c5; font-size: 0.92rem; margin-top: 0.4rem; }
+    .race-toast { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); background: rgba(14,116,144,0.95); color: #fff; padding: 0.6rem 1.2rem; border-radius: 14px; font-weight: 800; z-index: 300; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .race-toast.show { opacity: 1; }
+    #game-avatar { display: flex; align-items: center; margin-left: 0.5rem; }
+
+    /* phones and small tablets: canvas on top, cards below */
+    @media (max-width: 900px) {
+      .topbar { padding: 0 0.6rem; gap: 0.4rem; }
+      .topbar .brand a { display: none; } .topbar .brand .sep { display: none; }
+      .topbar-actions { gap: 0.3rem; }
+      .topbar-actions .btn { padding: 0.4rem 0.55rem; font-size: 0.8rem; }
+      .game-wrapper { flex-direction: column; padding: 0.5rem; gap: 0.6rem; justify-content: flex-start; }
+      .game-wrapper .sidebar { width: 100% !important; flex-direction: row; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+      .sidebar .tip-box, .sidebar .hide-narrow { display: none !important; }
+      .sidebar .stat-box { flex: 1 1 140px; }
+      .sidebar.left { display: none; }
+      .topbar-actions .btn { white-space: nowrap; }
+    }
+    @media (max-width: 600px) {
+      .topbar .brand, #howToPlayBtn { display: none; }
+      .topbar-actions { margin-left: 0; width: 100%; justify-content: flex-end; }
+      #game-avatar { display: none; }
+    }
+  </style>
+<link rel="stylesheet" href="../shared/readable.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <a href="../../">🎮 GameZone</a>
+    <span class="sep">/</span>
+    <span data-i18n="title"></span>
+  </div>
+  <div class="topbar-actions">
+    <div data-lang-switch></div>
+    <button class="btn btn-ghost" id="howToPlayBtn" data-i18n="howTo"></button>
+    <button class="btn btn-ghost" id="pauseBtn" data-i18n="pause"></button>
+    <button class="btn btn-ghost" id="restartBtn" data-i18n="restart"></button>
+    <button class="btn btn-danger" id="exitBtn" data-i18n="exit"></button>
+  </div>
+  <div id="game-avatar"></div>
+</div>
+
+<div class="pause-badge" id="pauseBadge" data-i18n="paused"></div>
+
+<div class="game-wrapper">
+  <div class="sidebar left">
+    <div class="stat-box">
+      <div class="stat-label" id="timeLabel" data-i18n="time"></div>
+      <div class="stat-value" id="timeDisplay">0:00</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label" data-i18n="cash"></div>
+      <div class="stat-value gold" id="cashDisplay">$0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label" data-i18n="health"></div>
+      <div class="stat-value red" id="hpDisplay" style="font-size:1.3rem">100</div>
+      <div class="hp-bar"><i id="hpBar"></i></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label" data-i18n="wanted"></div>
+      <div class="stars" id="starsDisplay"></div>
+    </div>
+    <div class="stat-box solo-only">
+      <div class="stat-label" data-i18n="best"></div>
+      <div class="stat-value" id="bestDisplay" style="font-size:1.3rem">—</div>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas" width="640" height="540"></canvas>
+
+  <div class="sidebar">
+    <div class="stat-box" id="raceBoard">
+      <div class="rb-title" id="rbTitle"></div>
+      <div id="rbRows"></div>
+      <div class="rb-note" id="rbNote"></div>
+    </div>
+    <div class="stat-box hide-narrow">
+      <div class="stat-label" data-i18n="map"></div>
+      <canvas id="miniMap" width="180" height="180"></canvas>
+    </div>
+    <div class="tip-box">
+      <div class="stat-label" data-i18n="controls"></div>
+      <div data-i18n-html="controlsText"></div>
+    </div>
+  </div>
+</div>
+
+<!-- START -->
+<div class="overlay active" id="startOverlay">
+  <div class="modal">
+    <div style="display:flex;justify-content:flex-end;margin:-0.4rem -0.4rem 0.3rem 0"><div data-lang-switch="full"></div></div>
+    <h2 data-i18n="gameTitle"></h2>
+    <p class="subtitle" data-i18n="subtitle"></p>
+    <div class="instructions">
+      <h3 data-i18n="howToH"></h3>
+      <ul data-i18n-html="rules"></ul>
+    </div>
+    <div class="best-line" id="bestLine"></div>
+    <div class="modal-buttons">
+      <button class="btn btn-primary" id="startBtn" data-i18n="startGame"></button>
+      <button class="btn btn-online" id="onlineBtn" data-i18n="onlineBtn"></button>
+      <button class="btn btn-danger" onclick="window.location.href='../../'" data-i18n="exit"></button>
+    </div>
+  </div>
+</div>
+
+<!-- SOLO RESULT -->
+<div class="overlay" id="resultOverlay">
+  <div class="modal">
+    <h2 id="resultTitle"></h2>
+    <p class="subtitle" id="resultSubtitle"></p>
+    <div class="modal-score" id="finalScore">0</div>
+    <p id="resultDetail" style="margin-bottom:0.5rem"></p>
+    <div class="modal-buttons">
+      <button class="btn btn-primary" id="resultRestartBtn" data-i18n="playAgain"></button>
+      <button class="btn btn-danger" id="resultExitBtn" data-i18n="exit"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ONLINE RACE RESULT -->
+<div class="overlay" id="raceOverlay">
+  <div class="modal">
+    <h2 id="raceTitle"></h2>
+    <p class="subtitle" id="raceSub"></p>
+    <table class="race-table" id="raceTable"></table>
+    <div class="race-next" id="raceNext"></div>
+    <div class="modal-buttons" id="raceBtns">
+      <button class="btn btn-primary" id="raceAgainBtn"></button>
+      <button class="btn btn-ghost" id="raceCloseBtn" data-i18n="viewMap"></button>
+      <button class="btn btn-danger" id="raceLeaveBtn" data-i18n="leaveRoom"></button>
+    </div>
+  </div>
+</div>
+<div class="race-toast" id="raceToast"></div>
+
+<script src="../shared/i18n.js"></script>
+<script src="../shared/online.js"></script>
+<script>
+SillyI18n.add({
+  zh: {
+    pageTitle: '極速逃亡 Escape Road — GameZone', title: '極速逃亡', howTo: '玩法說明', pause: '⏸ 暫停', resume: '▶ 繼續',
+    restart: '↺ 重新開始', exit: '✕ 離開', paused: '⏸ 暫停中 — 按「繼續」接著玩',
+    time: '撐了多久', timeLeft: '剩餘時間', cash: '撿到的錢', health: '車子耐久', wanted: '通緝等級', best: '最佳紀錄', map: '地圖', controls: '操作',
+    controlsText: '⬅➡ 或 <b>A／D</b>：轉彎<br>⬆ 或 <b>W</b>：加速<br>⬇ 或 <b>S</b>：煞車／倒車<br>📱 手機：按住畫面左半邊往左轉，右半邊往右轉，兩邊一起按是煞車',
+    gameTitle: '🚗 極速逃亡', subtitle: '警察來了！開著車在城市裡逃命，撐越久越好。',
+    howToH: '玩法說明',
+    rules: `<li><span class="icon">🚗</span> 車子會自己往前開，你只要控制左右轉彎</li>
+        <li><span class="icon">🚓</span> 別被警車圍住！車子停下來又被警車貼住，就會被抓</li>
+        <li><span class="icon">🌊</span> 開進水裡、或車子撞到耐久歸零，也算失敗</li>
+        <li><span class="icon">⭐</span> 撐得越久，通緝等級越高，會出現更多警車、裝甲車和路障</li>
+        <li><span class="icon">💰</span> 沿路撿錢，讓警車互撞翻車還有獎金；🔧 扳手可以修車</li>
+        <li><span class="icon">🌐</span> 連線對戰：2～4 人同一張地圖比 3 場，撐最久的人贏；都撐滿 90 秒就比誰的錢多</li>`,
+    startGame: '▶ 開始遊戲', resumeGame: '▶ 繼續遊戲', playAgain: '↺ 再玩一次', onlineBtn: '🌐 連線對戰',
+    busted: '🚨 被抓了！', wrecked: '💥 車子撞爛了！', drowned: '🌊 開進水裡了！',
+    resultDetail: (t, c) => `撐了 ${t}，撿到 $${c}`, newBest: '🎉 新紀錄！', bestWas: s => `最佳紀錄：${s} 分`,
+    bestLine: (s, t) => `🏆 最佳紀錄：${s} 分（撐了 ${t}）`, scoreRule: '分數 = 撿到的錢 + 每撐 1 秒 5 分',
+    viewMap: '👁 看地圖', leaveRoom: '✕ 離開房間', rematch: '▶ 再來一局', waitHost: '⏳ 等房主開新局',
+    raceN: n => `第 ${n} 場／共 3 場`, racers: '比賽中', driving: '逃亡中', escapedTag: '✓ 撐過 90 秒', bustedTag: '🚨 被抓',
+    offlineTag: '離線', leftTag: '已離開', watching: '👀 你正在觀戰，點畫面可以換人看',
+    waitOthers: '你已經結束這一場，等其他人跑完…（點畫面可以換人看）',
+    raceRule: '撐最久的人贏；都撐滿 90 秒就比誰的錢多。',
+    raceResult: n => `第 ${n} 場結果`, finalResult: '🏆 總成績', nextRace: s => `下一場 ${s} 秒後開始…`,
+    colRank: '名次', colPlayer: '玩家', colTime: '時間', colCash: '錢', colPts: '得分', colTotal: '總分', colCashSum: '三場總金額',
+    ptsRule: '每場依名次得分：第 1 名 3 分、第 2 名 2 分、第 3 名 1 分。成績一樣就同名次、同分。',
+    champion: n => `🏆 ${n} 獲得冠軍！`, coChamps: n => `🤝 ${n} 並列冠軍！`, youChamp: '🏆 你是冠軍！',
+    cpuName: lv => `電腦（${({ easy: '簡單', medium: '中等', hard: '困難' })[lv]}）`, you2: '你',
+    gotBusted: n => `🚨 ${n} 被抓了！`, gotEscaped: n => `🏁 ${n} 撐過 90 秒！`,
+  },
+  en: {
+    pageTitle: 'Escape Road — GameZone', title: 'Escape Road', howTo: 'How to Play', pause: '⏸ Pause', resume: '▶ Resume',
+    restart: '↺ Restart', exit: '✕ EXIT', paused: '⏸ PAUSED — click Resume to continue',
+    time: 'Time', timeLeft: 'Time Left', cash: 'Cash', health: 'Car Health', wanted: 'Wanted', best: 'Best', map: 'Map', controls: 'Controls',
+    controlsText: '⬅➡ or <b>A/D</b>: steer<br>⬆ or <b>W</b>: speed up<br>⬇ or <b>S</b>: brake / reverse<br>📱 Touch: hold the left half to turn left, the right half to turn right, both to brake',
+    gameTitle: '🚗 Escape Road', subtitle: "The cops are after you! Drive through the city and stay free as long as you can.",
+    howToH: 'How to Play',
+    rules: `<li><span class="icon">🚗</span> Your car drives forward by itself — you only steer left and right</li>
+        <li><span class="icon">🚓</span> Don't get boxed in! If you stop with a police car touching you, you're busted</li>
+        <li><span class="icon">🌊</span> Driving into water, or wrecking your car, also ends the run</li>
+        <li><span class="icon">⭐</span> The longer you last, the higher your wanted level: more cops, armored trucks and roadblocks</li>
+        <li><span class="icon">💰</span> Grab cash on the road, and earn a bonus when police cars crash; 🔧 wrenches repair your car</li>
+        <li><span class="icon">🌐</span> Online: 2–4 players share one map over 3 races — the longest escape wins; if everyone lasts 90 seconds, the most cash wins</li>`,
+    startGame: '▶ Start Game', resumeGame: '▶ Resume Game', playAgain: '↺ Play Again', onlineBtn: '🌐 Online Race',
+    busted: '🚨 Busted!', wrecked: '💥 Car wrecked!', drowned: '🌊 Into the water!',
+    resultDetail: (t, c) => `You lasted ${t} and grabbed $${c}`, newBest: '🎉 New best!', bestWas: s => `Best: ${s} points`,
+    bestLine: (s, t) => `🏆 Best: ${s} points (lasted ${t})`, scoreRule: 'Score = cash + 5 points per second',
+    viewMap: '👁 View Map', leaveRoom: '✕ Leave Room', rematch: '▶ Play Again', waitHost: '⏳ Waiting for host',
+    raceN: n => `Race ${n} of 3`, racers: 'Racers', driving: 'Driving', escapedTag: '✓ Lasted 90s', bustedTag: '🚨 Busted',
+    offlineTag: 'offline', leftTag: 'left', watching: "👀 You're watching — tap the map to switch player",
+    waitOthers: 'Your run is over — waiting for the others… (tap the map to switch player)',
+    raceRule: 'The longest escape wins; if everyone lasts 90 seconds, the most cash wins.',
+    raceResult: n => `Race ${n} Results`, finalResult: '🏆 Final Standings', nextRace: s => `Next race starts in ${s}s…`,
+    colRank: '#', colPlayer: 'Player', colTime: 'Time', colCash: 'Cash', colPts: 'Points', colTotal: 'Total', colCashSum: 'Cash (3 races)',
+    ptsRule: 'Each race: 1st gets 3 points, 2nd 2, 3rd 1. Equal results share the place and the points.',
+    champion: n => `🏆 ${n} is the champion!`, coChamps: n => `🤝 Joint champions: ${n}!`, youChamp: "🏆 You're the champion!",
+    cpuName: lv => `CPU (${({ easy: 'Easy', medium: 'Medium', hard: 'Hard' })[lv]})`, you2: 'you',
+    gotBusted: n => `🚨 ${n} got busted!`, gotEscaped: n => `🏁 ${n} lasted 90 seconds!`,
+  },
+});
+</script>
+<script>
+// ═══════════════════════════════════════════════
+//  WORLD
+// ═══════════════════════════════════════════════
+const CELL = 40, BLOCK = 6, PERIOD = 8, NB = 10, MARGIN = 4;
+const C0 = MARGIN, C1 = MARGIN + NB * PERIOD + 2;      // city cells [C0, C1)
+const GW = C1 + MARGIN;                                 // grid is GW × GW cells
+const WORLD = GW * CELL;
+const T_WATER = 0, T_ROAD = 1, T_BUILD = 2, T_GRASS = 3, T_TREE = 4, T_ALLEY = 5, T_SAND = 6, T_RAIL = 7;
+const STEP = 1000 / 60;
+const RACE_SEC = 90, RACE_FRAMES = RACE_SEC * 60;
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let CW = 640, CH = 540;
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+let grid = new Uint8Array(GW * GW), buildings = [], treeList = [], citySeed = 0;
+const cellAt = (cx, cy) => (cx < 0 || cy < 0 || cx >= GW || cy >= GW) ? T_WATER : grid[cy * GW + cx];
+const typeAt = (x, y) => cellAt(Math.floor(x / CELL), Math.floor(y / CELL));
+const solidT = t => t === T_BUILD || t === T_TREE || t === T_RAIL;
+const passT = t => t === T_ROAD || t === T_ALLEY || t === T_GRASS || t === T_SAND;
+const SPAWN = { x: (C0 + 5 * PERIOD + 1) * CELL, y: (C0 + 5 * PERIOD + 1) * CELL };
+
+const ROOF = ['#64748b', '#78716c', '#9ca3af', '#a16207', '#b45309', '#475569', '#7c2d12', '#0f766e', '#6d28d9', '#be123c', '#1d4ed8', '#57534e'];
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = k => Math.max(0, Math.min(255, Math.round(((n >> k) & 255) * f)));
+  return `rgb(${c(16)},${c(8)},${c(0)})`;
+}
+
+// the same seed builds the same city on every device
+function buildCity(seed) {
+  citySeed = seed;
+  const rng = mulberry32(seed);
+  grid = new Uint8Array(GW * GW).fill(T_WATER);
+  buildings = []; treeList = [];
+  const set = (x, y, t) => { if (x >= 0 && y >= 0 && x < GW && y < GW) grid[y * GW + x] = t; };
+  for (let y = C0 - 3; y <= C1 + 2; y++) for (let x = C0 - 3; x <= C1 + 2; x++) set(x, y, (x === C0 - 3 || y === C0 - 3 || x === C1 + 2 || y === C1 + 2) ? T_RAIL : T_SAND);   // a sea wall keeps you out of the sea
+  for (let y = C0; y < C1; y++) for (let x = C0; x < C1; x++) {
+    const i = (x - C0) % PERIOD, j = (y - C0) % PERIOD;
+    set(x, y, i < 2 || j < 2 ? T_ROAD : T_BUILD);
+  }
+  // one lake that swallows four blocks (never in the middle where everybody starts)
+  const lakeOptions = [[0, 0], [0, 7], [7, 0], [7, 7], [1, 3], [7, 3], [3, 7], [3, 0]];
+  const [lbx, lby] = lakeOptions[Math.floor(rng() * lakeOptions.length)];
+  const lake = (bx, by) => bx >= lbx && bx <= lbx + 1 && by >= lby && by <= lby + 1;
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = C0 + bx * PERIOD + 2, y0 = C0 + by * PERIOD + 2;
+    if (lake(bx, by)) continue;
+    const r = rng();
+    const centre = (bx === 4 || bx === 5) && (by === 4 || by === 5);
+    if (r < 0.12 && !centre) {                       // park with trees
+      for (let y = 0; y < BLOCK; y++) for (let x = 0; x < BLOCK; x++) set(x0 + x, y0 + y, T_GRASS);
+      const n = 3 + Math.floor(rng() * 4);
+      for (let k = 0; k < n; k++) {
+        const tx = x0 + Math.floor(rng() * BLOCK), ty = y0 + Math.floor(rng() * BLOCK);
+        set(tx, ty, T_TREE); treeList.push({ x: (tx + 0.5) * CELL, y: (ty + 0.5) * CELL, r: 15 + rng() * 5 });
+      }
+      continue;
+    }
+    if (r < 0.18 && !centre) {                       // pond
+      for (let y = 0; y < BLOCK; y++) for (let x = 0; x < BLOCK; x++) set(x0 + x, y0 + y, (x > 0 && x < 5 && y > 0 && y < 5) ? T_WATER : T_GRASS);
+      continue;
+    }
+    // buildings, sometimes split by alleys you can squeeze through
+    const lay = rng();
+    const rects = [];
+    if (lay < 0.35) rects.push([0, 0, 6, 6]);
+    else if (lay < 0.6) { const k = rng() < 0.5 ? 2 : 3; rects.push([0, 0, 6, k], [0, k + 1, 6, 5 - k]); }
+    else if (lay < 0.85) { const k = rng() < 0.5 ? 2 : 3; rects.push([0, 0, k, 6], [k + 1, 0, 5 - k, 6]); }
+    else rects.push([0, 0, 2, 2], [3, 0, 3, 2], [0, 3, 2, 3], [3, 3, 3, 3]);
+    for (let y = 0; y < BLOCK; y++) for (let x = 0; x < BLOCK; x++) set(x0 + x, y0 + y, T_ALLEY);
+    for (const [rx, ry, rw, rh] of rects) {
+      for (let y = 0; y < rh; y++) for (let x = 0; x < rw; x++) set(x0 + rx + x, y0 + ry + y, T_BUILD);
+      buildings.push({
+        x: (x0 + rx) * CELL + 3, y: (y0 + ry) * CELL + 3, w: rw * CELL - 6, h: rh * CELL - 6,
+        z: 8 + Math.floor(rng() * 16), color: ROOF[Math.floor(rng() * ROOF.length)], det: rng(),
+      });
+    }
+  }
+  // the lake: blocks plus the roads between them become water, with a grassy shore
+  const lx0 = C0 + lbx * PERIOD + 2, ly0 = C0 + lby * PERIOD + 2, LS = PERIOD + BLOCK;
+  for (let y = 0; y < LS; y++) for (let x = 0; x < LS; x++) {
+    const edge = x === 0 || y === 0 || x === LS - 1 || y === LS - 1;
+    set(lx0 + x, ly0 + y, edge ? T_GRASS : T_WATER);
+  }
+  buildMiniMap();
+}
+
+// ═══════════════════════════════════════════════
+//  SOUND
+// ═══════════════════════════════════════════════
+const Sound = (() => {
+  let ac = null;
+  const get = () => { try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) {} return ac; };
+  function tone(f, type, dur, vol = 0.15, f2) {
+    const a = get(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function noise(dur, vol = 0.2, hz = 900) {
+    const a = get(); if (!a) return;
+    const n = Math.floor(a.sampleRate * dur), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    f.type = 'lowpass'; f.frequency.value = hz; g.gain.value = vol;
+    s.buffer = b; s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+  }
+  return {
+    unlock: get,
+    coin() { tone(880, 'square', 0.08, 0.06); setTimeout(() => tone(1320, 'square', 0.1, 0.06), 60); },
+    crash(k) { noise(0.18 + k * 0.05, Math.min(0.35, 0.08 + k * 0.05), 700); },
+    boom() { noise(0.6, 0.4, 400); tone(120, 'sawtooth', 0.4, 0.12, 40); },
+    repair() { tone(520, 'triangle', 0.12, 0.1); setTimeout(() => tone(780, 'triangle', 0.16, 0.1), 90); },
+    siren(on) { if (on) tone(Math.random() < 0.5 ? 640 : 820, 'triangle', 0.22, 0.018); },
+    bust() { tone(600, 'sawtooth', 0.8, 0.14, 120); },
+    win() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 'triangle', 0.25, 0.12), i * 120)); },
+    star() { tone(990, 'triangle', 0.12, 0.08); setTimeout(() => tone(990, 'triangle', 0.12, 0.08), 160); },
+  };
+})();
+
+// ═══════════════════════════════════════════════
+//  CARS
+// ═══════════════════════════════════════════════
+const P_BASE = 4.6, P_BOOST = 5.9;
+function makeCar(kind, x, y, a) {
+  const c = { kind, x, y, a, vx: 0, vy: 0, spd: 0, r: 14, m: 1, turn: 0.06, grip: 0.14, acc: 0.06, hp: 3, stuck: 0, rev: 0, revSteer: 1, stun: 0, color: '#e2e8f0', parked: false, life: 0 };
+  if (kind === 'player') Object.assign(c, { m: 1.3, grip: 0.11, turn: 0.064, acc: 0.07, hp: 100, color: '#06b6d4' });
+  if (kind === 'swat') Object.assign(c, { r: 18, m: 2.6, turn: 0.045, grip: 0.18, acc: 0.04, hp: 8 });
+  if (kind === 'civ') Object.assign(c, { m: 0.8, turn: 0.07, grip: 0.2, hp: 99, color: ['#f97316', '#eab308', '#22c55e', '#ec4899', '#a3a3a3', '#8b5cf6', '#f43f5e', '#14b8a6'][Math.floor(Math.random() * 8)] });
+  return c;
+}
+function angNorm(a) { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; }
+function drive(c, steer, target) {
+  c.spd += (target - c.spd) * (Math.abs(target) > Math.abs(c.spd) ? c.acc : 0.09);
+  const sp = Math.hypot(c.vx, c.vy);
+  c.a = angNorm(c.a + c.turn * steer * Math.min(1, sp / 2.2) * (c.spd < 0 ? -1 : 1));
+  const hx = Math.cos(c.a), hy = Math.sin(c.a);
+  c.vx += (hx * c.spd - c.vx) * c.grip;
+  c.vy += (hy * c.spd - c.vy) * c.grip;
+  c.x += c.vx; c.y += c.vy;
+}
+// push a car out of buildings/trees (and water for computer cars); returns the hardest impact
+function collideWorld(c, waterSolid) {
+  let worst = 0;
+  const x0 = Math.floor((c.x - c.r) / CELL), x1 = Math.floor((c.x + c.r) / CELL);
+  const y0 = Math.floor((c.y - c.r) / CELL), y1 = Math.floor((c.y + c.r) / CELL);
+  for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+    const t = cellAt(cx, cy);
+    if (!(solidT(t) || (waterSolid && t === T_WATER))) continue;
+    const rx = cx * CELL, ry = cy * CELL;
+    const nx = Math.max(rx, Math.min(c.x, rx + CELL)), ny = Math.max(ry, Math.min(c.y, ry + CELL));
+    let dx = c.x - nx, dy = c.y - ny, d = Math.hypot(dx, dy);
+    if (d >= c.r) continue;
+    if (d < 0.001) { dx = c.x - (rx + CELL / 2); dy = c.y - (ry + CELL / 2); d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d; c.x = nx + dx * c.r; c.y = ny + dy * c.r; }
+    else { dx /= d; dy /= d; c.x += dx * (c.r - d); c.y += dy * (c.r - d); }
+    const vn = c.vx * dx + c.vy * dy;
+    if (vn < 0) {
+      c.vx -= 1.35 * vn * dx; c.vy -= 1.35 * vn * dy;
+      worst = Math.max(worst, -vn);
+    }
+  }
+  if (worst > 1) c.spd *= Math.max(0.35, 1 - worst * 0.12);
+  return worst;
+}
+function collideCars(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), min = a.r + b.r;
+  if (d >= min || d < 0.001) return 0;
+  const nx = dx / d, ny = dy / d;
+  const ia = a.parked || a.kind === 'wreck' ? 0 : 1 / a.m, ib = b.parked || b.kind === 'wreck' ? 0 : 1 / b.m;
+  if (ia + ib === 0) return 0;
+  const ov = min - d;
+  a.x -= nx * ov * ia / (ia + ib); a.y -= ny * ov * ia / (ia + ib);
+  b.x += nx * ov * ib / (ia + ib); b.y += ny * ov * ib / (ia + ib);
+  const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+  if (rv >= 0) return 0;
+  const j = -(1.4) * rv / (ia + ib);
+  a.vx -= j * ia * nx; a.vy -= j * ia * ny;
+  b.vx += j * ib * nx; b.vy += j * ib * ny;
+  return -rv;
+}
+
+// ═══════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════
+let gameState = 'idle';       // idle | running | paused | busted | countdown | spectate
+let player, police = [], civs = [], wrecks = [], coins = [], wrench = null;
+let particles = [], floats = [], skids = [];
+let cash = 0, runFrames = 0, star = 1, bustT = 0, endReason = '', shake = 0, spawnT = 0, blockT = 0, lastWrench = 0;
+let camX = SPAWN.x, camY = SPAWN.y, frame = 0, stepAcc = 0, lastTs = 0, looping = false, savedState = null;
+let dist = new Int16Array(GW * GW), heli = null, overT = 0, sirenT = 0;
+const keys = {};
+const touch = { l: false, r: false };
+const BEST_KEY = 'escapeRoad_best';
+let best = null;
+try { best = JSON.parse(localStorage.getItem(BEST_KEY)); } catch (e) {}
+
+const isRace = () => !!(window.Race && Race.online);
+const fmtTime = f => { const s = Math.floor(f / 60); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const MAX_POLICE = [0, 2, 3, 5, 7, 9];
+const starNow = () => Math.min(5, 1 + Math.floor(runFrames / (isRace() ? 13 * 60 : 20 * 60)));
+const scoreOf = () => cash + Math.floor(runFrames / 60) * 5;
+
+function resetRun() {
+  player = makeCar('player', SPAWN.x, SPAWN.y, 0);
+  player.spd = 2;
+  police = []; civs = []; wrecks = []; coins = []; wrench = null;
+  particles = []; floats = []; skids = []; heli = null;
+  cash = 0; runFrames = 0; star = 1; bustT = 0; endReason = ''; shake = 0; spawnT = 60; blockT = 0; lastWrench = 0; overT = 0;
+  camX = player.x; camY = player.y;
+  computeDist();
+  for (let i = 0; i < 10; i++) spawnCiv(true);
+  for (let i = 0; i < 24; i++) spawnCoin(true);
+  updateUI();
+}
+
+// ── distance field from the player's cell (police follow it downhill) ──
+function computeDist() {
+  dist.fill(-1);
+  const q = new Int32Array(GW * GW);
+  let cx = Math.floor(player.x / CELL), cy = Math.floor(player.y / CELL);
+  if (!passT(cellAt(cx, cy))) {           // e.g. pushed against a wall: start from the nearest open cell
+    let found = false;
+    for (let r = 1; r < 3 && !found; r++) for (let dy = -r; dy <= r && !found; dy++) for (let dx = -r; dx <= r && !found; dx++)
+      if (passT(cellAt(cx + dx, cy + dy))) { cx += dx; cy += dy; found = true; }
+  }
+  let h = 0, t = 0;
+  q[t++] = cy * GW + cx; dist[cy * GW + cx] = 0;
+  while (h < t) {
+    const k = q[h++], x = k % GW, y = (k / GW) | 0, dv = dist[k] + 1;
+    if (dv > 120) continue;
+    if (x > 0) { const n = k - 1; if (dist[n] < 0 && passT(grid[n])) { dist[n] = dv; q[t++] = n; } }
+    if (x < GW - 1) { const n = k + 1; if (dist[n] < 0 && passT(grid[n])) { dist[n] = dv; q[t++] = n; } }
+    if (y > 0) { const n = k - GW; if (dist[n] < 0 && passT(grid[n])) { dist[n] = dv; q[t++] = n; } }
+    if (y < GW - 1) { const n = k + GW; if (dist[n] < 0 && passT(grid[n])) { dist[n] = dv; q[t++] = n; } }
+  }
+}
+function downhill(cx, cy) {
+  let best = null, bd = dist[cy * GW + cx];
+  if (bd < 0) bd = 9999;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const nx = cx + dx, ny = cy + dy;
+    if (nx < 0 || ny < 0 || nx >= GW || ny >= GW) continue;
+    const v = dist[ny * GW + nx];
+    if (v >= 0 && v < bd) { bd = v; best = [nx, ny]; }
+  }
+  return best;
+}
+function lineClear(ax, ay, bx, by) {
+  const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / 18);
+  for (let i = 1; i < n; i++) { const t = typeAt(ax + (bx - ax) * i / n, ay + (by - ay) * i / n); if (solidT(t) || t === T_WATER) return false; }
+  return true;
+}
+
+// ── police brain ──
+function policeAI(p) {
+  if (p.parked) { p.vx *= 0.8; p.vy *= 0.8; p.x += p.vx; p.y += p.vy; return; }
+  if (p.stun > 0) { p.stun--; drive(p, 0, 0); return; }
+  if (p.rev > 0) { p.rev--; drive(p, p.revSteer, -2.2); return; }
+  const dx = player.x - p.x, dy = player.y - p.y, d = Math.hypot(dx, dy);
+  let tx, ty;
+  if (d < 280 && (heli || lineClear(p.x, p.y, player.x, player.y))) {
+    const lead = Math.min(22, d / 7);
+    tx = player.x + player.vx * lead; ty = player.y + player.vy * lead;
+  } else {
+    let cx = Math.floor(p.x / CELL), cy = Math.floor(p.y / CELL);
+    const a = downhill(cx, cy);
+    if (a) { const b = downhill(a[0], a[1]) || a; tx = (b[0] + 0.5) * CELL; ty = (b[1] + 0.5) * CELL; }
+    else { tx = player.x; ty = player.y; }
+  }
+  const diff = angNorm(Math.atan2(ty - p.y, tx - p.x) - p.a);
+  const steer = Math.max(-1, Math.min(1, diff * 2.6));
+  const max = (p.kind === 'swat' ? 3.7 : 3.95) + star * 0.18;
+  drive(p, steer, max * (Math.abs(diff) > 1.3 ? 0.5 : Math.abs(diff) > 0.6 ? 0.8 : 1));
+  if (Math.hypot(p.vx, p.vy) < 0.7) { if (++p.stuck > 40) { p.rev = 36; p.revSteer = diff > 0 ? -1 : 1; p.stuck = 0; } } else p.stuck = 0;
+}
+
+// ── traffic: wanders the streets ──
+function civAI(c) {
+  if (c.stun > 0) { c.stun--; drive(c, 0, 0); return; }
+  const cx = Math.floor(c.x / CELL), cy = Math.floor(c.y / CELL);
+  if (!c.goal || Math.hypot(c.goal[0] - c.x, c.goal[1] - c.y) < 16) {
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => cellAt(cx + dx, cy + dy) === T_ROAD);
+    let pick = dirs.filter(([dx, dy]) => !(c.dir && dx === -c.dir[0] && dy === -c.dir[1]));
+    if (!pick.length) pick = dirs;
+    const keep = c.dir && pick.find(([dx, dy]) => dx === c.dir[0] && dy === c.dir[1]);
+    const dir = keep && Math.random() < 0.8 ? keep : pick[Math.floor(Math.random() * pick.length)] || [1, 0];
+    c.dir = dir;
+    c.goal = [(cx + dir[0] + 0.5) * CELL, (cy + dir[1] + 0.5) * CELL];
+  }
+  const diff = angNorm(Math.atan2(c.goal[1] - c.y, c.goal[0] - c.x) - c.a);
+  drive(c, Math.max(-1, Math.min(1, diff * 3)), Math.abs(diff) > 0.8 ? 1.4 : 2.6);
+}
+
+// ── spawning ──
+function randomCellNear(minD, maxD, okType, offscreen) {
+  for (let tries = 0; tries < 60; tries++) {
+    const ang = Math.random() * Math.PI * 2, d = minD + Math.random() * (maxD - minD);
+    const x = player.x + Math.cos(ang) * d, y = player.y + Math.sin(ang) * d;
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    if (!okType(cellAt(cx, cy))) continue;
+    const px = (cx + 0.5) * CELL, py = (cy + 0.5) * CELL;
+    if (offscreen && Math.abs(px - camX) < CW / 2 + 40 && Math.abs(py - camY) < CH / 2 + 40) continue;
+    return { x: px, y: py };
+  }
+  return null;
+}
+function spawnPolice() {
+  const p0 = randomCellNear(560, 820, t => t === T_ROAD, true); if (!p0) return;
+  const swat = star >= 3 && police.filter(p => p.kind === 'swat').length < star - 2 && Math.random() < 0.4;
+  const p = makeCar(swat ? 'swat' : 'police', p0.x, p0.y, Math.atan2(player.y - p0.y, player.x - p0.x));
+  p.spd = 2; police.push(p);
+}
+function spawnCiv(anywhere) {
+  const p0 = randomCellNear(anywhere ? 150 : 480, 850, t => t === T_ROAD, !anywhere); if (!p0) return;
+  const c = makeCar('civ', p0.x, p0.y, [0, Math.PI / 2, Math.PI, -Math.PI / 2][Math.floor(Math.random() * 4)]);
+  c.spd = 2; civs.push(c);
+}
+function spawnCoin(anywhere) {
+  const p0 = randomCellNear(anywhere ? 120 : 300, 950, t => t === T_ROAD || t === T_ALLEY || t === T_GRASS, false); if (!p0) return;
+  const big = Math.random() < 0.1;
+  coins.push({ x: p0.x + (Math.random() - 0.5) * 20, y: p0.y + (Math.random() - 0.5) * 20, v: big ? 50 : 10, ph: Math.random() * 6 });
+}
+function spawnRoadblock() {
+  for (let k = 7; k <= 11; k++) {
+    const x = player.x + Math.cos(player.a) * k * CELL, y = player.y + Math.sin(player.a) * k * CELL;
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    if (cellAt(cx, cy) !== T_ROAD) continue;
+    const i = (cx - C0) % PERIOD, j = (cy - C0) % PERIOD;
+    if (i < 2 && j < 2) continue;                      // not in a crossing
+    const cars = [];
+    if (i < 2) { const bx = cx - i; cars.push([bx, cy], [bx + 1, cy]); }        // north–south street: block both lanes
+    else { const by = cy - j; cars.push([cx, by], [cx, by + 1]); }
+    for (const [ax, ay] of cars) {
+      const p = makeCar('police', (ax + 0.5) * CELL, (ay + 0.5) * CELL, i < 2 ? 0 : Math.PI / 2);
+      p.parked = true; p.life = 60 * 25; police.push(p);
+    }
+    floats.push({ x: (cx + 0.5) * CELL, y: (cy + 0.5) * CELL - 30, text: 'ROADBLOCK!', color: '#f87171', life: 1.6 });
+    return;
+  }
+}
+
+// ── effects ──
+function sparks(x, y, n, color) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = 1 + Math.random() * 3; particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color, r: 2 }); } }
+function smoke(x, y) { particles.push({ x, y, vx: (Math.random() - 0.5) * 0.6, vy: -0.4 - Math.random() * 0.4, life: 1, color: 'smoke', r: 6 + Math.random() * 5 }); }
+function explode(p) {
+  for (let i = 0; i < 30; i++) { const a = Math.random() * 6.28, s = 1 + Math.random() * 5; particles.push({ x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color: i % 3 ? '#f97316' : '#fde047', r: 3 + Math.random() * 3 }); }
+  wrecks.push({ kind: 'wreck', x: p.x, y: p.y, a: p.a, r: p.r, vx: 0, vy: 0, m: 99, life: 60 * 12, swat: p.kind === 'swat' });
+  const bonus = p.kind === 'swat' ? 100 : 50;
+  if (gameState === 'running' && p.kind !== 'player') { cash += bonus; floats.push({ x: p.x, y: p.y - 24, text: `WRECKED +$${bonus}`, color: '#fde047', life: 1.4 }); }
+  Sound.boom(); shake = Math.max(shake, 10);
+}
+function hurtPlayer(n) {
+  if (n <= 0 || gameState !== 'running') return;
+  player.hp = Math.max(0, player.hp - n);
+  shake = Math.max(shake, Math.min(10, n));
+}
+
+// ═══════════════════════════════════════════════
+//  UPDATE (one fixed 1/60 s step)
+// ═══════════════════════════════════════════════
+function updateGame() {
+  runFrames++;
+  const left = keys.ArrowLeft || keys.KeyA || (touch.l && !touch.r);
+  const right = keys.ArrowRight || keys.KeyD || (touch.r && !touch.l);
+  const brake = keys.ArrowDown || keys.KeyS || (touch.l && touch.r);
+  const boost = keys.ArrowUp || keys.KeyW;
+  const steer = (left ? -1 : 0) + (right ? 1 : 0);
+  player.turn = boost ? 0.052 : brake ? 0.075 : 0.064;
+  const target = brake ? (player.spd > 0.6 ? 0 : -2.4) : boost ? P_BOOST : P_BASE;
+  drive(player, steer, target);
+  // tyre marks when sliding
+  const sp = Math.hypot(player.vx, player.vy);
+  const slip = Math.abs(-Math.sin(player.a) * player.vx + Math.cos(player.a) * player.vy);
+  if (slip > 1.4 && sp > 2) { skids.push({ x: player.x, y: player.y, a: player.a, life: 1 }); if (skids.length > 260) skids.shift(); }
+  const hit = collideWorld(player, false);
+  if (hit > 1.6) { hurtPlayer((hit - 1.6) * 5); sparks(player.x, player.y, 6, '#fde047'); Sound.crash(hit / 2); }
+  const tHere = typeAt(player.x, player.y);
+  if (tHere === T_WATER) return endRun('drowned');
+
+  // wanted level
+  const s = starNow();
+  if (s > star) { star = s; Sound.star(); floats.push({ x: player.x, y: player.y - 40, text: '★'.repeat(star), color: '#fbbf24', life: 1.5 }); if (star >= 5 && !heli) heli = { x: player.x - 300, y: player.y - 300 }; }
+
+  // police
+  if (--spawnT <= 0) { spawnT = 120; if (police.filter(p => !p.parked).length < MAX_POLICE[star]) spawnPolice(); }
+  if (star >= 4 && ++blockT > 60 * 14) { blockT = 0; spawnRoadblock(); }
+  for (const p of police) {
+    policeAI(p);
+    const h = collideWorld(p, true);
+    if (h > 2.6 && !p.parked) { p.hp -= p.kind === 'swat' ? 0.5 : 1; sparks(p.x, p.y, 4, '#fde047'); }
+    if (p.parked && --p.life <= 0) p.hp = -99;
+    if (!p.parked && Math.hypot(p.x - player.x, p.y - player.y) > 1500) {   // lost track: come back from somewhere near
+      const q = randomCellNear(600, 820, t => t === T_ROAD, true); if (q) { p.x = q.x; p.y = q.y; p.vx = p.vy = 0; }
+    }
+  }
+  for (const c of civs) { civAI(c); collideWorld(c, true); }
+  // every car against every car
+  const all = [player, ...police, ...civs, ...wrecks];
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+    const a = all[i], b = all[j];
+    const rv = collideCars(a, b);
+    if (rv < 0.9) continue;
+    const isP = a === player || b === player, o = a === player ? b : a;
+    if (isP) {
+      if (o.kind === 'police' || o.kind === 'swat') {
+        hurtPlayer(rv * (o.kind === 'swat' ? 4 : 2.2));
+        o.hp -= rv * (o.kind === 'swat' ? 0.15 : 0.42);
+        if (rv > 2) { Sound.crash(rv / 2); sparks((a.x + b.x) / 2, (a.y + b.y) / 2, 8, '#fde047'); }
+      } else if (o.kind === 'civ') { hurtPlayer(rv * 1.2); o.stun = 70; if (rv > 2) Sound.crash(rv / 3); }
+      else if (o.kind === 'wreck') hurtPlayer(rv * 1.5);
+    } else {
+      const cop = k => k === 'police' || k === 'swat';
+      if (cop(a.kind) && (cop(b.kind) || b.kind === 'wreck') && rv > 1.6) { a.hp -= 0.7; if (cop(b.kind)) b.hp -= 0.7; sparks((a.x + b.x) / 2, (a.y + b.y) / 2, 5, '#fde047'); }
+      if (a.kind === 'civ') a.stun = 60; if (b.kind === 'civ') b.stun = 60;
+    }
+  }
+  for (const p of police) if (p.hp <= 0) { if (p.hp > -50) explode(p); p.dead = true; }
+  police = police.filter(p => !p.dead);
+  for (const w of wrecks) { w.life--; if (w.life % 9 === 0 && w.life > 60 * 6) smoke(w.x, w.y); }
+  wrecks = wrecks.filter(w => w.life > 0);
+  civs = civs.filter(c => Math.hypot(c.x - player.x, c.y - player.y) < 1150);
+  while (civs.length < 10) { const n = civs.length; spawnCiv(false); if (civs.length === n) break; }
+
+  // pickups
+  for (const c of coins) if (Math.hypot(c.x - player.x, c.y - player.y) < 28) {
+    c.got = true; cash += c.v; Sound.coin();
+    floats.push({ x: c.x, y: c.y - 16, text: '+$' + c.v, color: '#fde047', life: 1 });
+  }
+  coins = coins.filter(c => !c.got && Math.hypot(c.x - player.x, c.y - player.y) < 1300);
+  while (coins.length < 24) { const n = coins.length; spawnCoin(false); if (coins.length === n) break; }
+  if (!wrench && player.hp < 85 && runFrames - lastWrench > 60 * 18) {
+    const q = randomCellNear(300, 650, t => t === T_ROAD, false); if (q) wrench = q;
+  }
+  if (wrench && Math.hypot(wrench.x - player.x, wrench.y - player.y) < 30) {
+    player.hp = Math.min(100, player.hp + 35); wrench = null; lastWrench = runFrames; Sound.repair();
+    floats.push({ x: player.x, y: player.y - 30, text: 'REPAIRED +35', color: '#4ade80', life: 1.2 });
+  }
+  if (wrench && Math.hypot(wrench.x - player.x, wrench.y - player.y) > 1400) wrench = null;
+
+  // busted? stopped with a cop touching you
+  let near = 0;
+  for (const p of police) if (Math.hypot(p.x - player.x, p.y - player.y) < p.r + player.r + 12) near++;
+  if (near && sp < 1.15) bustT += near > 1 ? 2 : 1; else bustT = Math.max(0, bustT - 3);
+  if (bustT >= 100) return endRun('busted');
+  if (player.hp <= 0) { explode(player); return endRun('wrecked'); }
+  if (player.hp < 35 && frame % 10 === 0) smoke(player.x, player.y);
+
+  if (heli) { heli.x += (player.x - heli.x) * 0.03; heli.y += (player.y - 30 - heli.y) * 0.03; }
+  if (runFrames % 20 === 0) computeDist();
+  if (--sirenT <= 0) { sirenT = 30; Sound.siren(police.some(p => !p.parked && Math.hypot(p.x - player.x, p.y - player.y) < 420)); }
+  if (isRace()) { Race.tick(); if (runFrames >= RACE_FRAMES) return endRun('escaped'); }
+  if (runFrames % 6 === 0) updateUI();
+}
+
+function updateCamera(tx, ty, vx, vy) {
+  const lx = tx + vx * 20, ly = ty + vy * 20;
+  camX += (lx - camX) * 0.1; camY += (ly - camY) * 0.1;
+  camX = Math.max(CW / 2, Math.min(WORLD - CW / 2, camX));
+  camY = Math.max(CH / 2, Math.min(WORLD - CH / 2, camY));
+}
+function updateFx() {
+  for (const p of particles) { p.x += p.vx; p.y += p.vy; p.vx *= 0.94; p.vy *= 0.94; p.life -= p.color === 'smoke' ? 0.015 : 0.035; if (p.color === 'smoke') p.r += 0.25; }
+  particles = particles.filter(p => p.life > 0);
+  if (particles.length > 400) particles.splice(0, particles.length - 400);
+  for (const f of floats) { f.y -= 0.6; f.life -= 0.018; }
+  floats = floats.filter(f => f.life > 0);
+  for (const s of skids) s.life -= 0.004;
+  skids = skids.filter(s => s.life > 0);
+  if (shake > 0) shake *= 0.85; if (shake < 0.3) shake = 0;
+}
+
+function endRun(reason) {
+  endReason = reason; bustT = reason === 'busted' ? 100 : bustT;
+  if (reason === 'escaped') Sound.win(); else Sound.bust();
+  updateUI();
+  if (isRace()) { Race.finish(reason); return; }
+  gameState = 'busted'; overT = 0;
+}
+
+function showResult() {
+  const sc = scoreOf();
+  const isBest = !best || sc > best.score;
+  if (isBest) { best = { score: sc, time: runFrames, cash }; try { localStorage.setItem(BEST_KEY, JSON.stringify(best)); } catch (e) {} }
+  document.getElementById('resultTitle').textContent = SillyI18n.t(endReason);
+  document.getElementById('resultSubtitle').textContent = isBest ? SillyI18n.t('newBest') : SillyI18n.t('bestWas', best.score);
+  document.getElementById('finalScore').textContent = sc;
+  document.getElementById('resultDetail').textContent = SillyI18n.t('resultDetail', fmtTime(runFrames), cash) + ' · ' + SillyI18n.t('scoreRule');
+  document.getElementById('resultOverlay').classList.add('active');
+  updateUI();
+}
+
+// ═══════════════════════════════════════════════
+//  DRAWING
+// ═══════════════════════════════════════════════
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+function drawGround(vx0, vy0, vx1, vy1) {
+  const cx0 = Math.max(0, Math.floor(vx0 / CELL)), cy0 = Math.max(0, Math.floor(vy0 / CELL));
+  const cx1 = Math.min(GW - 1, Math.floor(vx1 / CELL)), cy1 = Math.min(GW - 1, Math.floor(vy1 / CELL));
+  const COL = { [T_WATER]: '#1e5f99', [T_ROAD]: '#3b3f4a', [T_BUILD]: '#8b919c', [T_GRASS]: '#3f7d3a', [T_TREE]: '#3f7d3a', [T_ALLEY]: '#555a66', [T_SAND]: '#cdb67c', [T_RAIL]: '#cdb67c' };
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    const t = grid[cy * GW + cx];
+    ctx.fillStyle = COL[t];
+    ctx.fillRect(cx * CELL, cy * CELL, CELL + 0.5, CELL + 0.5);
+    if (t === T_RAIL) {
+      ctx.fillStyle = '#6b7280'; ctx.fillRect(cx * CELL + 8, cy * CELL + 8, CELL - 16, CELL - 16);
+      ctx.fillStyle = (cx + cy) % 2 ? '#ef4444' : '#f8fafc'; ctx.fillRect(cx * CELL + 11, cy * CELL + 11, CELL - 22, CELL - 22);
+    } else if (t === T_WATER) {
+      const w = Math.sin(frame * 0.04 + cx * 0.9 + cy * 0.6);
+      if (w > 0.7) { ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx * CELL + 8, cy * CELL + 20); ctx.quadraticCurveTo(cx * CELL + 20, cy * CELL + 14, cx * CELL + 32, cy * CELL + 20); ctx.stroke(); }
+    } else if (t === T_ROAD) {
+      const i = (cx - C0) % PERIOD, j = (cy - C0) % PERIOD;
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      if (i === 0 && j >= 2) for (let k = 0; k < 2; k++) ctx.fillRect(cx * CELL + CELL - 1.5, cy * CELL + 4 + k * 20, 3, 11);
+      if (j === 0 && i >= 2) for (let k = 0; k < 2; k++) ctx.fillRect(cx * CELL + 4 + k * 20, cy * CELL + CELL - 1.5, 11, 3);
+      // zebra crossings at the edges of crossings
+      if (i < 2 && (j === 2 || j === PERIOD - 1) && cy < C1 - 1) { ctx.fillStyle = 'rgba(255,255,255,0.22)'; for (let k = 0; k < 4; k++) ctx.fillRect(cx * CELL + 4 + k * 9, cy * CELL + (j === 2 ? 2 : CELL - 9), 5, 7); }
+      if (j < 2 && (i === 2 || i === PERIOD - 1)) { ctx.fillStyle = 'rgba(255,255,255,0.22)'; for (let k = 0; k < 4; k++) ctx.fillRect(cx * CELL + (i === 2 ? 2 : CELL - 9), cy * CELL + 4 + k * 9, 7, 5); }
+    }
+  }
+}
+function drawBuildings(vx0, vy0, vx1, vy1) {
+  for (const b of buildings) {
+    if (b.x > vx1 || b.x + b.w < vx0 || b.y - b.z > vy1 || b.y + b.h < vy0) continue;
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(b.x + 7, b.y + 7, b.w, b.h);
+    ctx.fillStyle = shade(b.color, 0.6); ctx.fillRect(b.x, b.y + b.h - b.z, b.w, b.z);          // front wall
+    // windows on the wall
+    ctx.fillStyle = 'rgba(253,230,138,0.35)';
+    for (let wx = b.x + 6; wx < b.x + b.w - 8; wx += 14) ctx.fillRect(wx, b.y + b.h - b.z + 3, 7, Math.max(3, b.z - 7));
+    ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y - b.z, b.w, b.h);                             // roof
+    ctx.strokeStyle = shade(b.color, 1.25); ctx.lineWidth = 3; ctx.strokeRect(b.x + 1.5, b.y - b.z + 1.5, b.w - 3, b.h - 3);
+    if (b.det < 0.5 && b.w > 50 && b.h > 50) { ctx.fillStyle = shade(b.color, 0.8); ctx.fillRect(b.x + b.w * 0.25, b.y - b.z + b.h * 0.3, 18, 14); ctx.fillRect(b.x + b.w * 0.6, b.y - b.z + b.h * 0.55, 14, 14); }
+    else if (b.det > 0.8 && b.w > 40) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 18px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('H', b.x + b.w / 2, b.y - b.z + b.h / 2); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x + b.w / 2, b.y - b.z + b.h / 2, 13, 0, 7); ctx.stroke(); }
+  }
+  for (const t of treeList) {
+    if (t.x < vx0 - 30 || t.x > vx1 + 30 || t.y < vy0 - 30 || t.y > vy1 + 30) continue;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.arc(t.x + 5, t.y + 5, t.r, 0, 7); ctx.fill();
+    ctx.fillStyle = '#166534'; ctx.beginPath(); ctx.arc(t.x, t.y - 4, t.r, 0, 7); ctx.fill();
+    ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(t.x - 4, t.y - 9, t.r * 0.5, 0, 7); ctx.fill();
+  }
+}
+function drawCar(c, alpha = 1) {
+  const L = c.r * 2.6, W = c.r * 1.5;
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.translate(c.x, c.y); ctx.rotate(c.a);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; rr(-L / 2 + 3, -W / 2 + 4, L, W, 5); ctx.fill();
+  const k = c.kind;
+  if (k === 'wreck') {
+    ctx.fillStyle = '#292524'; rr(-L / 2, -W / 2, L, W, 5); ctx.fill();
+    ctx.fillStyle = '#44403c'; ctx.fillRect(-L * 0.2, -W / 2 + 3, L * 0.32, W - 6);
+    ctx.restore(); return;
+  }
+  const body = k === 'police' ? '#f8fafc' : k === 'swat' ? '#1e293b' : c.color;
+  ctx.fillStyle = body; rr(-L / 2, -W / 2, L, W, 5); ctx.fill();
+  if (k === 'police') { ctx.fillStyle = '#111827'; ctx.fillRect(L * 0.18, -W / 2, L * 0.32, W); ctx.fillRect(-L / 2, -W / 2, L * 0.16, W); }
+  if (k === 'swat') { ctx.fillStyle = '#334155'; ctx.fillRect(-L * 0.42, -W / 2 + 3, L * 0.62, W - 6); ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 9px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('SWAT', -L * 0.1, 0); }
+  // windows
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(L * 0.08, -W / 2 + 3, L * 0.14, W - 6);
+  ctx.fillRect(-L * 0.36, -W / 2 + 3, L * 0.1, W - 6);
+  if (k !== 'swat') { ctx.fillStyle = k === 'police' ? '#e5e7eb' : shade(c.color.startsWith('#') ? c.color : '#888888', 1.18); ctx.fillRect(-L * 0.24, -W / 2 + 3, L * 0.3, W - 6); }
+  // lights
+  ctx.fillStyle = '#fef9c3'; ctx.fillRect(L / 2 - 3, -W / 2 + 2, 3, 4); ctx.fillRect(L / 2 - 3, W / 2 - 6, 3, 4);
+  ctx.fillStyle = '#ef4444'; ctx.fillRect(-L / 2, -W / 2 + 2, 2, 4); ctx.fillRect(-L / 2, W / 2 - 6, 2, 4);
+  if (k === 'police' || k === 'swat') {
+    const on = Math.floor(frame / 8) % 2 === 0;
+    ctx.fillStyle = on ? '#ef4444' : '#3b82f6'; ctx.fillRect(-L * 0.1, -W / 2 + 3, 5, W / 2 - 3);
+    ctx.fillStyle = on ? '#3b82f6' : '#ef4444'; ctx.fillRect(-L * 0.1, 0, 5, W / 2 - 3);
+    if (!c.parked) { ctx.globalAlpha = alpha * 0.18; ctx.fillStyle = on ? '#ef4444' : '#3b82f6'; ctx.beginPath(); ctx.arc(0, 0, c.r * 2.2, 0, 7); ctx.fill(); }
+  }
+  if (k === 'player' || k === 'ghost') {   // racing stripes
+    ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fillRect(-L / 2 + 2, -2, L - 4, 1.6); ctx.fillRect(-L / 2 + 2, 1, L - 4, 1.6);
+  }
+  ctx.restore();
+}
+function drawCoin(c) {
+  const bob = Math.sin(frame * 0.08 + c.ph) * 2;
+  if (c.v >= 50) {
+    ctx.fillStyle = '#15803d'; rr(c.x - 11, c.y - 8 + bob, 22, 16, 4); ctx.fill();
+    ctx.fillStyle = '#bbf7d0'; ctx.font = 'bold 12px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$$', c.x, c.y + bob + 1);
+  } else {
+    ctx.fillStyle = '#ca8a04'; ctx.beginPath(); ctx.arc(c.x, c.y + bob, 9, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(c.x, c.y + bob, 7, 0, 7); ctx.fill();
+    ctx.fillStyle = '#a16207'; ctx.font = 'bold 11px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$', c.x, c.y + bob + 1);
+  }
+}
+function drawWrench(w) {
+  const bob = Math.sin(frame * 0.1) * 3;
+  ctx.fillStyle = 'rgba(74,222,128,0.25)'; ctx.beginPath(); ctx.arc(w.x, w.y + bob, 18, 0, 7); ctx.fill();
+  ctx.font = '22px Segoe UI Emoji, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🔧', w.x, w.y + bob);
+}
+
+function render(spect) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#1e5f99'; ctx.fillRect(0, 0, CW, CH);
+  const sx = shake ? (Math.random() - 0.5) * shake : 0, sy = shake ? (Math.random() - 0.5) * shake : 0;
+  const ox = Math.round(CW / 2 - camX + sx), oy = Math.round(CH / 2 - camY + sy);
+  ctx.setTransform(1, 0, 0, 1, ox, oy);
+  const vx0 = camX - CW / 2 - 40, vy0 = camY - CH / 2 - 40, vx1 = camX + CW / 2 + 40, vy1 = camY + CH / 2 + 60;
+  drawGround(vx0, vy0, vx1, vy1);
+  for (const s of skids) { ctx.save(); ctx.globalAlpha = s.life * 0.4; ctx.translate(s.x, s.y); ctx.rotate(s.a); ctx.fillStyle = '#111'; ctx.fillRect(-16, -9, 6, 3); ctx.fillRect(-16, 6, 6, 3); ctx.restore(); }
+  if (!spect) {
+    for (const c of coins) if (Math.abs(c.x - camX) < CW && Math.abs(c.y - camY) < CH) drawCoin(c);
+    if (wrench) drawWrench(wrench);
+    for (const w of wrecks) drawCar(w);
+    for (const c of civs) drawCar(c);
+    for (const p of police) drawCar(p);
+  }
+  if (window.Race && Race.online) Race.drawGhosts();
+  if (!spect && player && endReason !== 'wrecked') drawCar(player);
+  if (!spect && player && bustT > 0) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(player.x, player.y, 30, 0, 7); ctx.stroke();
+    ctx.strokeStyle = '#ef4444'; ctx.beginPath(); ctx.arc(player.x, player.y, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, bustT / 100)); ctx.stroke();
+  }
+  drawBuildings(vx0, vy0, vx1, vy1);
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life) * (p.color === 'smoke' ? 0.45 : 1);
+    ctx.fillStyle = p.color === 'smoke' ? '#9ca3af' : p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  if (!spect && heli) {
+    ctx.fillStyle = 'rgba(254,249,195,0.12)'; ctx.beginPath(); ctx.arc(player.x, player.y, 70, 0, 7); ctx.fill();
+    ctx.save(); ctx.translate(heli.x, heli.y - 60);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(20, 70, 26, 12, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#1f2937'; ctx.beginPath(); ctx.ellipse(0, 0, 22, 12, 0, 0, 7); ctx.fill(); ctx.fillRect(-46, -3, 30, 6);
+    ctx.strokeStyle = 'rgba(203,213,225,0.7)'; ctx.lineWidth = 3; const ra = frame * 0.5;
+    ctx.beginPath(); ctx.moveTo(Math.cos(ra) * 40, Math.sin(ra) * 40); ctx.lineTo(-Math.cos(ra) * 40, -Math.sin(ra) * 40); ctx.moveTo(Math.cos(ra + 1.57) * 40, Math.sin(ra + 1.57) * 40); ctx.lineTo(-Math.cos(ra + 1.57) * 40, -Math.sin(ra + 1.57) * 40); ctx.stroke();
+    ctx.restore();
+  }
+  for (const f of floats) {
+    ctx.globalAlpha = Math.min(1, f.life); ctx.fillStyle = f.color; ctx.font = 'bold 18px Segoe UI, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.strokeText(f.text, f.x, f.y); ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (!spect && player) drawHud();
+  if (touchHint && (gameState === 'running')) drawTouchHint();
+}
+function hudText(t, x, y, size, color, align = 'left') {
+  ctx.font = `bold ${size}px Segoe UI, sans-serif`; ctx.textAlign = align; ctx.textBaseline = 'top';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.65)'; ctx.strokeText(t, x, y); ctx.fillStyle = color; ctx.fillText(t, x, y);
+}
+function drawHud() {
+  const race = isRace();
+  hudText(race ? `${fmtTime(Math.max(0, RACE_FRAMES - runFrames))}` : fmtTime(runFrames), 14, 10, 26, '#fff');
+  hudText(`$${cash}`, 14, 42, 22, '#fde047');
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(14, 72, 120, 10, 5); ctx.fill();
+  ctx.fillStyle = player.hp > 50 ? '#22c55e' : player.hp > 25 ? '#eab308' : '#ef4444'; rr(14, 72, 120 * player.hp / 100, 10, 5); ctx.fill();
+  let st = ''; for (let i = 1; i <= 5; i++) st += i <= star ? '★' : '☆';
+  hudText(st, CW - 14, 10, 24, '#fbbf24', 'right');
+  if (race) hudText(`RACE ${Race.race} / 3`, CW - 14, 40, 16, '#e2e8f0', 'right');
+  if (bustT > 30 && gameState === 'running') hudText('GET MOVING!', CW / 2, CH - 60, 26, '#f87171', 'center');
+  if (gameState === 'busted' || (race && endReason)) {
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, CH / 2 - 50, CW, 100);
+    const label = { busted: 'BUSTED!', wrecked: 'WRECKED!', drowned: 'SPLASH!', escaped: 'ESCAPED!' }[endReason] || '';
+    hudText(label, CW / 2, CH / 2 - 34, 52, endReason === 'escaped' ? '#4ade80' : '#f87171', 'center');
+  }
+}
+let touchHint = false;
+function drawTouchHint() {
+  ctx.globalAlpha = 0.28;
+  ctx.fillStyle = touch.l ? '#fff' : '#cbd5e1'; ctx.font = 'bold 44px Segoe UI, sans-serif'; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; ctx.fillText('◀', 18, CH - 50);
+  ctx.fillStyle = touch.r ? '#fff' : '#cbd5e1'; ctx.textAlign = 'right'; ctx.fillText('▶', CW - 18, CH - 50);
+  ctx.globalAlpha = 1;
+}
+
+// ── minimap ──
+const mini = document.getElementById('miniMap'), mctx = mini.getContext('2d');
+let miniBase = null;
+function buildMiniMap() {
+  miniBase = document.createElement('canvas'); miniBase.width = GW; miniBase.height = GW;
+  const g = miniBase.getContext('2d'), img = g.createImageData(GW, GW);
+  const COL = { [T_WATER]: [30, 95, 153], [T_ROAD]: [90, 96, 110], [T_BUILD]: [40, 44, 56], [T_GRASS]: [63, 125, 58], [T_TREE]: [40, 100, 40], [T_ALLEY]: [70, 74, 84], [T_SAND]: [205, 182, 124], [T_RAIL]: [150, 150, 160] };
+  for (let i = 0; i < GW * GW; i++) { const c = COL[grid[i]]; img.data.set([c[0], c[1], c[2], 255], i * 4); }
+  g.putImageData(img, 0, 0);
+}
+function drawMini() {
+  if (!miniBase || !mini.offsetParent) return;
+  const S = mini.width / WORLD;
+  mctx.imageSmoothingEnabled = false;
+  mctx.drawImage(miniBase, 0, 0, mini.width, mini.height);
+  mctx.strokeStyle = 'rgba(255,255,255,0.5)'; mctx.lineWidth = 1;
+  mctx.strokeRect((camX - CW / 2) * S, (camY - CH / 2) * S, CW * S, CH * S);
+  if (gameState === 'running' || gameState === 'busted') for (const p of police) { mctx.fillStyle = Math.floor(frame / 10) % 2 ? '#ef4444' : '#3b82f6'; mctx.fillRect(p.x * S - 2, p.y * S - 2, 4, 4); }
+  if (window.Race && Race.online) Race.drawMiniGhosts(mctx, S);
+  if (player && !(window.Race && Race.online && SillyOnline.mySeat() < 0)) { mctx.fillStyle = '#fff'; mctx.beginPath(); mctx.arc(player.x * S, player.y * S, 3.5, 0, 7); mctx.fill(); mctx.fillStyle = window.Race && Race.online ? Race.myColor() : '#06b6d4'; mctx.beginPath(); mctx.arc(player.x * S, player.y * S, 2.4, 0, 7); mctx.fill(); }
+}
+
+// ── side panel ──
+function updateUI() {
+  const race = isRace();
+  document.getElementById('timeLabel').textContent = SillyI18n.t(race ? 'timeLeft' : 'time');
+  document.getElementById('timeDisplay').textContent = player ? fmtTime(race ? Math.max(0, RACE_FRAMES - runFrames) : runFrames) : '0:00';
+  document.getElementById('cashDisplay').textContent = '$' + cash;
+  const hp = player ? Math.ceil(player.hp) : 100;
+  document.getElementById('hpDisplay').textContent = hp;
+  const bar = document.getElementById('hpBar');
+  bar.style.width = hp + '%';
+  bar.style.background = hp > 50 ? 'linear-gradient(90deg,#22c55e,#84cc16)' : hp > 25 ? '#eab308' : '#ef4444';
+  let st = ''; for (let i = 1; i <= 5; i++) st += i <= star ? '★' : '<span class="off">★</span>';
+  document.getElementById('starsDisplay').innerHTML = st;
+  document.getElementById('bestDisplay').textContent = best ? best.score : '—';
+  document.getElementById('bestLine').textContent = best ? SillyI18n.t('bestLine', best.score, fmtTime(best.time)) : '';
+}
+
+// ═══════════════════════════════════════════════
+//  LOOP
+// ═══════════════════════════════════════════════
+const LOOP_STATES = new Set(['running', 'busted', 'countdown', 'spectate']);
+function loop(ts) {
+  if (!LOOP_STATES.has(gameState)) { looping = false; lastTs = 0; return; }
+  stepAcc += lastTs ? Math.min(250, ts - lastTs) : STEP;
+  lastTs = ts;
+  while (stepAcc >= STEP) {
+    stepAcc -= STEP; frame++;
+    if (gameState === 'running') updateGame();
+    if (gameState === 'busted') { if (++overT === 80) { gameState = 'over'; showResult(); } }
+    if (gameState === 'spectate' && window.Race) Race.spectStep();
+    else if (player) updateCamera(player.x, player.y, gameState === 'running' ? player.vx : 0, gameState === 'running' ? player.vy : 0);
+    if (window.Race && Race.online) Race.ghostStep();
+    updateFx();
+  }
+  render(gameState === 'spectate');
+  if (frame % 6 === 0) drawMini();
+  if (LOOP_STATES.has(gameState)) requestAnimationFrame(loop); else { looping = false; lastTs = 0; }
+}
+function ensureLoop() { if (!looping) { looping = true; lastTs = 0; stepAcc = 0; requestAnimationFrame(loop); } }
+
+function startSolo() {
+  document.getElementById('startOverlay').classList.remove('active');
+  document.getElementById('resultOverlay').classList.remove('active');
+  Sound.unlock();
+  buildCity((Math.random() * 2 ** 31) | 0);
+  resetRun();
+  gameState = 'running'; savedState = null; setPauseBtnText(false);
+  ensureLoop();
+}
+
+// ═══════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code) && (gameState === 'running' || gameState === 'paused')) e.preventDefault();
+  if ((e.code === 'KeyP' || e.code === 'Escape') && !isRace()) togglePause();
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; touch.l = touch.r = false; });
+function readTouches(e) {
+  const rect = canvas.getBoundingClientRect();
+  touch.l = touch.r = false;
+  for (const t of e.touches) { if (t.clientX - rect.left < rect.width / 2) touch.l = true; else touch.r = true; }
+}
+canvas.addEventListener('touchstart', e => { e.preventDefault(); touchHint = true; Sound.unlock(); readTouches(e); if (window.Race && Race.online && gameState === 'spectate') Race.nextWatch(); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); readTouches(e); }, { passive: false });
+canvas.addEventListener('touchend', e => { e.preventDefault(); readTouches(e); }, { passive: false });
+canvas.addEventListener('touchcancel', e => { readTouches(e); });
+canvas.addEventListener('mousedown', () => { if (window.Race && Race.online && gameState === 'spectate') Race.nextWatch(); });
+
+// canvas size: wide on computers, tall on phones
+function fitCanvas() {
+  const narrow = window.innerWidth <= 900;
+  let w = 640, h = 540, cssW = 640;
+  if (narrow) {
+    cssW = Math.min(window.innerWidth - 16, 640);
+    w = 440;
+    const ratio = Math.max(0.9, Math.min(1.6, (window.innerHeight - 150) / cssW));
+    h = Math.round(w * ratio);
+  }
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  CW = w; CH = h;
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = Math.round(cssW * h / w) + 'px';
+  if (!LOOP_STATES.has(gameState) && player) render(false);
+}
+window.addEventListener('resize', fitCanvas);
+
+// ═══════════════════════════════════════════════
+//  PAUSE & BUTTONS
+// ═══════════════════════════════════════════════
+function setPauseBtnText(p) {
+  document.getElementById('pauseBtn').textContent = SillyI18n.t(p ? 'resume' : 'pause');
+  document.getElementById('pauseBadge').classList.toggle('visible', p);
+}
+function togglePause() {
+  if (gameState === 'running') { savedState = 'running'; gameState = 'paused'; setPauseBtnText(true); }
+  else if (gameState === 'paused') { gameState = savedState || 'running'; savedState = null; setPauseBtnText(false); document.getElementById('startOverlay').classList.remove('active'); ensureLoop(); }
+}
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (gameState === 'paused') { togglePause(); return; }
+  startSolo();
+});
+document.getElementById('restartBtn').addEventListener('click', () => { if (gameState === 'idle') return; startSolo(); });
+document.getElementById('howToPlayBtn').addEventListener('click', () => {
+  if (gameState === 'running') togglePause();
+  document.getElementById('startBtn').textContent = SillyI18n.t(gameState === 'paused' ? 'resumeGame' : 'startGame');
+  document.getElementById('startOverlay').classList.add('active');
+});
+document.getElementById('resultRestartBtn').addEventListener('click', startSolo);
+document.getElementById('exitBtn').addEventListener('click', () => { window.location.href = '../../'; });
+document.getElementById('resultExitBtn').addEventListener('click', () => { window.location.href = '../../'; });
+SillyI18n.onChange(() => { updateUI(); if (gameState === 'paused') setPauseBtnText(true); });
+
+// preview behind the start dialog
+buildCity(20261025);
+player = makeCar('player', SPAWN.x, SPAWN.y, 0);
+camX = SPAWN.x; camY = SPAWN.y;
+fitCanvas();
+updateUI();
+render(false);
+drawMini();
+</script>
+<script>
+// ═══════════════════════════════════════════════
+//  ONLINE RACE (games/shared/online.js)
+//  2–4 players drive in the same city (same seed) on their own devices,
+//  each chased by their own police. Other players show up as see-through
+//  "ghost" cars (no crashing into each other). 3 races of up to 90 s:
+//  the longest escape wins; if several last the full 90 s, more cash wins.
+//  Positions go through the room's live channel (one doc per player, ~2 per second);
+//  the host runs the CPU drivers and decides when a race is over.
+// ═══════════════════════════════════════════════
+const Race = window.Race = {
+  online: false, race: 0, seed: 0, round: -1, key: '', resultKey: '',
+  live: {}, ghosts: {}, unLive: null, cpus: {}, lastPush: 0,
+  countdownTimer: null, hostTimer: null, nextTimer: null,
+  raceStartAt: 0, resultSeenAt: 0, done: false, watch: -1, announced: new Set(),
+};
+const RACE_COLORS = ['#06b6d4', '#f59e0b', '#a855f7', '#ef4444'];
+const POINTS = [3, 2, 1, 0];
+const CPU_SKILL = { easy: { min: 25, max: 62, cash: 8 }, medium: { min: 42, max: 112, cash: 12 }, hard: { min: 60, max: 135, cash: 16 } };   // cash per second
+const tt = (k, ...a) => SillyI18n.t(k, ...a);
+const room = () => SillyOnline.room;
+const mySeat = () => SillyOnline.mySeat();
+const seatId = i => { const s = room() && room().seats[i]; return !s ? null : s.cpu ? 'cpu' + i : s.id; };
+function seatName(i, short) {
+  const s = room() && room().seats[i];
+  if (!s) return '';
+  const nm = s.cpu ? tt('cpuName', s.level) : s.name;
+  if (short) return nm;
+  return nm + (i === mySeat() ? (SillyI18n.lang === 'zh' ? `（${tt('you2')}）` : ` (${tt('you2')})`) : '');
+}
+Race.myColor = () => RACE_COLORS[Math.max(0, mySeat())];
+Race.watchOnly = () => mySeat() < 0 || !player;
+
+// latest state of seat i in the current race
+function liveOf(i) {
+  if (i === mySeat() && Race.race && player) return { x: player.x, y: player.y, a: player.a, cash, t: runFrames, done: Race.done, end: endReason, hp: player.hp };
+  const c = Race.cpus[i];
+  if (c && c.race === Race.race) return { x: c.x, y: c.y, a: c.a, cash: Math.floor(c.cash), t: c.frames, done: c.done, end: c.end };
+  const L = Race.live[seatId(i)];
+  return L && L.round === Race.round && L.race === Race.race ? L : null;
+}
+
+// ── my run ──
+function pushLive(force) {
+  const now = Date.now();
+  if (!force && now - Race.lastPush < 500) return;
+  Race.lastPush = now;
+  const me = mySeat(); if (me < 0 || !Race.race || !player) return;
+  SillyOnline.liveSet(SillyOnline.me.id, {
+    seat: me, round: Race.round, race: Race.race,
+    x: Math.round(player.x), y: Math.round(player.y), a: +player.a.toFixed(2),
+    vx: +player.vx.toFixed(2), vy: +player.vy.toFixed(2),
+    cash, t: runFrames, done: Race.done, end: endReason || '', at: now,
+  });
+}
+Race.tick = function () { pushLive(false); };
+Race.finish = function (reason) {
+  Race.done = true;
+  pushLive(true);
+  gameState = 'spectate';
+  Race.watch = -1; Race.nextWatch(true);
+  renderBoard();
+};
+function startRun() {
+  clearInterval(Race.countdownTimer); Race.countdownTimer = null;
+  resetRun();
+  Race.done = false;
+  gameState = 'running';
+  pushLive(true);
+  ensureLoop();
+}
+// 3-2-1 before every race (also starts the host's CPU drivers)
+function countdown() {
+  clearInterval(Race.countdownTimer);
+  buildCity(Race.seed);
+  player = makeCar('player', SPAWN.x, SPAWN.y, 0);
+  police = []; civs = []; coins = []; wrecks = []; particles = []; floats = []; skids = []; heli = null;
+  cash = 0; runFrames = 0; star = 1; bustT = 0; endReason = '';
+  camX = SPAWN.x; camY = SPAWN.y;
+  Race.ghosts = {};
+  gameState = 'countdown'; ensureLoop();
+  updateUI();
+  const goAt = Date.now() + 3200;
+  let started = false;
+  Race.cdText = '3';
+  const tick = () => {
+    const left = goAt - Date.now();
+    Race.cdText = left > 0 ? String(Math.ceil(left / 1000)) : 'GO!';
+    if (left <= -250 && !started) {
+      started = true; Race.cdText = '';
+      Race.raceStartAt = Date.now();
+      if (SillyOnline.isHost()) startCpus();
+      if (mySeat() >= 0) startRun();
+      else { clearInterval(Race.countdownTimer); gameState = 'spectate'; Race.watch = -1; Race.nextWatch(true); }
+    }
+    if (started && left < -1200) clearInterval(Race.countdownTimer);
+  };
+  tick();
+  Race.countdownTimer = setInterval(tick, 100);
+}
+
+// ── other players: smooth "ghost" cars ──
+Race.ghostStep = function () {
+  const me = mySeat();
+  (room() ? room().seats : []).forEach((s, i) => {
+    if (!s || i === me) return;
+    const L = liveOf(i);
+    if (!L || L.x == null) return;
+    let g = Race.ghosts[i];
+    const isCpu = !!Race.cpus[i];
+    if (!g) g = Race.ghosts[i] = { x: L.x, y: L.y, a: L.a, recv: Date.now(), src: null };
+    if (!isCpu && g.src !== L.at) { g.src = L.at; g.recv = Date.now(); }
+    // predict from the last report, then ease toward it
+    const k = isCpu ? 0 : Math.min(36, (Date.now() - g.recv) / STEP);
+    const tx = L.x + (L.done ? 0 : (L.vx || 0) * k), ty = L.y + (L.done ? 0 : (L.vy || 0) * k);
+    if (Math.hypot(tx - g.x, ty - g.y) > 400) { g.x = tx; g.y = ty; }
+    g.x += (tx - g.x) * 0.2; g.y += (ty - g.y) * 0.2;
+    g.a += angNorm(L.a - g.a) * 0.25;
+    g.done = L.done; g.end = L.end;
+  });
+};
+Race.drawGhosts = function () {
+  for (const [i, g] of Object.entries(Race.ghosts)) {
+    const s = room() && room().seats[i]; if (!s) continue;
+    if (g.x < camX - CW / 2 - 60 || g.x > camX + CW / 2 + 60 || g.y < camY - CH / 2 - 60 || g.y > camY + CH / 2 + 60) continue;
+    drawCar({ kind: 'ghost', x: g.x, y: g.y, a: g.a, r: 14, color: RACE_COLORS[i] }, g.done && g.end !== 'escaped' ? 0.3 : 0.6);
+    const nm = seatName(+i, true);
+    ctx.font = 'bold 13px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.strokeText(nm, g.x, g.y - 22);
+    ctx.fillStyle = RACE_COLORS[i]; ctx.fillText(nm, g.x, g.y - 22);
+    if (g.done && g.end !== 'escaped') { ctx.fillStyle = '#f87171'; ctx.fillText('BUSTED', g.x, g.y - 36); }
+  }
+  if (Race.cdText) {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, 0, CW, CH);
+    hudText(`RACE ${Race.race} / 3`, CW / 2, CH / 2 - 110, 24, '#fbbf24', 'center');
+    hudText(Race.cdText, CW / 2, CH / 2 - 70, 110, '#fbbf24', 'center');
+    ctx.restore();
+  }
+  if (gameState === 'spectate' && Race.watch >= 0) {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    hudText(`WATCHING: ${seatName(Race.watch, true)}`, CW / 2, CH - 40, 18, '#e2e8f0', 'center');
+    ctx.restore();
+  }
+};
+Race.drawMiniGhosts = function (m, S) {
+  for (const [i, g] of Object.entries(Race.ghosts)) {
+    m.fillStyle = '#fff'; m.beginPath(); m.arc(g.x * S, g.y * S, 3.5, 0, 7); m.fill();
+    m.fillStyle = RACE_COLORS[i]; m.beginPath(); m.arc(g.x * S, g.y * S, 2.4, 0, 7); m.fill();
+  }
+};
+// after my run (or as a spectator) the camera follows someone else
+Race.nextWatch = function (preferAlive) {
+  const seats = (room() ? room().seats : []).map((s, i) => i).filter(i => room().seats[i] && i !== mySeat() && Race.ghosts[i]);
+  if (!seats.length) { Race.watch = -1; return; }
+  if (preferAlive) { const alive = seats.find(i => !Race.ghosts[i].done); Race.watch = alive != null ? alive : seats[0]; return; }
+  const k = seats.indexOf(Race.watch);
+  Race.watch = seats[(k + 1) % seats.length];
+};
+Race.spectStep = function () {
+  if (Race.watch < 0 || !Race.ghosts[Race.watch]) Race.nextWatch(true);
+  const g = Race.ghosts[Race.watch];
+  if (g) updateCamera(g.x, g.y, 0, 0);
+  else if (player) updateCamera(player.x, player.y, 0, 0);
+};
+
+// ── host: CPU drivers (they roam the streets; how long they last depends on their level) ──
+function startCpus() {
+  Race.cpus = {};
+  room().seats.forEach((s, i) => {
+    if (!s || !s.cpu) return;
+    const rng = mulberry32(Race.seed ^ ((i + 1) * 7919));
+    const sk = CPU_SKILL[s.level] || CPU_SKILL.medium;
+    const bust = Math.round((sk.min + rng() * (sk.max - sk.min)) * 60);
+    Race.cpus[i] = { race: Race.race, x: SPAWN.x, y: SPAWN.y, a: 0, dir: [1, 0], goal: null, frames: 0, cash: 0, rate: sk.cash * (0.8 + rng() * 0.4), bustAt: bust, done: false, end: '', rng, lastPush: 0, pushedDone: false };
+  });
+}
+function stepCpu(c, n) {
+  for (let k = 0; k < n && !c.done; k++) {
+    c.frames++;
+    c.cash += c.rate / 60 * (c.rng() < 0.5 ? 0.6 : 1.4);
+    const cx = Math.floor(c.x / CELL), cy = Math.floor(c.y / CELL);
+    if (!c.goal || Math.hypot(c.goal[0] - c.x, c.goal[1] - c.y) < 6) {
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => passT(cellAt(cx + dx, cy + dy)));
+      let pick = dirs.filter(([dx, dy]) => !(dx === -c.dir[0] && dy === -c.dir[1]));
+      if (!pick.length) pick = dirs;
+      const keep = pick.find(([dx, dy]) => dx === c.dir[0] && dy === c.dir[1]);
+      c.dir = keep && c.rng() < 0.75 ? keep : pick[Math.floor(c.rng() * pick.length)] || [1, 0];
+      c.goal = [(cx + c.dir[0] + 0.5) * CELL, (cy + c.dir[1] + 0.5) * CELL];
+    }
+    const dx = c.goal[0] - c.x, dy = c.goal[1] - c.y, d = Math.hypot(dx, dy) || 1, sp = Math.min(d, 4.4);
+    c.x += dx / d * sp; c.y += dy / d * sp;
+    c.a += angNorm(Math.atan2(dy, dx) - c.a) * 0.2;
+    if (c.frames >= c.bustAt) { c.done = true; c.end = 'busted'; }
+    else if (c.frames >= RACE_FRAMES) { c.done = true; c.end = 'escaped'; }
+  }
+}
+function hostTick() {
+  const r = room();
+  if (!Race.online || !r || !r.state || !SillyOnline.isHost()) return;
+  const st = r.state;
+  if (st.phase === 'run' && st.race === Race.race && Race.raceStartAt) {
+    const due = Math.floor((Date.now() - Race.raceStartAt) / STEP);
+    for (const [i, c] of Object.entries(Race.cpus)) {
+      if (c.race !== Race.race) continue;
+      stepCpu(c, due - c.frames);
+      if (Date.now() - c.lastPush > 500 || (c.done && !c.pushedDone)) {
+        c.lastPush = Date.now(); if (c.done) c.pushedDone = true;
+        SillyOnline.liveSet('cpu' + i, { seat: +i, round: Race.round, race: Race.race, x: Math.round(c.x), y: Math.round(c.y), a: +c.a.toFixed(2), vx: c.done ? 0 : c.dir[0] * 4.4, vy: c.done ? 0 : c.dir[1] * 4.4, cash: Math.floor(c.cash), t: c.frames, done: c.done, end: c.end, at: Date.now() });
+      }
+    }
+    // is everyone done? (left / offline / well past 90 s count as done with what they have)
+    const timeUp = Date.now() - Race.raceStartAt > (RACE_SEC + 15) * 1000;
+    const fin = r.seats.map((s, i) => {
+      if (!s) return true;
+      if (s.cpu) return !!(Race.cpus[i] && Race.cpus[i].done);
+      const L = liveOf(i);
+      return !!(L && L.done) || !!s.left || !SillyOnline.isOnline(r, s.id) || timeUp;
+    });
+    if (fin.every(Boolean)) {
+      const rows = r.seats.map((s, i) => {
+        const L = liveOf(i);
+        return { seat: i, t: L ? Math.min(RACE_FRAMES, L.t || 0) : 0, cash: L ? L.cash || 0 : 0 };
+      });
+      const race = Race.race;
+      SillyOnline.mutate(rr => {
+        if (!rr.state || rr.state.phase !== 'run' || rr.state.race !== race) return;
+        const better = (y, x) => y.t > x.t || (y.t === x.t && y.cash > x.cash);
+        const ranked = rows.slice().sort((a, b) => b.t - a.t || b.cash - a.cash);
+        ranked.forEach(x => {
+          const n = ranked.filter(y => better(y, x)).length;
+          x.rank = n + 1; x.pts = POINTS[Math.min(n, 3)];
+          rr.state.points[x.seat] = (rr.state.points[x.seat] || 0) + x.pts;
+          rr.state.sums[x.seat] = (rr.state.sums[x.seat] || 0) + x.cash;
+        });
+        rr.state.results[race] = ranked;
+        rr.state.phase = 'result';
+        return rr;
+      });
+    }
+  } else if (st.phase === 'result' && Race.resultSeenAt && Date.now() - Race.resultSeenAt > 6500) {
+    const race = st.race;
+    Race.resultSeenAt = 0;
+    SillyOnline.mutate(rr => {
+      if (!rr.state || rr.state.phase !== 'result' || rr.state.race !== race) return;
+      if (race >= 3) rr.state.phase = 'done';
+      else { rr.state.race = race + 1; rr.state.seed = (Math.random() * 2 ** 31) | 0; rr.state.phase = 'run'; }
+      return rr;
+    });
+  }
+}
+
+// ── side board + "X got busted" toasts ──
+function renderBoard() {
+  const r = room(); if (!Race.online || !r) return;
+  const st = r.state || {};
+  document.getElementById('rbTitle').textContent = st.race ? tt('raceN', st.race) : tt('racers');
+  document.getElementById('rbRows').innerHTML = r.seats.map((s, i) => {
+    if (!s) return '';
+    const L = liveOf(i);
+    const off = !s.cpu && s.id !== SillyOnline.me.id && !SillyOnline.isOnline(r, s.id);
+    const status = s.left ? tt('leftTag') : off ? tt('offlineTag') : L && L.done ? (L.end === 'escaped' ? tt('escapedTag') : tt('bustedTag')) : tt('driving');
+    const pts = (st.points || {})[i] || 0;
+    return `<div class="rb-row"><div class="rb-top"><span class="dot" style="background:${RACE_COLORS[i]}"></span>
+      <span class="nm">${SillyOnline.esc(seatName(i))}</span><span class="ct">$${L ? L.cash || 0 : 0}</span></div>
+      <div class="rb-sub">${status} · ${fmtTime(L ? L.t || 0 : 0)} · ${pts} ${SillyI18n.lang === 'zh' ? '分' : 'pts'}</div></div>`;
+  }).join('');
+  const note = mySeat() < 0 ? tt('watching') : Race.done && st.phase === 'run' ? tt('waitOthers') : tt('raceRule');
+  document.getElementById('rbNote').textContent = note;
+  // toasts when someone else's run ends
+  if (st.phase === 'run') r.seats.forEach((s, i) => {
+    if (!s || i === mySeat()) return;
+    const L = liveOf(i), k = `${Race.round}:${Race.race}:${i}`;
+    if (L && L.done && !Race.announced.has(k)) { Race.announced.add(k); toast(L.end === 'escaped' ? tt('gotEscaped', seatName(i)) : tt('gotBusted', seatName(i))); }
+  });
+}
+
+// ── results ──
+function showRaceResult(st, final) {
+  const r = room();
+  const me = mySeat();
+  const medal = k => k === 1 ? '🥇' : k === 2 ? '🥈' : k === 3 ? '🥉' : k;
+  let title, sub;
+  if (!final) {
+    const res = st.results[st.race] || [];
+    title = tt('raceResult', st.race);
+    document.getElementById('raceTable').innerHTML =
+      `<tr><th>${tt('colRank')}</th><th>${tt('colPlayer')}</th><th class="num">${tt('colTime')}</th><th class="num">${tt('colCash')}</th><th class="num">${tt('colPts')}</th><th class="num">${tt('colTotal')}</th></tr>` +
+      res.map(x => `<tr class="${x.seat === me ? 'me' : ''} ${x.rank === 1 ? 'top' : ''}"><td>${medal(x.rank)}</td>
+        <td><span style="color:${RACE_COLORS[x.seat]}">●</span> ${SillyOnline.esc(seatName(x.seat))}</td><td class="num">${fmtTime(x.t)}</td><td class="num">$${x.cash}</td><td class="num">+${x.pts}</td><td class="num">${st.points[x.seat] || 0}</td></tr>`).join('');
+    sub = tt('ptsRule');
+  } else {
+    title = tt('finalResult');
+    const seats = r.seats.map((s, i) => i).filter(i => r.seats[i]);
+    const ranked = seats.map(i => ({ seat: i, pts: st.points[i] || 0, sum: st.sums[i] || 0 })).sort((a, b) => b.pts - a.pts || b.sum - a.sum);
+    ranked.forEach(x => { x.rank = ranked.filter(y => y.pts > x.pts || (y.pts === x.pts && y.sum > x.sum)).length + 1; });
+    const champs = ranked.filter(x => x.rank === 1);
+    sub = champs.length > 1 ? tt('coChamps', champs.map(x => seatName(x.seat)).join(SillyI18n.lang === 'zh' ? '、' : ', '))
+      : champs[0].seat === me ? tt('youChamp') : tt('champion', seatName(champs[0].seat));
+    document.getElementById('raceTable').innerHTML =
+      `<tr><th>${tt('colRank')}</th><th>${tt('colPlayer')}</th><th class="num">${tt('colCashSum')}</th><th class="num">${tt('colTotal')}</th></tr>` +
+      ranked.map(x => `<tr class="${x.seat === me ? 'me' : ''} ${x.rank === 1 ? 'top' : ''}"><td>${x.rank === 1 ? '🏆' : x.rank}</td>
+        <td><span style="color:${RACE_COLORS[x.seat]}">●</span> ${SillyOnline.esc(seatName(x.seat))}</td><td class="num">$${x.sum}</td><td class="num">${x.pts}</td></tr>`).join('');
+    if (me >= 0) champs.some(x => x.seat === me) ? Sound.win() : Sound.bust();
+  }
+  document.getElementById('raceTitle').textContent = title;
+  document.getElementById('raceSub').textContent = sub;
+  const again = document.getElementById('raceAgainBtn');
+  again.textContent = SillyOnline.isHost() ? tt('rematch') : tt('waitHost');
+  again.disabled = !SillyOnline.isHost();
+  document.getElementById('raceBtns').style.display = final ? '' : 'none';
+  clearInterval(Race.nextTimer);
+  if (!final && st.race < 3) {
+    const at = Date.now() + 6500;
+    const upd = () => { const s = Math.max(0, Math.ceil((at - Date.now()) / 1000)); document.getElementById('raceNext').textContent = tt('nextRace', s); if (!s) clearInterval(Race.nextTimer); };
+    upd(); Race.nextTimer = setInterval(upd, 250);
+  } else document.getElementById('raceNext').textContent = '';
+  document.getElementById('raceOverlay').classList.add('active');
+}
+
+// ── room updates ──
+function onRoom(r) {
+  Race.online = true;
+  document.body.classList.add('racing');
+  document.getElementById('startOverlay').classList.remove('active');
+  document.getElementById('resultOverlay').classList.remove('active');
+  if (!Race.unLive) Race.unLive = SillyOnline.liveWatch(map => { Race.live = map; renderBoard(); });
+  if (!Race.hostTimer) Race.hostTimer = setInterval(() => { hostTick(); renderBoard(); }, 400);
+  const st = r.state; if (!st) return;
+  const key = r.round + ':' + st.race + ':' + st.seed;
+  if (st.phase === 'run' && key !== Race.key) {
+    Race.key = key; Race.round = r.round; Race.race = st.race; Race.seed = st.seed;
+    Race.cpus = {}; Race.raceStartAt = 0; Race.done = false;
+    document.getElementById('raceOverlay').classList.remove('active');
+    countdown();
+  } else if (st.phase === 'result' && Race.resultKey !== key) {
+    Race.resultKey = key; Race.resultSeenAt = Date.now();
+    if (gameState === 'running') { Race.done = true; gameState = 'spectate'; }
+    showRaceResult(st, false);
+  } else if (st.phase === 'done' && Race.resultKey !== key + ':done') {
+    Race.resultKey = key + ':done';
+    if (gameState === 'running') { Race.done = true; gameState = 'spectate'; }
+    showRaceResult(st, true);
+  }
+  renderBoard();
+}
+function raceExit() {
+  clearInterval(Race.countdownTimer); clearInterval(Race.hostTimer); clearInterval(Race.nextTimer);
+  Race.hostTimer = null; if (Race.unLive) Race.unLive(); Race.unLive = null;
+  Object.assign(Race, { online: false, done: false, race: 0, key: '', resultKey: '', cpus: {}, live: {}, ghosts: {}, cdText: '' });
+  document.body.classList.remove('racing');
+  document.getElementById('raceOverlay').classList.remove('active');
+  gameState = 'idle';
+  buildCity(20261025);
+  player = makeCar('player', SPAWN.x, SPAWN.y, 0); police = []; civs = []; coins = []; wrecks = []; endReason = ''; bustT = 0;
+  camX = SPAWN.x; camY = SPAWN.y;
+  render(false); drawMini(); updateUI();
+  document.getElementById('startBtn').textContent = SillyI18n.t('startGame');
+  document.getElementById('startOverlay').classList.add('active');
+}
+async function raceLeave() { await SillyOnline.leave(); }
+let toastT = null;
+function toast(msg) {
+  const el = document.getElementById('raceToast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+SillyOnline.mount({
+  game: 'escape-road',
+  title: { zh: '極速逃亡', en: 'Escape Road' },
+  seats: 2,
+  seatCounts: [2, 3, 4],
+  defaultSeats: () => 2,
+  seatLabel: (i, l) => (l === 'zh' ? ['藍', '橘', '紫', '紅'] : ['Blue', 'Orange', 'Purple', 'Red'])[i],
+  seatColor: i => RACE_COLORS[i],
+  cpuLevels: ['easy', 'medium', 'hard'],
+  newState: () => ({ race: 1, seed: (Math.random() * 2 ** 31) | 0, phase: 'run', results: {}, points: {}, sums: {} }),
+  onRoom: r => onRoom(r),
+  onExit: () => raceExit(),
+  onCancelEntry: () => document.getElementById('startOverlay').classList.add('active'),
+});
+
+document.getElementById('onlineBtn').addEventListener('click', () => {
+  if (gameState === 'paused') { gameState = 'idle'; setPauseBtnText(false); }
+  Sound.unlock();
+  document.getElementById('startOverlay').classList.remove('active');
+  SillyOnline.openEntry();
+});
+document.getElementById('raceAgainBtn').addEventListener('click', () => { if (SillyOnline.isHost()) SillyOnline.rematch(); });
+document.getElementById('raceCloseBtn').addEventListener('click', () => document.getElementById('raceOverlay').classList.remove('active'));
+document.getElementById('raceLeaveBtn').addEventListener('click', () => raceLeave());
+document.getElementById('exitBtn').addEventListener('click', async e => {
+  if (!Race.online) return;
+  e.stopImmediatePropagation();
+  if (!confirm(SillyI18n.lang === 'zh' ? '確定要離開房間嗎？' : 'Leave the room?')) return;
+  await raceLeave(); window.location.href = '../../';
+}, true);
+SillyI18n.onChange(() => {
+  if (!Race.online) return;
+  renderBoard();
+  const st = room() && room().state;
+  if (st && document.getElementById('raceOverlay').classList.contains('active')) showRaceResult(st, st.phase === 'done');
+});
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../shared/firebase.js"></script>
+<script>
+if ((() => { try { return typeof SillyFirebase !== 'undefined'; } catch (e) { return false; } })()) {
+  try {
+    SillyFirebase.renderAvatarFromCacheDisplay('game-avatar');
+    SillyFirebase.onAuthChanged(user => SillyFirebase.renderAvatarDisplay('game-avatar', user));
+  } catch (e) {}
+}
+</script>
+</body>
+</html>

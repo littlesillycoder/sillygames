@@ -78,7 +78,7 @@
       cpuLevel: 'CPU level', numPlayers: 'Players',
     },
   };
-  const GAME_NAMES = { chess: { zh: '西洋棋', en: 'Chess' }, go: { zh: '圍棋', en: 'Go' }, 'chinese-checkers': { zh: '跳棋', en: 'Chinese Checkers' }, rummikub: { zh: '拉密', en: 'Rummikub' }, 'count-masters': { zh: '人海大作戰', en: 'Count Masters' } };
+  const GAME_NAMES = { chess: { zh: '西洋棋', en: 'Chess' }, go: { zh: '圍棋', en: 'Go' }, 'chinese-checkers': { zh: '跳棋', en: 'Chinese Checkers' }, rummikub: { zh: '拉密', en: 'Rummikub' }, 'count-masters': { zh: '人海大作戰', en: 'Count Masters' }, 'escape-road': { zh: '極速逃亡', en: 'Escape Road' } };
   const lang = () => { try { const v = localStorage.getItem('sg_lang'); if (v === 'zh' || v === 'en') return v; } catch (e) {} return (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en'; };
   const t = (k, ...a) => { const v = DICT[lang()][k] ?? DICT.zh[k] ?? k; return typeof v === 'function' ? v(...a) : v; };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
